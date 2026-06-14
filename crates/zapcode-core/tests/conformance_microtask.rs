@@ -349,6 +349,51 @@ fn inline_rejected_combinator_unawaited_is_unhandled() {
     );
 }
 
+#[test]
+fn unawaited_combinator_over_pending_element_that_rejects_is_unhandled() {
+    // The harder case: the element is still PENDING when the combinator is
+    // called and rejects on a later tick. The batch is wired eagerly (combine
+    // reactions), so it settles from the drain even though it is never awaited
+    // — an orphaned rejecting batch surfaces, matching Node's crash on each.
+    let el = "Promise.resolve(1).then(() => { throw new Error('x'); })";
+    for combinator in ["all", "race", "any"] {
+        let err = run_err(&format!(
+            "async function main() {{ \
+               Promise.{combinator}([{el}]); \
+               await new Promise(r => setTimeout(r, 1)); \
+               return 'survived'; \
+             }} main()"
+        ));
+        assert!(
+            err.contains("Unhandled promise rejection"),
+            "{combinator}: unexpected error: {err}"
+        );
+    }
+    // A `.catch` on a later tick still rescues the batch — not unhandled.
+    assert_eq!(
+        run_str(&format!(
+            "async function main() {{ \
+               const p = Promise.all([{el}]); \
+               p.catch(() => {{}}); \
+               await new Promise(r => setTimeout(r, 1)); \
+               return 'survived'; \
+             }} main()"
+        )),
+        "survived"
+    );
+    // `allSettled` over a pending rejecting element still never rejects.
+    assert_eq!(
+        run_str(&format!(
+            "async function main() {{ \
+               Promise.allSettled([{el}]); \
+               await new Promise(r => setTimeout(r, 1)); \
+               return 'survived'; \
+             }} main()"
+        )),
+        "survived"
+    );
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 //  Thenable adoption
 // ════════════════════════════════════════════════════════════════════════════

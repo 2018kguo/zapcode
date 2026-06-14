@@ -7345,15 +7345,10 @@ impl Vm {
                             }
                             // Handing a promise to a combinator attaches a
                             // reaction to it in real JS, so an element's
-                            // rejection is CONSUMED by the combinator
-                            // (`Promise.allSettled([rejected])` reports it; it
-                            // must not surface as an unhandled rejection).
-                            // Clear the marks of already-settled elements, and
-                            // give each still-pending element a sink reaction
-                            // so a LATER settle doesn't mark either — the
-                            // batch reads element status directly, so the sink
-                            // only has to swallow the unhandled-mark.
-                            // Then run the normal builtin.
+                            // rejection is CONSUMED by the combinator and must
+                            // not surface as an element-level unhandled
+                            // rejection. Clear the marks of already-settled
+                            // elements here; pending elements are wired below.
                             "Promise"
                                 if matches!(
                                     method_name.as_ref(),
@@ -7364,20 +7359,33 @@ impl Vm {
                                     for item in self.heap.array_vec(*h) {
                                         if let Value::Object(eh) = &item {
                                             self.mark_rejection_handled(*eh);
-                                            if self.is_internal_pending(&item) {
-                                                self.register_sink_reaction(*eh)?;
-                                            }
                                         }
                                     }
                                 }
-                                builtins::call_global_method(
+                                let batch = builtins::call_global_method(
                                     "Promise",
                                     &method_name,
                                     &args,
                                     &mut self.stdout,
                                     &mut self.stderr,
                                     &mut self.heap,
-                                )?
+                                )?;
+                                // Wire the batch's reactions eagerly, like JS:
+                                // an all-internal batch (no host call to force)
+                                // settles from the drain whether or not it is
+                                // ever awaited. Each pending element gets a
+                                // combine reaction — so its rejection flows to
+                                // the batch instead of going unhandled — and an
+                                // orphaned rejecting batch then surfaces as an
+                                // unhandled rejection (Node parity). Batches
+                                // still holding a host call stay lazy: they must
+                                // suspend to the host at `await`.
+                                if let Some(v) = &batch {
+                                    if self.batch_all_internal(v) {
+                                        self.lower_internal_batch(v)?;
+                                    }
+                                }
+                                batch
                             }
                             // Object.groupBy / Map.groupBy take a guest key
                             // callback, so they group here (the pure builtin
