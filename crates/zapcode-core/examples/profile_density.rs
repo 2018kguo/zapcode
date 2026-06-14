@@ -201,8 +201,7 @@ fn main() {
     // ZapcodeRun-per-VM path above (every VM re-compiles and owns its own copy)
     // to read off the per-VM bytecode the sharing removes.
     println!("\n== Arc-shared program: {n} suspended VMs sharing ONE compiled program ==");
-    let program =
-        ZapcodeProgram::compile(AGENT_CODE, vec!["callTool".to_string()]).unwrap();
+    let program = ZapcodeProgram::compile(AGENT_CODE, vec!["callTool".to_string()]).unwrap();
     // Warm: one throwaway run so any first-use allocation is out of the delta.
     drop(suspended_from(&program));
     let rss_before = rss_bytes();
@@ -221,7 +220,12 @@ fn main() {
     // Sanity: a live snapshot still resumes to an independent, runnable VM even
     // though its program is shared (Arc is read-only; resume never mutates it).
     let one = shared.pop().unwrap();
-    let resumed = one.resume(zapcode_core::Value::String("done".into())).unwrap();
-    assert!(matches!(resumed.state, VmState::Complete(_) | VmState::Suspended { .. }));
+    let resumed = one
+        .resume(zapcode_core::Value::String("done".into()))
+        .unwrap();
+    assert!(matches!(
+        resumed.state,
+        VmState::Complete(_) | VmState::Suspended { .. }
+    ));
     drop(shared);
 }

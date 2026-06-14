@@ -39,7 +39,10 @@ fn test_new_function_constructor_blocked() {
     // sandbox violation, raised at runtime so it is catchable by the guest.
     let result = eval_ts(r#"new Function("return 1")"#);
     assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), ZapcodeError::SandboxViolation(_)));
+    assert!(matches!(
+        result.unwrap_err(),
+        ZapcodeError::SandboxViolation(_)
+    ));
 }
 
 #[test]

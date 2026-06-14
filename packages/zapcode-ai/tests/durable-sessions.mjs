@@ -7,7 +7,7 @@
  * against the freshly-built local binding (see `npm run sync-local-binding`).
  */
 import assert from "node:assert/strict";
-import { ZapcodeSessionHandle } from "@unchartedfr/zapcode";
+import { ZapcodeSessionHandle } from "@arcainc/zapcode";
 
 let passed = 0;
 function test(name, fn) {

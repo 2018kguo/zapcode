@@ -70,10 +70,12 @@ fn resume_combinator(state: VmState, outcomes: &[Out]) -> VmState {
             // `outcomes` so index 0 is the first to settle.
             match &outcomes[0] {
                 Out::Ok(v) => snapshot.resume_many(vec![v.clone()]).unwrap().state,
-                Out::Err(msg) => snapshot
-                    .resume_with_error(Value::String((*msg).into()))
-                    .unwrap()
-                    .state,
+                Out::Err(msg) => {
+                    snapshot
+                        .resume_with_error(Value::String((*msg).into()))
+                        .unwrap()
+                        .state
+                }
             }
         }
         BatchKind::Any => {
@@ -83,10 +85,12 @@ fn resume_combinator(state: VmState, outcomes: &[Out]) -> VmState {
                 Out::Err(_) => None,
             }) {
                 Some(v) => snapshot.resume_many(vec![v]).unwrap().state,
-                None => snapshot
-                    .resume_with_error(Value::String("AggregateError: all rejected".into()))
-                    .unwrap()
-                    .state,
+                None => {
+                    snapshot
+                        .resume_with_error(Value::String("AggregateError: all rejected".into()))
+                        .unwrap()
+                        .state
+                }
             }
         }
         BatchKind::AllSettled => {
@@ -308,9 +312,7 @@ fn inline_race_first_element_wins() {
 #[test]
 fn inline_any_skips_rejected_first() {
     assert_eq!(
-        run_inline(
-            r#"await Promise.any([Promise.reject("bad"), Promise.resolve("good")])"#
-        ),
+        run_inline(r#"await Promise.any([Promise.reject("bad"), Promise.resolve("good")])"#),
         "good"
     );
 }

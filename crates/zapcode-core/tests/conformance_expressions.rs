@@ -109,7 +109,10 @@ fn void_evaluates_its_operand_for_side_effects() {
 #[test]
 fn chained_assignment_threads_one_value() {
     assert_eq!(run_str("let x, y; x = y = 7; x + '/' + y"), "7/7");
-    assert_eq!(run_str("const o = {}; o.a = o.b = 7; o.a + '/' + o.b"), "7/7");
+    assert_eq!(
+        run_str("const o = {}; o.a = o.b = 7; o.a + '/' + o.b"),
+        "7/7"
+    );
     // Chained assignment evaluates to the assigned value.
     assert_eq!(run_str("let a, b, c; a = b = c = 9"), "9");
 }
@@ -122,7 +125,10 @@ fn assignment_expression_returns_assigned_value() {
 
 #[test]
 fn compound_assignment_on_member_targets() {
-    assert_eq!(run_str("const a = [1, 2, 3]; a[1] += 10; a.join(',')"), "1,12,3");
+    assert_eq!(
+        run_str("const a = [1, 2, 3]; a[1] += 10; a.join(',')"),
+        "1,12,3"
+    );
     assert_eq!(run_str("const o = { n: 5 }; o['n'] *= 2; o.n"), "10");
     assert_eq!(run_str("const o = { n: 10 }; o.n -= 3; o.n"), "7");
     assert_eq!(run_str("const o = { s: 'a' }; o.s += 'b'; o.s"), "ab");
@@ -287,9 +293,18 @@ fn instanceof_negative_and_non_object_lhs() {
 
 #[test]
 fn ternary_basic_and_nesting() {
-    assert_eq!(run_str("const x = 5; x < 0 ? 'neg' : x === 0 ? 'zero' : 'pos'"), "pos");
-    assert_eq!(run_str("const x = 0; x < 0 ? 'neg' : x === 0 ? 'zero' : 'pos'"), "zero");
-    assert_eq!(run_str("const x = -3; x < 0 ? 'neg' : x === 0 ? 'zero' : 'pos'"), "neg");
+    assert_eq!(
+        run_str("const x = 5; x < 0 ? 'neg' : x === 0 ? 'zero' : 'pos'"),
+        "pos"
+    );
+    assert_eq!(
+        run_str("const x = 0; x < 0 ? 'neg' : x === 0 ? 'zero' : 'pos'"),
+        "zero"
+    );
+    assert_eq!(
+        run_str("const x = -3; x < 0 ? 'neg' : x === 0 ? 'zero' : 'pos'"),
+        "neg"
+    );
 }
 
 #[test]
@@ -356,7 +371,10 @@ fn exponentiation_right_associative_and_unary() {
 
 #[test]
 fn optional_call_on_present_and_absent() {
-    assert_eq!(run_str("const o = { a: { b: () => 42 } }; o?.a?.b?.()"), "42");
+    assert_eq!(
+        run_str("const o = { a: { b: () => 42 } }; o?.a?.b?.()"),
+        "42"
+    );
     assert_eq!(run_str("const o = {}; o?.a?.b?.()"), "undefined");
     assert_eq!(run_str("const o = { f: () => 5 }; o?.f()"), "5");
     assert_eq!(run_str("const o = null; o?.f()"), "undefined");
@@ -433,7 +451,10 @@ fn symbol_for_global_registry() {
     assert_eq!(run_str("Symbol.for('d').description"), "d");
     assert_eq!(run_str("typeof Symbol.for('x')"), "symbol");
     // A registered symbol works as a computed property key.
-    assert_eq!(run_str("(function(){ const s = Symbol.for('k'); const o = { [s]: 1 }; return o[s]; })()"), "1");
+    assert_eq!(
+        run_str("(function(){ const s = Symbol.for('k'); const o = { [s]: 1 }; return o[s]; })()"),
+        "1"
+    );
 }
 
 #[test]
@@ -450,7 +471,9 @@ fn member_store_through_arbitrary_object_expressions() {
     );
     // A call result as the store target mutates the shared reference.
     assert_eq!(
-        run_str("const o = { inner: {} }; function get() { return o.inner; } get().v = 7; o.inner.v"),
+        run_str(
+            "const o = { inner: {} }; function get() { return o.inner; } get().v = 7; o.inner.v"
+        ),
         "7"
     );
     // Ternary-selected target.

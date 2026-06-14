@@ -12,7 +12,7 @@ that was used to read a `SECRET` env var out of the host.
 ## 1. Threat model
 
 The sandbox runs guest code that we treat as fully adversarial. The host is a long-lived Node
-process (via the `@unchartedfr/zapcode` napi addon used by `packages/zapcode-ai`), so the bar is:
+process (via the `@arcainc/zapcode` napi addon used by `packages/zapcode-ai`), so the bar is:
 
 > **A guest program must never be able to crash, hang, escape, or read host state out of the
 > sandbox. Every adverse outcome must be a *catchable* error or a *fired resource limit*, never

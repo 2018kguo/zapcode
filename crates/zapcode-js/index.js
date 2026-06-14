@@ -33,7 +33,7 @@ function getPlatformKey() {
 function loadNativeBinding() {
   const key = getPlatformKey()
   const localFile = `zapcode.${key}.node`
-  const npmPkg = `@unchartedfr/zapcode-${key}`
+  const npmPkg = `@arcainc/zapcode-${key}`
 
   // Try local .node file first (development)
   const localPath = join(__dirname, localFile)
@@ -48,7 +48,7 @@ function loadNativeBinding() {
     throw new Error(
       `Failed to load native binding for ${platform}-${arch}.\n` +
       `Looked for: ${localFile} (local) or ${npmPkg} (npm package).\n` +
-      `Try reinstalling: npm install @unchartedfr/zapcode`
+      `Try reinstalling: npm install @arcainc/zapcode`
     )
   }
 }

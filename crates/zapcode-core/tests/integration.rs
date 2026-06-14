@@ -48,8 +48,7 @@ fn test_fizzbuzz() {
 
 #[test]
 fn test_map_implementation() {
-    let (result, heap) = run(
-        r#"
+    let (result, heap) = run(r#"
         function map(arr, fn) {
             const result = [];
             for (let i = 0; i < arr.length; i++) {
@@ -59,8 +58,7 @@ fn test_map_implementation() {
         }
         const doubled = map([1, 2, 3], (x) => x * 2);
         doubled
-    "#,
-    );
+    "#);
     match result {
         Value::Array(h) => {
             assert_eq!(

@@ -1,5 +1,5 @@
 /**
- * Half-deterministic, half-agentic workflows with @unchartedfr/zapcode-ai.
+ * Half-deterministic, half-agentic workflows with @arcainc/zapcode-ai.
  *
  * Every demo here is the kind of TypeScript an LLM writes in "code mode": real
  * control flow (loops, conditionals, retries, compensation) with tool calls
@@ -14,7 +14,7 @@
  * Run with: npm start
  */
 
-import { execute, createSession, loadSession, dryRun } from "@unchartedfr/zapcode-ai";
+import { execute, createSession, loadSession, dryRun } from "@arcainc/zapcode-ai";
 import assert from "node:assert/strict";
 
 const tool = (

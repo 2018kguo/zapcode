@@ -51,7 +51,9 @@ fn compound_assignment_evaluates_target_once() {
         "1:15"
     );
     assert_eq!(
-        run_str(&format!("{COUNTER} f().x -= 2; f().x *= 3; calls + ':' + o.x")),
+        run_str(&format!(
+            "{COUNTER} f().x -= 2; f().x *= 3; calls + ':' + o.x"
+        )),
         "2:24"
     );
 }
@@ -73,11 +75,15 @@ fn computed_compound_evaluates_object_and_index_once() {
 #[test]
 fn increment_decrement_evaluate_target_once() {
     assert_eq!(
-        run_str(&format!("{COUNTER} const r = f().n++; calls + ':' + o.n + ':' + r")),
+        run_str(&format!(
+            "{COUNTER} const r = f().n++; calls + ':' + o.n + ':' + r"
+        )),
         "1:2:1"
     );
     assert_eq!(
-        run_str(&format!("{COUNTER} const r = ++f().n; calls + ':' + o.n + ':' + r")),
+        run_str(&format!(
+            "{COUNTER} const r = ++f().n; calls + ':' + o.n + ':' + r"
+        )),
         "1:2:2"
     );
     assert_eq!(
@@ -97,7 +103,9 @@ fn logical_assignments_evaluate_target_once() {
         "1:7"
     );
     assert_eq!(
-        run_str(&format!("{COUNTER} f().missing ??= 3; calls + ':' + o.missing")),
+        run_str(&format!(
+            "{COUNTER} f().missing ??= 3; calls + ':' + o.missing"
+        )),
         "1:3"
     );
     // Keep path (no store) still evaluates the reference exactly once.
@@ -116,7 +124,9 @@ fn delete_works_through_call_results_and_evaluates_once() {
         "1:false:true"
     );
     assert_eq!(
-        run_str(&format!("{COUNTER} delete f()['n']; calls + ':' + ('n' in o)")),
+        run_str(&format!(
+            "{COUNTER} delete f()['n']; calls + ':' + ('n' in o)"
+        )),
         "1:false"
     );
 }

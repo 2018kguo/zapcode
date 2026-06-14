@@ -130,6 +130,7 @@ fn fnv1a(bytes: &[u8]) -> u64 {
 }
 
 impl VmSnapshot {
+    #[allow(dead_code)] // convenience constructor kept alongside capture_with
     pub(crate) fn capture(vm: &Vm) -> Self {
         Self::capture_with(vm, &mut |_| {})
     }
@@ -336,7 +337,11 @@ impl VmSnapshot {
             .compact_retaining(self.builtin_base as usize, &roots);
         let mut rewrite = |h: &mut crate::heap::Handle| {
             let new = remap[*h as usize];
-            debug_assert_ne!(new, crate::heap::Handle::MAX, "compactor dropped a rooted slot");
+            debug_assert_ne!(
+                new,
+                crate::heap::Handle::MAX,
+                "compactor dropped a rooted slot"
+            );
             *h = new;
         };
         self.for_each_handle_mut(&mut rewrite);
@@ -443,6 +448,7 @@ pub struct ZapcodeSnapshot {
 
 impl ZapcodeSnapshot {
     /// Capture the current VM state as a snapshot.
+    #[allow(dead_code)] // convenience constructor kept alongside capture_with
     pub(crate) fn capture(vm: &Vm) -> Result<Self> {
         Ok(Self {
             snapshot: Box::new(VmSnapshot::capture(vm)),

@@ -202,8 +202,24 @@ fn wrap_trailing_object(source: &str) -> String {
         // `in`/`of`; the operator chars here cover things like `x ?? {y:1}`).
         if matches!(
             last_char,
-            '=' | '(' | ',' | ':' | '>' | '[' | ')' | '&' | '|' | '?' | '+' | '-' | '*' | '/'
-                | '%' | '<' | '!' | '^' | '~'
+            '=' | '('
+                | ','
+                | ':'
+                | '>'
+                | '['
+                | ')'
+                | '&'
+                | '|'
+                | '?'
+                | '+'
+                | '-'
+                | '*'
+                | '/'
+                | '%'
+                | '<'
+                | '!'
+                | '^'
+                | '~'
         ) {
             return source.to_string();
         }
@@ -501,9 +517,9 @@ impl<'a> AstLowerer<'a> {
             // `ParamPattern` form, which carries element defaults and arbitrary
             // object/array nesting. The compiler destructures it via the same
             // recursive path used for parameters and `for…of` bindings.
-            ast::BindingPattern::ObjectPattern(_) | ast::BindingPattern::ArrayPattern(_) => {
-                Ok(AssignTarget::Pattern(self.lower_binding_pattern_to_param(pat)?))
-            }
+            ast::BindingPattern::ObjectPattern(_) | ast::BindingPattern::ArrayPattern(_) => Ok(
+                AssignTarget::Pattern(self.lower_binding_pattern_to_param(pat)?),
+            ),
             ast::BindingPattern::AssignmentPattern(assign) => {
                 self.lower_binding_pattern(&assign.left)
             }
@@ -1073,17 +1089,21 @@ impl<'a> AstLowerer<'a> {
                     body.strip_prefix("0x").or_else(|| body.strip_prefix("0X"))
                 {
                     (r, 16)
-                } else if let Some(r) = body.strip_prefix("0o").or_else(|| body.strip_prefix("0O")) {
+                } else if let Some(r) = body.strip_prefix("0o").or_else(|| body.strip_prefix("0O"))
+                {
                     (r, 8)
-                } else if let Some(r) = body.strip_prefix("0b").or_else(|| body.strip_prefix("0B")) {
+                } else if let Some(r) = body.strip_prefix("0b").or_else(|| body.strip_prefix("0B"))
+                {
                     (r, 2)
                 } else {
                     (body.as_str(), 10)
                 };
-                let value = num_bigint::BigInt::parse_bytes(digits.as_bytes(), radix)
-                    .ok_or_else(|| ZapcodeError::UnsupportedSyntax {
-                        span: "unknown".to_string(),
-                        description: "invalid BigInt literal".to_string(),
+                let value =
+                    num_bigint::BigInt::parse_bytes(digits.as_bytes(), radix).ok_or_else(|| {
+                        ZapcodeError::UnsupportedSyntax {
+                            span: "unknown".to_string(),
+                            description: "invalid BigInt literal".to_string(),
+                        }
                     })?;
                 Ok(Expr::BigIntLit(value))
             }
@@ -1452,7 +1472,7 @@ impl<'a> AstLowerer<'a> {
                         && sm.property.name == "raw";
                     if is_string_raw {
                         let mut acc: Option<Expr> = None;
-                        let mut push = |e: Expr, acc: &mut Option<Expr>| {
+                        let push = |e: Expr, acc: &mut Option<Expr>| {
                             *acc = Some(match acc.take() {
                                 None => e,
                                 Some(prev) => Expr::Binary {

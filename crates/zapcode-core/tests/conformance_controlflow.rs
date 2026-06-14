@@ -78,7 +78,8 @@ fn if_else_chain_first_truthy_wins() {
 fn dangling_else_binds_to_nearest_if() {
     // `else` attaches to the inner `if`. With a=1,b=0 the inner-if is false so we
     // hit the `else` => 'inner-else'.
-    let prog = "function f(a,b){ let r='x'; if (a) if (b) r='both'; else r='inner-else'; return r; }";
+    let prog =
+        "function f(a,b){ let r='x'; if (a) if (b) r='both'; else r='inner-else'; return r; }";
     assert_eq!(run_str(&format!("{prog} f(1,1)")), "both");
     assert_eq!(run_str(&format!("{prog} f(1,0)")), "inner-else");
     // a falsy => outer if skipped entirely; the else (bound to inner) is NOT taken.
@@ -165,7 +166,10 @@ fn for_let_binding_is_per_iteration() {
 
 #[test]
 fn var_in_c_style_for_is_function_scoped() {
-    assert_eq!(run_str("function f(){ for(var i=0;i<3;i++){} return i; } f()"), "3");
+    assert_eq!(
+        run_str("function f(){ for(var i=0;i<3;i++){} return i; } f()"),
+        "3"
+    );
     assert_eq!(run_str("function f(){ { var x=5; } return x; } f()"), "5");
 }
 
@@ -176,22 +180,34 @@ fn var_in_c_style_for_is_function_scoped() {
 #[test]
 fn for_of_array_values() {
     assert_eq!(run_str("let s=0; for(const x of [5,10,15]) s+=x; s"), "30");
-    assert_eq!(run_str("let o=[]; for(const x of ['a','b','c']) o.push(x); o.join('')"), "abc");
+    assert_eq!(
+        run_str("let o=[]; for(const x of ['a','b','c']) o.push(x); o.join('')"),
+        "abc"
+    );
     // empty array runs zero iterations
     assert_eq!(run_str("let n=0; for(const x of []) n++; n"), "0");
 }
 
 #[test]
 fn for_of_string_iterates_characters() {
-    assert_eq!(run_str("let o=[]; for(const c of 'abc') o.push(c); o.join('|')"), "a|b|c");
+    assert_eq!(
+        run_str("let o=[]; for(const c of 'abc') o.push(c); o.join('|')"),
+        "a|b|c"
+    );
     assert_eq!(run_str("let n=0; for(const c of '') n++; n"), "0");
     // characters include punctuation/whitespace
-    assert_eq!(run_str("let o=[]; for(const c of 'a,b') o.push(c); o.join('|')"), "a|,|b");
+    assert_eq!(
+        run_str("let o=[]; for(const c of 'a,b') o.push(c); o.join('|')"),
+        "a|,|b"
+    );
 }
 
 #[test]
 fn for_of_array_of_objects_with_destructuring() {
-    assert_eq!(run_str("let t=0; for(const {v} of [{v:1},{v:2},{v:3}]) t+=v; t"), "6");
+    assert_eq!(
+        run_str("let t=0; for(const {v} of [{v:1},{v:2},{v:3}]) t+=v; t"),
+        "6"
+    );
     // destructuring with a default for a missing key
     assert_eq!(
         run_str("let o=[]; for(const {a,b=9} of [{a:1},{a:2,b:3}]) o.push(a+'-'+b); o.join(',')"),
@@ -206,7 +222,10 @@ fn for_of_array_of_objects_with_destructuring() {
 
 #[test]
 fn for_of_array_entries() {
-    assert_eq!(run_str("let o=[]; for(const [i,v] of ['x','y'].entries()) o.push(i+v); o.join(',')"), "0x,1y");
+    assert_eq!(
+        run_str("let o=[]; for(const [i,v] of ['x','y'].entries()) o.push(i+v); o.join(',')"),
+        "0x,1y"
+    );
     assert_eq!(
         run_str("let o=[]; for(const [i,v] of ['a','b','c'].entries()) o.push(`${i}:${v}`); o.join(',')"),
         "0:a,1:b,2:c"
@@ -263,7 +282,10 @@ fn for_of_map_preserves_insertion_order_and_overwrite_keeps_position() {
 
 #[test]
 fn for_of_set_values_dedup() {
-    assert_eq!(run_str("let t=0; for(const x of new Set([1,2,2,3])) t+=x; t"), "6");
+    assert_eq!(
+        run_str("let t=0; for(const x of new Set([1,2,2,3])) t+=x; t"),
+        "6"
+    );
     // Set preserves insertion order and dedups
     assert_eq!(
         run_str("const s=new Set(); s.add('a'); s.add('b'); s.add('a'); let r=[]; for(const x of s) r.push(x); r.join(',')"),
@@ -282,7 +304,9 @@ fn nested_for_of_arrays_runs_all_outer_iterations() {
         "a1,a2,b1,b2"
     );
     assert_eq!(
-        run_str("let c=0; for(const a of [1,2]) for(const b of [1,2,3]) for(const d of [1,2]) c++; c"),
+        run_str(
+            "let c=0; for(const a of [1,2]) for(const b of [1,2,3]) for(const d of [1,2]) c++; c"
+        ),
         "12"
     );
 }
@@ -347,7 +371,10 @@ fn for_in_object_keys_and_values() {
 #[test]
 fn for_in_string_key_insertion_order() {
     // For purely-string keys, both zapcode and JS iterate in insertion order.
-    assert_eq!(run_str("const o={z:1,a:2,m:3}; let k=''; for(const x in o) k+=x; k"), "zam");
+    assert_eq!(
+        run_str("const o={z:1,a:2,m:3}; let k=''; for(const x in o) k+=x; k"),
+        "zam"
+    );
 }
 
 #[test]
@@ -355,7 +382,9 @@ fn for_in_integer_key_order() {
     // for...in (like Object.keys) emits integer-index keys in ascending numeric
     // order first, then string keys in insertion order — matching JS.
     assert_eq!(
-        run_str("const o={}; o['b']=1; o[2]=1; o['a']=1; o[1]=1; let k=''; for(const x in o) k+=x; k"),
+        run_str(
+            "const o={}; o['b']=1; o[2]=1; o['a']=1; o[1]=1; let k=''; for(const x in o) k+=x; k"
+        ),
         "12ba"
     );
     assert_eq!(
@@ -366,7 +395,10 @@ fn for_in_integer_key_order() {
 
 #[test]
 fn for_in_array_indices_are_strings_in_order() {
-    assert_eq!(run_str("const a=['x','y','z']; let r=''; for(const i in a) r+=i; r"), "012");
+    assert_eq!(
+        run_str("const a=['x','y','z']; let r=''; for(const i in a) r+=i; r"),
+        "012"
+    );
     // indices are STRINGS — concatenation, not addition
     assert_eq!(
         run_str("const a=[10,20]; let r=[]; for(const i in a) r.push(typeof i); r.join(',')"),
@@ -403,13 +435,22 @@ fn while_loop_accumulates() {
 #[test]
 fn while_false_body_never_runs() {
     assert_eq!(run_str("let i=0; while(false){ i=99; } i"), "0");
-    assert_eq!(run_str("let r='untouched'; while(false){ r='changed'; } r"), "untouched");
+    assert_eq!(
+        run_str("let r='untouched'; while(false){ r='changed'; } r"),
+        "untouched"
+    );
 }
 
 #[test]
 fn while_break_and_continue() {
-    assert_eq!(run_str("let n=0; while(true){ n++; if(n>=4) break; } n"), "4");
-    assert_eq!(run_str("let i=0,s=0; while(i<5){ i++; if(i%2===0) continue; s+=i; } s"), "9");
+    assert_eq!(
+        run_str("let n=0; while(true){ n++; if(n>=4) break; } n"),
+        "4"
+    );
+    assert_eq!(
+        run_str("let i=0,s=0; while(i<5){ i++; if(i%2===0) continue; s+=i; } s"),
+        "9"
+    );
 }
 
 // ============================================================================
@@ -426,15 +467,24 @@ fn do_while_runs_at_least_once() {
 
 #[test]
 fn do_while_break_and_continue() {
-    assert_eq!(run_str("let n=0; do { n++; if(n===2) break; } while(n<10); n"), "2");
+    assert_eq!(
+        run_str("let n=0; do { n++; if(n===2) break; } while(n<10); n"),
+        "2"
+    );
     assert_eq!(run_str("let c=0; do { c++; break; } while(true); c"), "1");
     // continue jumps to the condition check (n still increments before continue)
-    assert_eq!(run_str("let n=0,s=0; do { n++; if(n%2===0) continue; s+=n; } while(n<5); s"), "9");
+    assert_eq!(
+        run_str("let n=0,s=0; do { n++; if(n%2===0) continue; s+=n; } while(n<5); s"),
+        "9"
+    );
 }
 
 #[test]
 fn do_while_accumulate_through_condition() {
-    assert_eq!(run_str("let i=0,sum=0; do { sum += i; i++; } while(i<=5); sum"), "15"); // 0+1+2+3+4+5
+    assert_eq!(
+        run_str("let i=0,sum=0; do { sum += i; i++; } while(i<=5); sum"),
+        "15"
+    ); // 0+1+2+3+4+5
 }
 
 // ============================================================================
@@ -532,7 +582,9 @@ fn switch_discriminant_evaluated_once() {
 #[test]
 fn switch_case_with_lexical_block() {
     assert_eq!(
-        run_str("function f(x){switch(x){case 1:{ const y=10; return y; } default: return 0;}} f(1)"),
+        run_str(
+            "function f(x){switch(x){case 1:{ const y=10; return y; } default: return 0;}} f(1)"
+        ),
         "10"
     );
 }
@@ -546,7 +598,9 @@ fn switch_inside_loop_break_targets_switch_only() {
     );
     // a break that exits the switch still lets the loop body continue afterwards
     assert_eq!(
-        run_str("let o=[]; for(let i=0;i<3;i++){ switch(i){ case 0: break; } o.push(i);} o.join(',')"),
+        run_str(
+            "let o=[]; for(let i=0;i<3;i++){ switch(i){ case 0: break; } o.push(i);} o.join(',')"
+        ),
         "0,1,2"
     );
 }
@@ -565,13 +619,24 @@ fn switch_completion_value() {
 
 #[test]
 fn break_stops_loop() {
-    assert_eq!(run_str("let s=0; for(let i=0;i<10;i++){ if(i===5) break; s+=i; } s"), "10");
+    assert_eq!(
+        run_str("let s=0; for(let i=0;i<10;i++){ if(i===5) break; s+=i; } s"),
+        "10"
+    );
 }
 
 #[test]
 fn continue_skips_iteration() {
-    assert_eq!(run_str("let s=0; for(let i=0;i<6;i++){ if(i%2===0) continue; s+=i; } s"), "9");
-    assert_eq!(run_str("let o=[]; for(const x of [1,2,3,4]){ if(x%2===0) continue; o.push(x);} o.join(',')"), "1,3");
+    assert_eq!(
+        run_str("let s=0; for(let i=0;i<6;i++){ if(i%2===0) continue; s+=i; } s"),
+        "9"
+    );
+    assert_eq!(
+        run_str(
+            "let o=[]; for(const x of [1,2,3,4]){ if(x%2===0) continue; o.push(x);} o.join(',')"
+        ),
+        "1,3"
+    );
 }
 
 #[test]
@@ -657,12 +722,21 @@ fn labeled_break_on_plain_block() {
     // `break label` out of a labeled NON-loop block jumps past the block. This
     // used to emit an unpatched Break(0) that ran to instruction 0 and hit the
     // allocation limit (guest-triggerable runaway).
-    assert_eq!(run_str("let r=''; foo:{ r+='a'; break foo; r+='b'; } r+'c'"), "ac");
+    assert_eq!(
+        run_str("let r=''; foo:{ r+='a'; break foo; r+='b'; } r+'c'"),
+        "ac"
+    );
     // No break: the whole block runs.
     assert_eq!(run_str("let r=''; foo:{ r+='a'; r+='b'; } r+'c'"), "abc");
     // Nested labeled blocks: break the outer vs the inner.
-    assert_eq!(run_str("let r=''; a:{ b:{ r+='1'; break a; r+='2'; } r+='3'; } r+'4'"), "14");
-    assert_eq!(run_str("let r=''; a:{ b:{ r+='1'; break b; r+='2'; } r+='3'; } r+'4'"), "134");
+    assert_eq!(
+        run_str("let r=''; a:{ b:{ r+='1'; break a; r+='2'; } r+='3'; } r+'4'"),
+        "14"
+    );
+    assert_eq!(
+        run_str("let r=''; a:{ b:{ r+='1'; break b; r+='2'; } r+='3'; } r+'4'"),
+        "134"
+    );
 }
 
 #[test]
@@ -721,7 +795,9 @@ fn nested_block_statement_order() {
 #[test]
 fn return_from_nested_block_in_loop() {
     assert_eq!(
-        run_str("function f(){ for(let i=0;i<5;i++){ { if(i===2){ return i*10; } } } return -1; } f()"),
+        run_str(
+            "function f(){ for(let i=0;i<5;i++){ { if(i===2){ return i*10; } } } return -1; } f()"
+        ),
         "20"
     );
 }

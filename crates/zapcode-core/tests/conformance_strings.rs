@@ -43,6 +43,7 @@ fn run_str(code: &str) -> String {
 
 /// Run `code` expecting a runtime/parse error; return its `Debug` string. Used to pin
 /// "feature is not provided" residuals so a future implementation makes them fail loudly.
+#[allow(dead_code)] // shared test helper; not exercised by every case yet
 fn run_err(code: &str) -> String {
     match ZapcodeRun::new(
         code.to_string(),
@@ -103,7 +104,7 @@ fn at_method() {
     assert_eq!(run_str("'hello'.at(-1)"), "o");
     assert_eq!(run_str("'hello'.at(-2)"), "l");
     assert_eq!(run_str("String('hello'.at(10))"), "undefined"); // forward OOB -> undefined
-    // A negative index beyond the start is `undefined` (no clamping).
+                                                                // A negative index beyond the start is `undefined` (no clamping).
     assert_eq!(run_str("String('abc'.at(-10))"), "undefined");
 }
 
@@ -306,7 +307,10 @@ fn trim_start_end() {
 fn case_conversion() {
     assert_eq!(run_str("'hello'.toUpperCase()"), "HELLO");
     assert_eq!(run_str("'HeLLo'.toLowerCase()"), "hello");
-    assert_eq!(run_str("'Hello World 123'.toUpperCase()"), "HELLO WORLD 123");
+    assert_eq!(
+        run_str("'Hello World 123'.toUpperCase()"),
+        "HELLO WORLD 123"
+    );
     assert_eq!(run_str("'MiXeD'.toLowerCase()"), "mixed");
     assert_eq!(run_str("'already upper'.toUpperCase()"), "ALREADY UPPER");
     assert_eq!(run_str("''.toUpperCase()"), "");
@@ -340,26 +344,50 @@ fn locale_compare() {
 
 #[test]
 fn split_string_separator() {
-    assert_eq!(run_str("JSON.stringify('a,b,c'.split(','))"), "[\"a\",\"b\",\"c\"]");
-    assert_eq!(run_str("JSON.stringify('no-delim'.split(','))"), "[\"no-delim\"]");
-    assert_eq!(run_str("JSON.stringify('a::b'.split('::'))"), "[\"a\",\"b\"]");
-    assert_eq!(run_str("JSON.stringify('a,b,'.split(','))"), "[\"a\",\"b\",\"\"]"); // trailing empty
+    assert_eq!(
+        run_str("JSON.stringify('a,b,c'.split(','))"),
+        "[\"a\",\"b\",\"c\"]"
+    );
+    assert_eq!(
+        run_str("JSON.stringify('no-delim'.split(','))"),
+        "[\"no-delim\"]"
+    );
+    assert_eq!(
+        run_str("JSON.stringify('a::b'.split('::'))"),
+        "[\"a\",\"b\"]"
+    );
+    assert_eq!(
+        run_str("JSON.stringify('a,b,'.split(','))"),
+        "[\"a\",\"b\",\"\"]"
+    ); // trailing empty
 }
 
 #[test]
 fn split_char_and_default() {
-    assert_eq!(run_str("JSON.stringify('abc'.split(''))"), "[\"a\",\"b\",\"c\"]"); // char split
-    // A missing/undefined separator returns the whole string in a single-element
-    // array (NOT a per-character split).
+    assert_eq!(
+        run_str("JSON.stringify('abc'.split(''))"),
+        "[\"a\",\"b\",\"c\"]"
+    ); // char split
+       // A missing/undefined separator returns the whole string in a single-element
+       // array (NOT a per-character split).
     assert_eq!(run_str("JSON.stringify('abc'.split())"), "[\"abc\"]");
-    assert_eq!(run_str("JSON.stringify('abc'.split(undefined))"), "[\"abc\"]");
+    assert_eq!(
+        run_str("JSON.stringify('abc'.split(undefined))"),
+        "[\"abc\"]"
+    );
 }
 
 #[test]
 fn split_limit() {
-    assert_eq!(run_str("JSON.stringify('a,b,c,d'.split(',', 2))"), "[\"a\",\"b\"]");
+    assert_eq!(
+        run_str("JSON.stringify('a,b,c,d'.split(',', 2))"),
+        "[\"a\",\"b\"]"
+    );
     assert_eq!(run_str("'a,b,c'.split(',', 0).length"), "0"); // limit 0 -> empty
-    assert_eq!(run_str("JSON.stringify('a,b'.split(',', 10))"), "[\"a\",\"b\"]"); // limit > parts
+    assert_eq!(
+        run_str("JSON.stringify('a,b'.split(',', 10))"),
+        "[\"a\",\"b\"]"
+    ); // limit > parts
     assert_eq!(run_str("'a,b,c'.split(',', 1).join('|')"), "a");
 }
 
@@ -368,9 +396,12 @@ fn split_regex_and_groups() {
     // Trailing digit produces a trailing empty segment, exactly like JS:
     // "a1b2c3".split(/\d/) === ["a","b","c",""].
     assert_eq!(run_str("'a1b2c3'.split(/\\d/).join('|')"), "a|b|c|"); // regex sep dropped
-    // A capturing-group regex KEEPS the captured separators interleaved.
+                                                                      // A capturing-group regex KEEPS the captured separators interleaved.
     assert_eq!(run_str("'a1b2c'.split(/(\\d)/).join('|')"), "a|1|b|2|c");
-    assert_eq!(run_str("JSON.stringify('a1b2c'.split(/(\\d)/))"), "[\"a\",\"1\",\"b\",\"2\",\"c\"]");
+    assert_eq!(
+        run_str("JSON.stringify('a1b2c'.split(/(\\d)/))"),
+        "[\"a\",\"1\",\"b\",\"2\",\"c\"]"
+    );
     // limit applies after group interleaving
     assert_eq!(run_str("'a1b2c'.split(/(\\d)/, 3).join('|')"), "a|1|b");
     assert_eq!(run_str("'a1b2c3'.split(/\\d/, 2).join('|')"), "a|b");
@@ -399,7 +430,10 @@ fn replace_regex_global() {
 #[test]
 fn replace_dollar_patterns() {
     assert_eq!(run_str("'abc'.replace(/b/, '[$&]')"), "a[b]c"); // $& whole match
-    assert_eq!(run_str("'2020-01'.replace(/(\\d+)-(\\d+)/, '$2/$1')"), "01/2020"); // numbered
+    assert_eq!(
+        run_str("'2020-01'.replace(/(\\d+)-(\\d+)/, '$2/$1')"),
+        "01/2020"
+    ); // numbered
     assert_eq!(
         run_str("'2020-01'.replace(/(?<y>\\d+)-(?<m>\\d+)/, '$<m>/$<y>')"),
         "01/2020"
@@ -432,10 +466,7 @@ fn replace_function_replacer() {
         run_str("'hello'.replace('l', m => m.toUpperCase())"),
         "heLlo"
     );
-    assert_eq!(
-        run_str("'abcabc'.replace(/b/g, (m, off) => off)"),
-        "a1ca4c"
-    );
+    assert_eq!(run_str("'abcabc'.replace(/b/g, (m, off) => off)"), "a1ca4c");
 }
 
 // ============================================================================
@@ -453,7 +484,10 @@ fn replace_all_string() {
 #[test]
 fn replace_all_regex_and_patterns() {
     assert_eq!(run_str("'a1b2'.replaceAll(/\\d/g, '#')"), "a#b#");
-    assert_eq!(run_str("'x1x2x3'.replaceAll(/x(\\d)/g, '[$1]')"), "[1][2][3]");
+    assert_eq!(
+        run_str("'x1x2x3'.replaceAll(/x(\\d)/g, '[$1]')"),
+        "[1][2][3]"
+    );
     // A function replacer is invoked per match here too.
     assert_eq!(
         run_str("'a1b2'.replaceAll(/\\d/g, m => '<' + m + '>')"),
@@ -467,7 +501,10 @@ fn replace_all_regex_and_patterns() {
 
 #[test]
 fn match_global_array_of_strings() {
-    assert_eq!(run_str("JSON.stringify('a1b2c3'.match(/\\d/g))"), "[\"1\",\"2\",\"3\"]");
+    assert_eq!(
+        run_str("JSON.stringify('a1b2c3'.match(/\\d/g))"),
+        "[\"1\",\"2\",\"3\"]"
+    );
     assert_eq!(
         run_str("JSON.stringify('cat hat bat'.match(/\\w+at/g))"),
         "[\"cat\",\"hat\",\"bat\"]"
@@ -486,14 +523,20 @@ fn match_non_global_result() {
     assert_eq!(run_str("'a1b'.match(/(\\d)/).length"), "2"); // match + 1 group
     assert_eq!(run_str("'xy1'.match(/\\d/).index"), "2"); // match position
     assert_eq!(run_str("String('abc'.match(/\\d/))"), "null"); // no match -> null
-    // Documented G4 residual: non-global result is NOT branded as a real Array.
+                                                               // Documented G4 residual: non-global result is NOT branded as a real Array.
     assert_eq!(run_str("Array.isArray('a1'.match(/\\d/))"), "false"); // JS: true
 }
 
 #[test]
 fn match_named_groups() {
-    assert_eq!(run_str("'2020-01'.match(/(?<y>\\d+)-(?<m>\\d+)/).groups.y"), "2020");
-    assert_eq!(run_str("'2020-01'.match(/(?<y>\\d+)-(?<m>\\d+)/).groups.m"), "01");
+    assert_eq!(
+        run_str("'2020-01'.match(/(?<y>\\d+)-(?<m>\\d+)/).groups.y"),
+        "2020"
+    );
+    assert_eq!(
+        run_str("'2020-01'.match(/(?<y>\\d+)-(?<m>\\d+)/).groups.m"),
+        "01"
+    );
 }
 
 // ============================================================================
@@ -515,7 +558,10 @@ fn match_all_basics() {
 
 #[test]
 fn match_all_index_input_groups() {
-    assert_eq!(run_str("[...'a1b2'.matchAll(/\\d/g)].map(m => m.index).join(',')"), "1,3");
+    assert_eq!(
+        run_str("[...'a1b2'.matchAll(/\\d/g)].map(m => m.index).join(',')"),
+        "1,3"
+    );
     assert_eq!(run_str("[...'a1'.matchAll(/(\\d)/g)][0].input"), "a1");
     assert_eq!(run_str("[...'a1'.matchAll(/(\\d)/g)][0].length"), "2"); // match + group
     assert_eq!(
@@ -549,7 +595,7 @@ fn regex_exec() {
     assert_eq!(run_str("String(/\\d/.exec('abc'))"), "null"); // no match -> null
     assert_eq!(run_str("/(\\d+)/.exec('xy42')[0]"), "42"); // group 0 = whole match
     assert_eq!(run_str("/(\\d+)/.exec('xy42')[1]"), "42"); // group 1
-    // The `exec` result carries `.index` (match start in chars), like JS.
+                                                           // The `exec` result carries `.index` (match start in chars), like JS.
     assert_eq!(run_str("String(/(\\d+)/.exec('xy42').index)"), "2");
 }
 
@@ -560,13 +606,19 @@ fn regex_global_exec_loop() {
         run_str("const re = /\\d/g; const s = 'a1b2c3'; let out = []; let m; while ((m = re.exec(s)) !== null) out.push(m[0]); out.join(',')"),
         "1,2,3"
     );
-    assert_eq!(run_str("const r = /\\d/g; r.exec('a1b2'); r.lastIndex"), "2");
+    assert_eq!(
+        run_str("const r = /\\d/g; r.exec('a1b2'); r.lastIndex"),
+        "2"
+    );
 }
 
 #[test]
 fn regex_flags_in_methods() {
     assert_eq!(run_str("'Hello'.replace(/hello/i, 'hi')"), "hi");
-    assert_eq!(run_str("JSON.stringify('a\\nb\\nc'.match(/^\\w/gm))"), "[\"a\",\"b\",\"c\"]"); // multiline
+    assert_eq!(
+        run_str("JSON.stringify('a\\nb\\nc'.match(/^\\w/gm))"),
+        "[\"a\",\"b\",\"c\"]"
+    ); // multiline
     assert_eq!(run_str("'AbAb'.replace(/a/gi, 'x')"), "xbxb"); // global+insensitive
 }
 
@@ -619,7 +671,10 @@ fn template_basic_interpolation() {
     assert_eq!(run_str("const a = 'x', b = 'y'; `${a}-${b}`"), "x-y");
     assert_eq!(run_str("`sum: ${1 + 2 + 3}`"), "sum: 6");
     assert_eq!(run_str("`${1}${2}${3}`"), "123");
-    assert_eq!(run_str("const o = {name: 'Ada'}; `Hi ${o.name}!`"), "Hi Ada!");
+    assert_eq!(
+        run_str("const o = {name: 'Ada'}; `Hi ${o.name}!`"),
+        "Hi Ada!"
+    );
 }
 
 #[test]
@@ -635,7 +690,10 @@ fn template_coercion_of_values() {
 
 #[test]
 fn template_nesting_and_escapes() {
-    assert_eq!(run_str("const x = 2; `outer ${`inner ${x}`}`"), "outer inner 2"); // nested
+    assert_eq!(
+        run_str("const x = 2; `outer ${`inner ${x}`}`"),
+        "outer inner 2"
+    ); // nested
     assert_eq!(run_str("`a\\nb`.length"), "3"); // cooked newline
     assert_eq!(run_str("`a\\tb`.length"), "3"); // cooked tab
     assert_eq!(run_str("`a\\\\b`.length"), "3"); // cooked backslash
@@ -691,11 +749,20 @@ fn tagged_template_calls_tag_with_strings_and_values() {
 
 #[test]
 fn method_chaining() {
-    assert_eq!(run_str("'  Hello World  '.trim().toLowerCase()"), "hello world");
-    assert_eq!(run_str("'a,b,c'.split(',').map(s => s.toUpperCase()).join('-')"), "A-B-C");
+    assert_eq!(
+        run_str("'  Hello World  '.trim().toLowerCase()"),
+        "hello world"
+    );
+    assert_eq!(
+        run_str("'a,b,c'.split(',').map(s => s.toUpperCase()).join('-')"),
+        "A-B-C"
+    );
     assert_eq!(run_str("'one two three'.split(' ').length"), "3");
     assert_eq!(run_str("'  x  '.trim().padStart(3, '.')"), "..x");
-    assert_eq!(run_str("'Hello'.slice(0, 1).toLowerCase() + 'Hello'.slice(1)"), "hello");
+    assert_eq!(
+        run_str("'Hello'.slice(0, 1).toLowerCase() + 'Hello'.slice(1)"),
+        "hello"
+    );
     assert_eq!(
         run_str("'2020-01-15'.split('-').map(s => Number(s)).reduce((a, b) => a + b, 0)"),
         "2036"
@@ -734,7 +801,10 @@ fn multibyte_slice_substring_no_host_abort() {
     assert_eq!(run_str("\"ééé\".substring(1, 2)"), "é");
     assert_eq!(run_str("\"ééé\".substring(0, 2)"), "éé");
     // C3: indexOf returns a CHAR index; slice must consume it as a char index too.
-    assert_eq!(run_str("const u = \"é://host\"; u.slice(0, u.indexOf(\":\"))"), "é");
+    assert_eq!(
+        run_str("const u = \"é://host\"; u.slice(0, u.indexOf(\":\"))"),
+        "é"
+    );
     // Negative indices over multibyte text.
     assert_eq!(run_str("\"café\".slice(-2)"), "fé");
     assert_eq!(run_str("\"café\".slice(2)"), "fé");
@@ -764,7 +834,10 @@ fn astral_strings_are_utf16_indexed() {
     assert_eq!(run_str("'a😀b'.split('').length"), "4");
     // for-of / spread iterate by CODE POINT (an astral char is one element).
     assert_eq!(run_str("[...'a😀b'].length"), "3");
-    assert_eq!(run_str("(() => { let n = 0; for (const c of '😀😀') n++; return n; })()"), "2");
+    assert_eq!(
+        run_str("(() => { let n = 0; for (const c of '😀😀') n++; return n; })()"),
+        "2"
+    );
 }
 
 #[test]
@@ -776,11 +849,20 @@ fn lone_surrogates_round_trip_through_units() {
     assert_eq!(run_str("'😀'.slice(0, 1).charCodeAt(0)"), "55357");
     // Concatenating a high + low lone surrogate RE-PAIRS them into the astral
     // char (UTF-16 string semantics).
-    assert_eq!(run_str("(() => { const s = '😀'; return (s.charAt(0) + s.charAt(1)) === s; })()"), "true");
-    assert_eq!(run_str("(String.fromCharCode(55357) + String.fromCharCode(56832)).codePointAt(0)"), "128512");
+    assert_eq!(
+        run_str("(() => { const s = '😀'; return (s.charAt(0) + s.charAt(1)) === s; })()"),
+        "true"
+    );
+    assert_eq!(
+        run_str("(String.fromCharCode(55357) + String.fromCharCode(56832)).codePointAt(0)"),
+        "128512"
+    );
     // String.fromCharCode takes UTF-16 units (surrogate pair -> astral char);
     // String.fromCodePoint takes code points.
-    assert_eq!(run_str("String.fromCharCode(55357, 56832).codePointAt(0)"), "128512");
+    assert_eq!(
+        run_str("String.fromCharCode(55357, 56832).codePointAt(0)"),
+        "128512"
+    );
     assert_eq!(run_str("String.fromCodePoint(128512).length"), "2");
     assert_eq!(run_str("String.fromCodePoint(128512) === '😀'"), "true");
 }

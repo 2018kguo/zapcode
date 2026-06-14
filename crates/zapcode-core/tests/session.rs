@@ -627,10 +627,15 @@ fn session_array_input_rebases_over_existing_heap() {
 
     // First chunk leaves a user-global array in the session heap.
     let state = session
-        .run_chunk("const base = [100, 200]; base.length".to_string(), Vec::new())
+        .run_chunk(
+            "const base = [100, 200]; base.length".to_string(),
+            Vec::new(),
+        )
         .unwrap();
     let session = match state {
-        ZapcodeSessionState::Complete { output, session, .. } => {
+        ZapcodeSessionState::Complete {
+            output, session, ..
+        } => {
             assert_eq!(output, Value::Int(2));
             session
         }

@@ -240,62 +240,6 @@ impl Heap {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // Merging a host-built input heap into a live heap must rebase the input's
-    // handles past the slots already present, and keep nested handles valid —
-    // this is what the language bindings rely on for array/object inputs and
-    // resume values.
-    #[test]
-    fn absorb_rebases_top_level_and_nested_handles() {
-        // Live heap already holds one slot (e.g. a builtin / existing global).
-        let mut live = Heap::new();
-        let existing = live.alloc_array(vec![Value::Int(1)]);
-        assert_eq!(existing, 0);
-
-        // Host builds inputs in a standalone heap: an object { inner: [10, 20] }.
-        let mut input = Heap::new();
-        let inner = input.alloc_array(vec![Value::Int(10), Value::Int(20)]);
-        let mut fields = IndexMap::new();
-        fields.insert(Arc::from("inner"), Value::Array(inner));
-        let outer = input.alloc_object(fields);
-        let input_value = Value::Object(outer);
-
-        let offset = live.absorb(input);
-        assert_eq!(offset, 1, "input handle 0 lands at live.len() == 1");
-
-        let rebased = Heap::rebase_handles(input_value, offset);
-        let outer_h = match rebased {
-            Value::Object(h) => h,
-            _ => panic!("expected object"),
-        };
-        // The object's own handle was rebased, and the live slot it now points
-        // at still holds the nested array handle rebased to a valid slot.
-        let obj = live.object(outer_h).expect("object present after absorb");
-        let nested = match obj.get("inner").unwrap() {
-            Value::Array(h) => *h,
-            _ => panic!("expected nested array"),
-        };
-        assert_eq!(live.array(nested), &[Value::Int(10), Value::Int(20)]);
-        // The pre-existing live slot is untouched.
-        assert_eq!(live.array(existing), &[Value::Int(1)]);
-    }
-
-    #[test]
-    fn rebase_leaves_primitives_unchanged() {
-        assert!(matches!(
-            Heap::rebase_handles(Value::Int(5), 7),
-            Value::Int(5)
-        ));
-        assert!(matches!(
-            Heap::rebase_handles(Value::Array(2), 3),
-            Value::Array(5)
-        ));
-    }
-}
-
 impl Heap {
     /// Re-point every object key at the interner's canonical shared `Arc<str>`.
     /// After a snapshot load each key is a fresh per-occurrence allocation; this
@@ -428,5 +372,61 @@ impl Heap {
         }
         self.slots = new_slots;
         remap
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Merging a host-built input heap into a live heap must rebase the input's
+    // handles past the slots already present, and keep nested handles valid —
+    // this is what the language bindings rely on for array/object inputs and
+    // resume values.
+    #[test]
+    fn absorb_rebases_top_level_and_nested_handles() {
+        // Live heap already holds one slot (e.g. a builtin / existing global).
+        let mut live = Heap::new();
+        let existing = live.alloc_array(vec![Value::Int(1)]);
+        assert_eq!(existing, 0);
+
+        // Host builds inputs in a standalone heap: an object { inner: [10, 20] }.
+        let mut input = Heap::new();
+        let inner = input.alloc_array(vec![Value::Int(10), Value::Int(20)]);
+        let mut fields = IndexMap::new();
+        fields.insert(Arc::from("inner"), Value::Array(inner));
+        let outer = input.alloc_object(fields);
+        let input_value = Value::Object(outer);
+
+        let offset = live.absorb(input);
+        assert_eq!(offset, 1, "input handle 0 lands at live.len() == 1");
+
+        let rebased = Heap::rebase_handles(input_value, offset);
+        let outer_h = match rebased {
+            Value::Object(h) => h,
+            _ => panic!("expected object"),
+        };
+        // The object's own handle was rebased, and the live slot it now points
+        // at still holds the nested array handle rebased to a valid slot.
+        let obj = live.object(outer_h).expect("object present after absorb");
+        let nested = match obj.get("inner").unwrap() {
+            Value::Array(h) => *h,
+            _ => panic!("expected nested array"),
+        };
+        assert_eq!(live.array(nested), &[Value::Int(10), Value::Int(20)]);
+        // The pre-existing live slot is untouched.
+        assert_eq!(live.array(existing), &[Value::Int(1)]);
+    }
+
+    #[test]
+    fn rebase_leaves_primitives_unchanged() {
+        assert!(matches!(
+            Heap::rebase_handles(Value::Int(5), 7),
+            Value::Int(5)
+        ));
+        assert!(matches!(
+            Heap::rebase_handles(Value::Array(2), 3),
+            Value::Array(5)
+        ));
     }
 }

@@ -124,7 +124,7 @@ pub struct GeneratorObject {
     pub suspended: Option<SuspendedFrame>,
     /// Whether the generator has completed.
     pub done: bool,
-    /// The `this` binding for a generator METHOD (`*vals()` / 
+    /// The `this` binding for a generator METHOD (`*vals()` /
     /// `*[Symbol.iterator]()` on an object or class instance), captured at
     /// call time so the body's `this.x` reads resolve. Boxed: `Value`
     /// contains `GeneratorObject`, so an inline field would be recursive.
@@ -232,10 +232,10 @@ impl Value {
             Some((rest, 16))
         } else if let Some(rest) = t.strip_prefix("0b").or_else(|| t.strip_prefix("0B")) {
             Some((rest, 2))
-        } else if let Some(rest) = t.strip_prefix("0o").or_else(|| t.strip_prefix("0O")) {
-            Some((rest, 8))
         } else {
-            None
+            t.strip_prefix("0o")
+                .or_else(|| t.strip_prefix("0O"))
+                .map(|rest| (rest, 8))
         };
         if let Some((digits, base)) = radix {
             return match u64::from_str_radix(digits, base) {

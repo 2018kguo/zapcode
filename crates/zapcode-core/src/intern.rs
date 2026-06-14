@@ -110,7 +110,11 @@ mod tests {
         // A fresh, distinct allocation of the same string folds onto the
         // canonical one, dropping the caller's buffer.
         let dup: Arc<str> = Arc::from("name");
-        assert_ne!(addr(&dup), owned_addr, "test setup: dup must be a new buffer");
+        assert_ne!(
+            addr(&dup),
+            owned_addr,
+            "test setup: dup must be a new buffer"
+        );
         let folded = interner.intern_arc(dup);
         assert_eq!(addr(&folded), owned_addr);
     }
@@ -140,8 +144,14 @@ mod tests {
         let o1 = heap.object(h1).unwrap();
         let o2 = heap.object(h2).unwrap();
         // Order preserved.
-        assert_eq!(o1.keys().map(|k| k.to_string()).collect::<Vec<_>>(), ["id", "name"]);
-        assert_eq!(o2.keys().map(|k| k.to_string()).collect::<Vec<_>>(), ["id", "name"]);
+        assert_eq!(
+            o1.keys().map(|k| k.to_string()).collect::<Vec<_>>(),
+            ["id", "name"]
+        );
+        assert_eq!(
+            o2.keys().map(|k| k.to_string()).collect::<Vec<_>>(),
+            ["id", "name"]
+        );
         // Same string now shares ONE allocation across both objects.
         let id1 = addr(o1.keys().next().unwrap());
         let id2 = addr(o2.keys().next().unwrap());

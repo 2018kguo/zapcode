@@ -11,7 +11,7 @@
  * Run: npm start
  */
 
-import { zapcode } from "@unchartedfr/zapcode-ai";
+import { zapcode } from "@arcainc/zapcode-ai";
 import { generateText } from "ai";
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";

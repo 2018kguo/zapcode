@@ -64,7 +64,10 @@ fn match_result_named_groups() {
 #[test]
 fn match_result_groups_undefined_without_named() {
     // No named groups -> .groups is undefined (matching JS).
-    assert_eq!(run_str(r#"String("a1".match(/([a-z])(\d)/).groups)"#), "undefined");
+    assert_eq!(
+        run_str(r#"String("a1".match(/([a-z])(\d)/).groups)"#),
+        "undefined"
+    );
 }
 
 #[test]
@@ -84,14 +87,20 @@ fn no_match_is_null() {
 #[test]
 fn global_match_still_returns_plain_array_of_strings() {
     // /g keeps the plain-array-of-matched-strings behavior (JS does too).
-    assert_eq!(run_str(r#""cat bat sat".match(/at/g).join(",")"#), "at,at,at");
+    assert_eq!(
+        run_str(r#""cat bat sat".match(/at/g).join(",")"#),
+        "at,at,at"
+    );
     assert_eq!(run_str(r#""cat bat sat".match(/at/g).length"#), "3");
     assert_eq!(run_str(r#"Array.isArray("cat bat".match(/at/g))"#), "true");
 }
 
 #[test]
 fn match_all_yields_array_like_objects() {
-    assert_eq!(run_str(r#""x1 y2 z3".matchAll(/([a-z])(\d)/g).length"#), "3");
+    assert_eq!(
+        run_str(r#""x1 y2 z3".matchAll(/([a-z])(\d)/g).length"#),
+        "3"
+    );
     // Each yielded result carries indexed groups, .index, .input, .length.
     let code = r#"
         const ms = [..."x1 y2 z3".matchAll(/([a-z])(\d)/g)];
@@ -130,5 +139,8 @@ fn match_all_iteration_via_for_of() {
 #[test]
 fn match_result_is_not_an_array() {
     // Documented trade-off: the non-global array-like result is an object.
-    assert_eq!(run_str(r#"Array.isArray("a1".match(/([a-z])(\d)/))"#), "false");
+    assert_eq!(
+        run_str(r#"Array.isArray("a1".match(/([a-z])(\d)/))"#),
+        "false"
+    );
 }

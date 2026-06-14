@@ -39,7 +39,10 @@ fn throw_inside_function_reports_the_throw_line() {
     let e = run_err("function f() {\n  const x = 1;\n  throw new Error(\"inner\");\n}\nf();");
     // Line 3 is the `throw`, not the call site (line 5) or the decl (line 1).
     assert!(e.contains("\n    at 3:3"), "wrong line: {e}");
-    assert!(e.contains("throw new Error(\"inner\");"), "missing frame: {e}");
+    assert!(
+        e.contains("throw new Error(\"inner\");"),
+        "missing frame: {e}"
+    );
 }
 
 #[test]
@@ -160,11 +163,15 @@ fn uncaught_error_through_finally_keeps_the_throw_site() {
     // The re-raise after a finally body must stay attributed to the ORIGINAL
     // throw, not the finally's last line — pointing the agent at an innocent
     // cleanup statement is worse than no location at all.
-    let err = run_err(
-        "try {\n  throw new Error(\"boom\");\n} finally {\n  const cleanup = 1;\n}",
+    let err = run_err("try {\n  throw new Error(\"boom\");\n} finally {\n  const cleanup = 1;\n}");
+    assert!(
+        err.starts_with("runtime error: Error: boom"),
+        "first line: {err}"
     );
-    assert!(err.starts_with("runtime error: Error: boom"), "first line: {err}");
-    assert!(err.contains("at 2:3"), "expected the throw's line, got: {err}");
+    assert!(
+        err.contains("at 2:3"),
+        "expected the throw's line, got: {err}"
+    );
     assert!(
         err.contains("throw new Error"),
         "code frame should show the throw, got: {err}"
@@ -180,6 +187,9 @@ fn nested_finally_chain_keeps_the_throw_site() {
     let err = run_err(
         "try {\n  try {\n    throw new TypeError(\"inner\");\n  } finally {\n    const a = 1;\n  }\n} finally {\n  const b = 2;\n}",
     );
-    assert!(err.contains("at 3:5"), "expected the inner throw line, got: {err}");
+    assert!(
+        err.contains("at 3:5"),
+        "expected the inner throw line, got: {err}"
+    );
     assert!(!err.contains("const b"), "got: {err}");
 }

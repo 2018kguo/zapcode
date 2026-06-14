@@ -1,5 +1,5 @@
 /**
- * AI Agent using @unchartedfr/zapcode-ai — the high-level wrapper.
+ * AI Agent using @arcainc/zapcode-ai — the high-level wrapper.
  *
  * This is the recommended way to use Zapcode with AI models.
  * One call to `zapcode()` gives you `{ system, tools }` that plug
@@ -12,7 +12,7 @@
  * Run with: npm run agent
  */
 
-import { zapcode } from "@unchartedfr/zapcode-ai";
+import { zapcode } from "@arcainc/zapcode-ai";
 import { generateText } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 

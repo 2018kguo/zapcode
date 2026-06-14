@@ -37,7 +37,10 @@ fn bigint_literals_and_typeof() {
 #[test]
 fn bigint_arithmetic_is_arbitrary_precision() {
     assert_eq!(run_str("String(10n + 20n)"), "30");
-    assert_eq!(run_str("String(9007199254740993n + 1n)"), "9007199254740994");
+    assert_eq!(
+        run_str("String(9007199254740993n + 1n)"),
+        "9007199254740994"
+    );
     assert_eq!(
         run_str("String(123456789012345678901234567890n * 2n)"),
         "246913578024691357802469135780"
@@ -47,7 +50,10 @@ fn bigint_arithmetic_is_arbitrary_precision() {
     assert_eq!(run_str("String(-7n / 2n)"), "-3");
     assert_eq!(run_str("String(7n % 3n)"), "1");
     assert_eq!(run_str("String(2n ** 10n)"), "1024");
-    assert_eq!(run_str("(function(){ let x = 5n; x++; return String(x); })()"), "6");
+    assert_eq!(
+        run_str("(function(){ let x = 5n; x++; return String(x); })()"),
+        "6"
+    );
 }
 
 #[test]
@@ -68,7 +74,9 @@ fn bigint_division_and_exponent_errors() {
 
 #[test]
 fn mixing_bigint_and_number_in_arithmetic_throws() {
-    for op in ["10n + 5", "10n - 5", "10n * 5", "10n / 5", "10n % 5", "2n ** 3"] {
+    for op in [
+        "10n + 5", "10n - 5", "10n * 5", "10n / 5", "10n % 5", "2n ** 3",
+    ] {
         assert_eq!(
             run_str(&format!(
                 "(function(){{ try {{ return String({op}); }} catch (e) {{ return e.name; }} }})()"
@@ -102,7 +110,9 @@ fn bigint_constructor_and_methods() {
     assert_eq!(run_str("String(BigInt('100'))"), "100");
     assert_eq!(run_str("String(BigInt(true))"), "1");
     assert_eq!(
-        run_str("(function(){ try { return String(BigInt(1.5)); } catch (e) { return e.name; } })()"),
+        run_str(
+            "(function(){ try { return String(BigInt(1.5)); } catch (e) { return e.name; } })()"
+        ),
         "RangeError"
     );
     assert_eq!(run_str("(255n).toString(16)"), "ff");

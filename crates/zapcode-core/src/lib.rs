@@ -56,11 +56,11 @@ pub(crate) mod wire;
 
 pub use compiler::instruction::BatchKind;
 pub use error::ZapcodeError;
+pub use jsstring::JsString;
 pub use program::ZapcodeProgram;
 pub use sandbox::ResourceLimits;
 pub use session::{ZapcodeSessionSnapshot, ZapcodeSessionState};
 pub use snapshot::ZapcodeSnapshot;
 pub use trace::{ExecutionTrace, TraceSpan, TraceStatus};
-pub use jsstring::JsString;
 pub use value::Value;
 pub use vm::{ExternalCall, RunResult, VmState, ZapcodeRun};

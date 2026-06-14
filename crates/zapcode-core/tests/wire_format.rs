@@ -144,7 +144,9 @@ fn load_rejects_decompression_bomb() {
         stored.len()
     );
     let frame = forge_frame(2 /* session */, 1 /* deflate */, &stored);
-    let err = ZapcodeSessionSnapshot::load(&frame).unwrap_err().to_string();
+    let err = ZapcodeSessionSnapshot::load(&frame)
+        .unwrap_err()
+        .to_string();
     assert!(
         err.contains("decompression bomb") || err.contains("load limit"),
         "expected a decompression-bomb rejection, got: {err}"

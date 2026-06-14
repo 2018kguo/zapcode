@@ -325,8 +325,7 @@ fn test_method_this_mutation_persists() {
     // Regression test: mutations to `this` properties inside method calls must
     // persist back to the original object variable. Previously, the receiver was
     // cloned and mutations were lost.
-    let (result, heap) = run(
-        r#"
+    let (result, heap) = run(r#"
         class Counter {
             count: number;
             constructor(start: number) {
@@ -339,8 +338,7 @@ fn test_method_this_mutation_persists() {
         }
         const c = new Counter(10);
         [c.increment(), c.increment(), c.increment()]
-    "#,
-    );
+    "#);
     match result {
         Value::Array(h) => {
             let arr = heap.array_vec(h);
@@ -384,8 +382,7 @@ fn test_method_this_mutation_persists_local() {
 #[test]
 fn test_method_this_mutation_multiple_instances() {
     // Ensure mutations to one instance don't affect another.
-    let (result, heap) = run(
-        r#"
+    let (result, heap) = run(r#"
         class Counter {
             count: number;
             constructor(start: number) {
@@ -402,8 +399,7 @@ fn test_method_this_mutation_multiple_instances() {
         a.increment();
         b.increment();
         [a.count, b.count]
-    "#,
-    );
+    "#);
     match result {
         Value::Array(h) => {
             let arr = heap.array_vec(h);

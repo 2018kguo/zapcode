@@ -77,10 +77,7 @@ impl ZapcodeProgram {
             .map_err(|e| ZapcodeError::SnapshotError(format!("program dump failed: {}", e)))?;
         // Same backstop as snapshots: don't emit a blob too large to move
         // between processes / activities.
-        crate::wire::check_state_size(
-            payload.len(),
-            ResourceLimits::default().max_snapshot_bytes,
-        )?;
+        crate::wire::check_state_size(payload.len(), ResourceLimits::default().max_snapshot_bytes)?;
         Ok(crate::wire::encode_frame(FrameKind::Program, &payload))
     }
 
@@ -119,8 +116,12 @@ impl ZapcodeProgram {
         // `self.clone()` now bumps the bytecode's `Arc` refcount (plus the
         // small ext-names / source strings) rather than deep-copying the
         // program: every run shares the one cached bytecode allocation.
-        self.clone()
-            .run_consuming(input_values, input_heap, limits, SpanBuilder::new("zapcode.run"))
+        self.clone().run_consuming(
+            input_values,
+            input_heap,
+            limits,
+            SpanBuilder::new("zapcode.run"),
+        )
     }
 
     /// Start execution, returning the raw `VmState` (the suspension /

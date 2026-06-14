@@ -3,7 +3,6 @@ use std::collections::{HashMap, HashSet};
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::instruction::BatchKind;
-use crate::jsstring::JsString;
 use crate::compiler::{compile_session_chunk, CompiledProgram, TopLevelBindingKind};
 use crate::error::{Result, ZapcodeError};
 use crate::sandbox::ResourceLimits;
@@ -273,8 +272,7 @@ impl ZapcodeSessionSnapshot {
         programs.push(std::sync::Arc::new(compiled));
         let program_index = programs.len() - 1;
 
-        let mut vm =
-            Vm::with_programs_and_heap(programs, idle.limits.clone(), ext_set, idle.heap);
+        let mut vm = Vm::with_programs_and_heap(programs, idle.limits.clone(), ext_set, idle.heap);
         for (name, value) in idle.globals {
             vm.globals.insert(name, value);
         }

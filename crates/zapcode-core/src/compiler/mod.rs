@@ -1,9 +1,9 @@
 pub mod instruction;
 
-use std::sync::Arc;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::error::{Result, ZapcodeError};
 use crate::parser::ir::*;
@@ -418,7 +418,9 @@ impl Compiler {
                 .iter()
                 .any(|d| d.init.as_ref().is_some_and(Self::expr_uses_arguments)),
             Statement::Expression { expr, .. } => Self::expr_uses_arguments(expr),
-            Statement::Return { value, .. } => value.as_ref().is_some_and(Self::expr_uses_arguments),
+            Statement::Return { value, .. } => {
+                value.as_ref().is_some_and(Self::expr_uses_arguments)
+            }
             Statement::Throw { value, .. } => Self::expr_uses_arguments(value),
             Statement::If {
                 test,
@@ -457,7 +459,9 @@ impl Compiler {
             } => {
                 Self::body_uses_arguments(try_body)
                     || Self::body_uses_arguments(catch_body)
-                    || finally_body.as_deref().is_some_and(Self::body_uses_arguments)
+                    || finally_body
+                        .as_deref()
+                        .is_some_and(Self::body_uses_arguments)
             }
             Statement::Labeled { body, .. } => Self::stmt_uses_arguments(body),
             Statement::Switch {
@@ -592,7 +596,11 @@ impl Compiler {
                     // default and destructure it into the leaf slots; then apply
                     // any inner field/element defaults.
                     nested => {
-                        func_compiler.emit_pattern_param_default(&Self::param_temp_name(i), nested, default)?;
+                        func_compiler.emit_pattern_param_default(
+                            &Self::param_temp_name(i),
+                            nested,
+                            default,
+                        )?;
                     }
                 },
                 ParamPattern::ObjectDestructure(_) | ParamPattern::ArrayDestructure(_) => {
@@ -1205,7 +1213,6 @@ impl Compiler {
         finally_body: Option<&[Statement]>,
         completion: Option<()>,
     ) -> Result<()> {
-
         // ---- No finally: the classic catch-only lowering. ----
         let Some(finally) = finally_body else {
             let setup = self.emit(Instruction::SetupTry {
@@ -1839,7 +1846,8 @@ impl Compiler {
                         self.emit_pattern_inner_defaults(nested, false)?;
                     } else {
                         let name = field.alias.as_ref().unwrap_or(&field.key);
-                        if let (Some(def), Some(slot)) = (&field.default, self.resolve_local(name)) {
+                        if let (Some(def), Some(slot)) = (&field.default, self.resolve_local(name))
+                        {
                             self.emit_slot_default(slot, def)?;
                         }
                     }
@@ -1915,7 +1923,9 @@ impl Compiler {
                 let mut parts = 0;
                 for (i, quasi) in quasis.iter().enumerate() {
                     if !quasi.is_empty() {
-                        self.emit(Instruction::Push(Constant::String(Arc::from(quasi.as_str()))));
+                        self.emit(Instruction::Push(Constant::String(Arc::from(
+                            quasi.as_str(),
+                        ))));
                         parts += 1;
                     }
                     if i < exprs.len() {
@@ -1924,7 +1934,9 @@ impl Compiler {
                     }
                 }
                 if parts == 0 {
-                    self.emit(Instruction::Push(Constant::String(Arc::from(String::new().as_str()))));
+                    self.emit(Instruction::Push(Constant::String(Arc::from(
+                        String::new().as_str(),
+                    ))));
                 } else {
                     // Always concat (even a single interpolated expression) so the
                     // result is string-coerced: `${obj}` yields "[object Object]".
@@ -1932,14 +1944,16 @@ impl Compiler {
                 }
             }
             Expr::RegExpLit { pattern, flags } => {
-                self.emit(Instruction::Push(Constant::String(
-                    Arc::from("__regexp__"),
-                )));
+                self.emit(Instruction::Push(Constant::String(Arc::from("__regexp__"))));
                 self.emit(Instruction::Push(Constant::Bool(true)));
                 self.emit(Instruction::Push(Constant::String(Arc::from("pattern"))));
-                self.emit(Instruction::Push(Constant::String(Arc::from(pattern.as_str()))));
+                self.emit(Instruction::Push(Constant::String(Arc::from(
+                    pattern.as_str(),
+                ))));
                 self.emit(Instruction::Push(Constant::String(Arc::from("flags"))));
-                self.emit(Instruction::Push(Constant::String(Arc::from(flags.as_str()))));
+                self.emit(Instruction::Push(Constant::String(Arc::from(
+                    flags.as_str(),
+                ))));
                 // `lastIndex` is the mutable cursor maintained by `exec`/`test` on
                 // /g (and /y) regexes so that repeated calls advance through the
                 // subject string and eventually terminate (G3).
@@ -2010,7 +2024,9 @@ impl Compiler {
                         match &prop.key_expr {
                             Some(key_expr) => c.compile_expr(key_expr),
                             None => {
-                                c.emit(Instruction::Push(Constant::String(Arc::from(prop.key.as_str()))));
+                                c.emit(Instruction::Push(Constant::String(Arc::from(
+                                    prop.key.as_str(),
+                                ))));
                                 Ok(())
                             }
                         }
@@ -2062,7 +2078,9 @@ impl Compiler {
                         match &prop.key_expr {
                             Some(key_expr) => self.compile_expr(key_expr)?,
                             None => {
-                                self.emit(Instruction::Push(Constant::String(Arc::from(prop.key.as_str()))));
+                                self.emit(Instruction::Push(Constant::String(Arc::from(
+                                    prop.key.as_str(),
+                                ))));
                             }
                         }
                         self.compile_expr(&prop.value)?;
@@ -2082,9 +2100,9 @@ impl Compiler {
                                 match &prop.key_expr {
                                     Some(key_expr) => self.compile_expr(key_expr)?,
                                     None => {
-                                        self.emit(Instruction::Push(Constant::String(
-                                            Arc::from(prop.key.as_str()),
-                                        )));
+                                        self.emit(Instruction::Push(Constant::String(Arc::from(
+                                            prop.key.as_str(),
+                                        ))));
                                     }
                                 }
                                 self.compile_expr(&prop.value)?;
@@ -2482,10 +2500,7 @@ impl Compiler {
                         }
                         self.emit(Instruction::CallSuper {
                             arg_count: args.len(),
-                            class: self
-                                .current_class
-                                .as_deref()
-                                .map(Arc::from),
+                            class: self.current_class.as_deref().map(Arc::from),
                         });
                         return Ok(());
                     }
@@ -2532,7 +2547,10 @@ impl Compiler {
                             for arg in args {
                                 self.compile_expr(arg)?;
                             }
-                            self.emit(Instruction::CallExternalDeferred(Arc::from(name.as_str()), args.len()));
+                            self.emit(Instruction::CallExternalDeferred(
+                                Arc::from(name.as_str()),
+                                args.len(),
+                            ));
                             self.emit(Instruction::MakeCallPromise);
                         }
                         return Ok(());
@@ -2578,7 +2596,10 @@ impl Compiler {
                                 for arg in args {
                                     self.compile_expr(arg)?;
                                 }
-                                self.emit(Instruction::CallExternal(Arc::from(name.as_str()), args.len()));
+                                self.emit(Instruction::CallExternal(
+                                    Arc::from(name.as_str()),
+                                    args.len(),
+                                ));
                                 handled = true;
                             }
                         }
@@ -2620,10 +2641,10 @@ impl Compiler {
                     let exit = self.current_offset();
                     self.patch_jump(exit_jump, exit);
                     self.emit(Instruction::Pop); // pop the exhausted iterator
-                    // Completion value of `yield* X` (the iterator's return value).
-                    // For array/string/Set/Map iterators this is `undefined`, which
-                    // matches JS. (A delegated generator's explicit return value is
-                    // not propagated here.)
+                                                 // Completion value of `yield* X` (the iterator's return value).
+                                                 // For array/string/Set/Map iterators this is `undefined`, which
+                                                 // matches JS. (A delegated generator's explicit return value is
+                                                 // not propagated here.)
                     self.emit(Instruction::Push(Constant::Undefined));
                 } else {
                     // Compile the yielded value (or undefined if none)
@@ -2715,7 +2736,10 @@ impl Compiler {
     /// Returns `true` if it handled the call.
     fn try_compile_promise_batch(&mut self, callee: &Expr, args: &[Expr]) -> Result<bool> {
         // callee must be `Promise.<combinator>`
-        let Expr::Member { object, property, .. } = callee else {
+        let Expr::Member {
+            object, property, ..
+        } = callee
+        else {
             return Ok(false);
         };
         if !matches!(object.as_ref(), Expr::Ident(n) if n == "Promise") {
@@ -2756,7 +2780,10 @@ impl Compiler {
                         for arg in &call_args {
                             self.compile_expr(arg)?;
                         }
-                        self.emit(Instruction::CallExternalDeferred(Arc::from(name.as_str()), argc));
+                        self.emit(Instruction::CallExternalDeferred(
+                            Arc::from(name.as_str()),
+                            argc,
+                        ));
                     } else {
                         self.compile_expr(expr)?;
                     }
@@ -2868,7 +2895,9 @@ impl Compiler {
     /// Emit `(name_string, closure)` pairs for a group of class methods/accessors.
     fn push_class_method_pairs(&mut self, ms: &[ClassMethod]) -> Result<()> {
         for m in ms {
-            self.emit(Instruction::Push(Constant::String(Arc::from(m.name.as_str()))));
+            self.emit(Instruction::Push(Constant::String(Arc::from(
+                m.name.as_str(),
+            ))));
             let compiled = self.compile_function_def(&m.func)?;
             let func_idx = self.functions.borrow().len();
             self.functions.borrow_mut().push(compiled);
@@ -2883,7 +2912,9 @@ impl Compiler {
     /// instance/class so `this.other` references resolve.
     fn push_class_field_pairs(&mut self, fields: &[ClassField]) -> Result<()> {
         for f in fields {
-            self.emit(Instruction::Push(Constant::String(Arc::from(f.name.as_str()))));
+            self.emit(Instruction::Push(Constant::String(Arc::from(
+                f.name.as_str(),
+            ))));
             let init = FunctionDef {
                 name: None,
                 params: Vec::new(),
@@ -2907,11 +2938,7 @@ impl Compiler {
     /// Compile a destructuring ASSIGNMENT expression (`[a, b] = …`,
     /// `({x: o.p} = …)`). The whole expression evaluates to the right-hand value
     /// (left on the stack), matching JS.
-    fn compile_destructure_assign(
-        &mut self,
-        pattern: &AssignPattern,
-        value: &Expr,
-    ) -> Result<()> {
+    fn compile_destructure_assign(&mut self, pattern: &AssignPattern, value: &Expr) -> Result<()> {
         self.compile_expr(value)?;
         // Keep one copy of the source as the expression's result; destructure a
         // duplicate into the targets.
@@ -2945,8 +2972,7 @@ impl Compiler {
                 Ok(())
             }
             AssignPattern::Object { fields, rest } => {
-                let excluded: Vec<String> =
-                    fields.iter().map(|f| f.key.clone()).collect();
+                let excluded: Vec<String> = fields.iter().map(|f| f.key.clone()).collect();
                 for field in fields {
                     self.emit(Instruction::Dup);
                     if let Some(key_expr) = &field.computed_key {
@@ -3145,7 +3171,6 @@ impl Compiler {
         Ok(())
     }
 }
-
 
 /// Whether an expression's access/call spine contains an optional (`?.`) link,
 /// i.e. it is the top of an optional chain and must short-circuit as a whole.

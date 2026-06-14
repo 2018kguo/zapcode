@@ -6,8 +6,8 @@ use napi_derive::napi;
 
 use zapcode_core::heap::Heap;
 use zapcode_core::{
-    ExecutionTrace, ResourceLimits, RunResult, TraceSpan, TraceStatus, Value, VmState, ZapcodeProgram,
-    ZapcodeRun, ZapcodeSessionSnapshot, ZapcodeSessionState, ZapcodeSnapshot,
+    ExecutionTrace, ResourceLimits, RunResult, TraceSpan, TraceStatus, Value, VmState,
+    ZapcodeProgram, ZapcodeRun, ZapcodeSessionSnapshot, ZapcodeSessionState, ZapcodeSnapshot,
 };
 
 // ---------------------------------------------------------------------------
@@ -1064,7 +1064,10 @@ fn value_to_json_inner(
                     if zapcode_core::vm::is_internal_marker_key(k) {
                         continue;
                     }
-                    map.insert(k.to_string(), value_to_json_inner(v, heap, seen, depth + 1)?);
+                    map.insert(
+                        k.to_string(),
+                        value_to_json_inner(v, heap, seen, depth + 1)?,
+                    );
                 }
                 seen.pop();
             }

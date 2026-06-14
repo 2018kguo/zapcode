@@ -60,7 +60,7 @@ fn decimal_integer_literals() {
     assert_eq!(run_str("1000"), "1000");
     assert_eq!(run_str("123456789"), "123456789");
     assert_eq!(run_str("9007199254740991"), "9007199254740991"); // MAX_SAFE_INTEGER
-    // A single leading zero on a non-octal-looking literal is just 0.
+                                                                 // A single leading zero on a non-octal-looking literal is just 0.
     assert_eq!(run_str("0 + 5"), "5");
 }
 
@@ -158,8 +158,8 @@ fn exponent_literals() {
     assert_eq!(run_str("1.5e2"), "150");
     assert_eq!(run_str("2.5e-1"), "0.25");
     assert_eq!(run_str("1e+3"), "1000"); // explicit + sign
-    // Number-to-string switches to exponential at magnitude >= 1e21 and for
-    // 0 < magnitude < 1e-6, matching V8 / ECMA-262 Number::toString.
+                                         // Number-to-string switches to exponential at magnitude >= 1e21 and for
+                                         // 0 < magnitude < 1e-6, matching V8 / ECMA-262 Number::toString.
     assert_eq!(run_str("6.022e23"), "6.022e+23");
     assert_eq!(run_str("1e21"), "1e+21");
     assert_eq!(run_str("1e-7"), "1e-7");
@@ -177,7 +177,7 @@ fn special_numeric_values() {
     // Negative zero stringifies as "0".
     assert_eq!(run_str("String(-0)"), "0");
     assert_eq!(run_str("-0 === 0"), "true"); // === treats -0 and 0 as equal
-    // The negative-zero sign is preserved through division (matches V8).
+                                             // The negative-zero sign is preserved through division (matches V8).
     assert_eq!(run_str("String(1 / -0)"), "-Infinity");
     assert_eq!(run_str("Number.isNaN(0 / 0)"), "true");
 }
@@ -278,7 +278,10 @@ fn template_literals_interpolation() {
     assert_eq!(run_str("const a = 1, b = 2; `${a}+${b}=${a + b}`"), "1+2=3");
     assert_eq!(run_str("`${'a'}${'b'}${'c'}`"), "abc");
     // Interpolating non-strings coerces via String().
-    assert_eq!(run_str("`${true} ${null} ${undefined}`"), "true null undefined");
+    assert_eq!(
+        run_str("`${true} ${null} ${undefined}`"),
+        "true null undefined"
+    );
     assert_eq!(run_str("`${[1,2,3]}`"), "1,2,3");
     assert_eq!(run_str("`${ {a:1} }`"), "[object Object]");
     assert_eq!(run_str("`${1/0}`"), "Infinity");
@@ -292,10 +295,7 @@ fn template_literals_nesting() {
         run_str("const x = 2; `${x > 1 ? `big ${x}` : 'small'}`"),
         "big 2"
     );
-    assert_eq!(
-        run_str("`${[1,2].map(n => `#${n}`).join(',')}`"),
-        "#1,#2"
-    );
+    assert_eq!(run_str("`${[1,2].map(n => `#${n}`).join(',')}`"), "#1,#2");
 }
 
 #[test]
@@ -315,10 +315,7 @@ fn template_literals_multiline() {
     // A real newline inside a template is preserved literally.
     assert_eq!(run_str("`line1\nline2`.split('\\n').length"), "2");
     assert_eq!(run_str("`a\nb\nc`.length"), "5"); // a \n b \n c
-    assert_eq!(
-        run_str("const s = `first\nsecond`; s.indexOf('\\n')"),
-        "5"
-    );
+    assert_eq!(run_str("const s = `first\nsecond`; s.indexOf('\\n')"), "5");
 }
 
 // ============================================================================
@@ -343,7 +340,7 @@ fn regex_literal_flags_property() {
     assert_eq!(run_str("/abc/i.flags"), "i");
     assert_eq!(run_str("/abc/m.flags"), "m");
     assert_eq!(run_str("/abc/.flags"), ""); // no flags
-    // Regex accessor properties derived from source/flags now resolve like V8.
+                                            // Regex accessor properties derived from source/flags now resolve like V8.
     assert_eq!(run_str("let r = /abc/; String(r.source)"), "abc");
     assert_eq!(run_str("let r = /abc/g; String(r.global)"), "true");
     assert_eq!(run_str("let r = /abc/i; String(r.ignoreCase)"), "true");
@@ -439,7 +436,10 @@ fn asi_newline_terminated_statements() {
     // No semicolons; newlines drive ASI.
     assert_eq!(run_str("const a = 1\nconst b = 2\na + b"), "3");
     assert_eq!(run_str("let x = 5\nx = x + 1\nx"), "6");
-    assert_eq!(run_str("const a = 1\nconst b = 2\nconst c = 3\na + b + c"), "6");
+    assert_eq!(
+        run_str("const a = 1\nconst b = 2\nconst c = 3\na + b + c"),
+        "6"
+    );
 }
 
 #[test]
@@ -452,10 +452,7 @@ fn asi_return_statement() {
     // return on the same line as its value works.
     assert_eq!(run_str("function g() {\n  return 42\n}\ng()"), "42");
     // return with expression spanning is fine without ASI break.
-    assert_eq!(
-        run_str("function h() {\n  return 1 +\n    2\n}\nh()"),
-        "3"
-    );
+    assert_eq!(run_str("function h() {\n  return 1 +\n    2\n}\nh()"), "3");
 }
 
 #[test]
@@ -501,15 +498,24 @@ fn identifier_characters() {
 #[test]
 fn identifier_unicode_letters() {
     // Unicode letters are valid identifier characters (BMP letters).
-    assert_eq!(run_str("const \u{e9}l\u{e9}ment = 1; \u{e9}l\u{e9}ment"), "1");
+    assert_eq!(
+        run_str("const \u{e9}l\u{e9}ment = 1; \u{e9}l\u{e9}ment"),
+        "1"
+    );
     assert_eq!(run_str("const \u{3c0} = 3; \u{3c0}"), "3"); // π
 }
 
 #[test]
 fn identifier_keywords_as_property_names() {
     // Reserved words are allowed as property keys (member/object literal keys).
-    assert_eq!(run_str("const o = { class: 1, if: 2, return: 3 }; o.class"), "1");
-    assert_eq!(run_str("const o = { for: 5, while: 6 }; o.for + o.while"), "11");
+    assert_eq!(
+        run_str("const o = { class: 1, if: 2, return: 3 }; o.class"),
+        "1"
+    );
+    assert_eq!(
+        run_str("const o = { for: 5, while: 6 }; o.for + o.while"),
+        "11"
+    );
     assert_eq!(run_str("const o = { new: 1 }; o.new"), "1");
     assert_eq!(run_str("const o = { default: 'd' }; o.default"), "d");
 }
@@ -524,7 +530,10 @@ fn identifier_property_access_styles() {
 
 #[test]
 fn identifier_case_sensitivity() {
-    assert_eq!(run_str("const abc = 1; const Abc = 2; const ABC = 3; abc + Abc + ABC"), "6");
+    assert_eq!(
+        run_str("const abc = 1; const Abc = 2; const ABC = 3; abc + Abc + ABC"),
+        "6"
+    );
 }
 
 // ============================================================================

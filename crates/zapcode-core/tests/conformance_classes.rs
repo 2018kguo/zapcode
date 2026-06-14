@@ -82,7 +82,10 @@ fn basic_class_and_methods() {
 #[test]
 fn empty_class_constructs() {
     assert_eq!(run_str("class C {} typeof new C()"), "object");
-    assert_eq!(run_str("class C {} const c = new C(); c.x = 1; String(c.x)"), "1");
+    assert_eq!(
+        run_str("class C {} const c = new C(); c.x = 1; String(c.x)"),
+        "1"
+    );
 }
 
 #[test]
@@ -257,8 +260,14 @@ fn arrow_in_filter_and_reduce_captures_this() {
 fn getter_is_invoked_on_read() {
     // `get val()` installs an accessor: a bare read runs the getter body and
     // yields its return value (matching real Node).
-    assert_eq!(run_str("class T { get val(){ return 99; } } typeof new T().val"), "number");
-    assert_eq!(run_str("class T { get val(){ return 99; } } String(new T().val)"), "99");
+    assert_eq!(
+        run_str("class T { get val(){ return 99; } } typeof new T().val"),
+        "number"
+    );
+    assert_eq!(
+        run_str("class T { get val(){ return 99; } } String(new T().val)"),
+        "99"
+    );
     // The getter reads instance state set by the constructor.
     assert_eq!(
         run_str("class Box { constructor(v){ this.v = v; } get doubled(){ return this.v * 2; } } String(new Box(5).doubled)"),
@@ -281,12 +290,18 @@ fn explicit_getter_method_idiom_works() {
 
 #[test]
 fn anonymous_class_expression() {
-    assert_eq!(run_str("const C = class { f(){ return 7; } }; new C().f()"), "7");
+    assert_eq!(
+        run_str("const C = class { f(){ return 7; } }; new C().f()"),
+        "7"
+    );
 }
 
 #[test]
 fn named_class_expression() {
-    assert_eq!(run_str("const Named = class Inner { val(){ return 11; } }; new Named().val()"), "11");
+    assert_eq!(
+        run_str("const Named = class Inner { val(){ return 11; } }; new Named().val()"),
+        "11"
+    );
 }
 
 #[test]
@@ -315,7 +330,10 @@ fn class_expression_instanceof_chain() {
 
 #[test]
 fn class_assigned_to_alias_var_constructs_and_instanceof() {
-    assert_eq!(run_str("class A {} const B = A; String(new B() instanceof A)"), "true");
+    assert_eq!(
+        run_str("class A {} const B = A; String(new B() instanceof A)"),
+        "true"
+    );
 }
 
 // ============================================================================
@@ -324,7 +342,10 @@ fn class_assigned_to_alias_var_constructs_and_instanceof() {
 
 #[test]
 fn inheritance_inherits_methods() {
-    assert_eq!(run_str("class A { f(){ return 1; } } class B extends A {} new B().f()"), "1");
+    assert_eq!(
+        run_str("class A { f(){ return 1; } } class B extends A {} new B().f()"),
+        "1"
+    );
     assert_eq!(
         run_str("class Animal { speak(){ return 'generic'; } } class Dog extends Animal {} new Dog().speak()"),
         "generic"
@@ -334,7 +355,9 @@ fn inheritance_inherits_methods() {
 #[test]
 fn inheritance_three_levels_deep() {
     assert_eq!(
-        run_str("class A { f(){ return 'a'; } } class B extends A {} class C extends B {} new C().f()"),
+        run_str(
+            "class A { f(){ return 'a'; } } class B extends A {} class C extends B {} new C().f()"
+        ),
         "a"
     );
 }
@@ -380,7 +403,9 @@ fn super_constructor_implicit_forwards_args() {
         "7"
     );
     assert_eq!(
-        run_str("class A { constructor(a,b){ this.sum = a + b; } } class B extends A {} new B(2,3).sum"),
+        run_str(
+            "class A { constructor(a,b){ this.sum = a + b; } } class B extends A {} new B(2,3).sum"
+        ),
         "5"
     );
 }
@@ -517,7 +542,10 @@ fn super_method_coexists_with_unoverridden_sibling() {
 
 #[test]
 fn instanceof_direct_class() {
-    assert_eq!(run_str("class A {} const a = new A(); String(a instanceof A)"), "true");
+    assert_eq!(
+        run_str("class A {} const a = new A(); String(a instanceof A)"),
+        "true"
+    );
 }
 
 #[test]
@@ -538,15 +566,27 @@ fn instanceof_three_level_chain() {
 
 #[test]
 fn instanceof_negative_cases() {
-    assert_eq!(run_str("class A {} class B extends A {} `${new A() instanceof B}`"), "false");
-    assert_eq!(run_str("class A {} class B {} const b = new B(); String(b instanceof A)"), "false");
-    assert_eq!(run_str("class A {} class B {} const a = new A(); `${a instanceof A},${a instanceof B}`"), "true,false");
+    assert_eq!(
+        run_str("class A {} class B extends A {} `${new A() instanceof B}`"),
+        "false"
+    );
+    assert_eq!(
+        run_str("class A {} class B {} const b = new B(); String(b instanceof A)"),
+        "false"
+    );
+    assert_eq!(
+        run_str("class A {} class B {} const a = new A(); `${a instanceof A},${a instanceof B}`"),
+        "true,false"
+    );
 }
 
 #[test]
 fn instanceof_object_for_all_instances() {
     assert_eq!(run_str("class A {} new A() instanceof Object"), "true");
-    assert_eq!(run_str("class A {} class B extends A {} new B() instanceof Object"), "true");
+    assert_eq!(
+        run_str("class A {} class B extends A {} new B() instanceof Object"),
+        "true"
+    );
 }
 
 #[test]
@@ -569,18 +609,26 @@ fn instanceof_survives_method_using_super() {
 
 #[test]
 fn static_method_basic() {
-    assert_eq!(run_str("class M { static make(){ return 42; } } M.make()"), "42");
+    assert_eq!(
+        run_str("class M { static make(){ return 42; } } M.make()"),
+        "42"
+    );
 }
 
 #[test]
 fn static_method_with_params() {
-    assert_eq!(run_str("class M { static add(a,b){ return a + b; } } String(M.add(3,4))"), "7");
+    assert_eq!(
+        run_str("class M { static add(a,b){ return a + b; } } String(M.add(3,4))"),
+        "7"
+    );
 }
 
 #[test]
 fn static_method_calls_another_static_via_this() {
     assert_eq!(
-        run_str("class C { static a(){ return 1; } static b(){ return this.a() + 2; } } String(C.b())"),
+        run_str(
+            "class C { static a(){ return 1; } static b(){ return this.a() + 2; } } String(C.b())"
+        ),
         "3"
     );
 }
@@ -604,14 +652,19 @@ fn static_new_this_refers_to_class() {
         "1"
     );
     assert_eq!(
-        run_str("class C { static make(){ return new C(); } } C.make() instanceof C ? 'yes' : 'no'"),
+        run_str(
+            "class C { static make(){ return new C(); } } C.make() instanceof C ? 'yes' : 'no'"
+        ),
         "yes"
     );
 }
 
 #[test]
 fn static_method_returns_object_literal() {
-    assert_eq!(run_str("class C { static cfg(){ return { a: 1, b: 2 }; } } JSON.stringify(C.cfg())"), r#"{"a":1,"b":2}"#);
+    assert_eq!(
+        run_str("class C { static cfg(){ return { a: 1, b: 2 }; } } JSON.stringify(C.cfg())"),
+        r#"{"a":1,"b":2}"#
+    );
 }
 
 #[test]
@@ -796,15 +849,22 @@ fn class_name_property() {
 #[test]
 fn instance_constructor_property() {
     // Instances carry a `.constructor` back-link to their class value.
-    assert_eq!(run_str("class Foo {} String(new Foo().constructor === Foo)"), "true");
-    assert_eq!(run_str("class Foo {} typeof new Foo().constructor"), "function");
+    assert_eq!(
+        run_str("class Foo {} String(new Foo().constructor === Foo)"),
+        "true"
+    );
+    assert_eq!(
+        run_str("class Foo {} typeof new Foo().constructor"),
+        "function"
+    );
 }
 
 #[test]
 fn methods_are_per_instance_not_shared_documented_divergence() {
     // DIVERGENCE (documented): each instance gets its own bound method value, so
     // two instances' method references are not identical.
-    assert_eq!(run_str("class C { m(){ return 1; } } const a = new C(); const b = new C(); String(a.m === b.m)"), "false"); // JS: true
+    assert_eq!(run_str("class C { m(){ return 1; } } const a = new C(); const b = new C(); String(a.m === b.m)"), "false");
+    // JS: true
 }
 
 #[test]
@@ -827,22 +887,40 @@ fn class_field_declarations_initialize_on_construction() {
     // construction, before the constructor body. Initializers run in order and
     // can read earlier fields via `this`.
     assert_eq!(run_str("class C { x = 10; } String(new C().x)"), "10");
-    assert_eq!(run_str("class C { x = 10; y = this.x * 2; } String(new C().y)"), "20");
+    assert_eq!(
+        run_str("class C { x = 10; y = this.x * 2; } String(new C().y)"),
+        "20"
+    );
     // A bare `x;` initializes to undefined.
     assert_eq!(run_str("class C { x; } String(new C().x)"), "undefined");
     // The constructor runs after field initializers and can build on them.
-    assert_eq!(run_str("class C { x = 1; constructor(){ this.x += 5; } } String(new C().x)"), "6");
+    assert_eq!(
+        run_str("class C { x = 1; constructor(){ this.x += 5; } } String(new C().x)"),
+        "6"
+    );
     // Fields are not enumerated as internal keys.
-    assert_eq!(run_str("class C { a = 1; b = 2; } Object.keys(new C()).join(',')"), "a,b");
+    assert_eq!(
+        run_str("class C { a = 1; b = 2; } Object.keys(new C()).join(',')"),
+        "a,b"
+    );
 }
 
 #[test]
 fn static_field_declarations_initialize_on_class() {
     // Cluster C: STATIC field declarations install the value on the class object.
-    assert_eq!(run_str("class C { static count = 5; } String(C.count)"), "5");
-    assert_eq!(run_str("class C { static count = 0; } String(C.count)"), "0");
+    assert_eq!(
+        run_str("class C { static count = 5; } String(C.count)"),
+        "5"
+    );
+    assert_eq!(
+        run_str("class C { static count = 0; } String(C.count)"),
+        "0"
+    );
     // A static initializer can read earlier static fields via `this`.
-    assert_eq!(run_str("class C { static a = 2; static b = this.a * 3; } String(C.b)"), "6");
+    assert_eq!(
+        run_str("class C { static a = 2; static b = this.a * 3; } String(C.b)"),
+        "6"
+    );
 }
 
 #[test]
@@ -864,9 +942,15 @@ fn setter_is_invoked_on_assignment() {
 fn private_fields_and_methods() {
     // `#private` fields and methods work and are hidden from reflection
     // (mangled to a "#"-prefixed key the guest can't enumerate).
-    assert_eq!(run_str("class C { #x = 42; getX(){ return this.#x; } } new C().getX()"), "42");
+    assert_eq!(
+        run_str("class C { #x = 42; getX(){ return this.#x; } } new C().getX()"),
+        "42"
+    );
     // private method, called through `this`.
-    assert_eq!(run_str("class C { #h(){ return 7; } run(){ return this.#h(); } } new C().run()"), "7");
+    assert_eq!(
+        run_str("class C { #h(){ return 7; } run(){ return this.#h(); } } new C().run()"),
+        "7"
+    );
     // private accessor pair.
     assert_eq!(
         run_str("class C { #x = 1; get v(){ return this.#x; } set v(n){ this.#x = n; } } const c = new C(); c.v = 5; c.v"),
@@ -876,8 +960,14 @@ fn private_fields_and_methods() {
     assert_eq!(run_str("class C { #n = 0; inc(){ this.#n += 1; return this.#n; } } const c = new C(); `${c.inc()},${c.inc()}`"), "1,2");
     assert_eq!(run_str("class C { static #count = 0; static inc(){ return ++C.#count; } } `${C.inc()},${C.inc()}`"), "1,2");
     // Private members are NOT enumerable / serialized (only `pub` shows).
-    assert_eq!(run_str("class C { #secret = 1; pub = 2; } JSON.stringify(Object.keys(new C()))"), "[\"pub\"]");
-    assert_eq!(run_str("class C { #secret = 1; pub = 2; } JSON.stringify(new C())"), "{\"pub\":2}");
+    assert_eq!(
+        run_str("class C { #secret = 1; pub = 2; } JSON.stringify(Object.keys(new C()))"),
+        "[\"pub\"]"
+    );
+    assert_eq!(
+        run_str("class C { #secret = 1; pub = 2; } JSON.stringify(new C())"),
+        "{\"pub\":2}"
+    );
 }
 
 #[test]
@@ -900,7 +990,9 @@ fn class_declared_inside_function_constructs_and_runs() {
     // member closures dangled into the wrong functions and instantiating one
     // recursed until the stack-depth guard fired.
     assert_eq!(
-        run_str("function make(){ class C { constructor(){ this.v = 5; } } return new C().v; } make()"),
+        run_str(
+            "function make(){ class C { constructor(){ this.v = 5; } } return new C().v; } make()"
+        ),
         "5"
     );
     assert_eq!(

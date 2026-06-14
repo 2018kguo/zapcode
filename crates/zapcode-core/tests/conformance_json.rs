@@ -42,9 +42,18 @@ fn stringify_scalars() {
 
 #[test]
 fn stringify_objects_and_arrays() {
-    assert_eq!(run_str("JSON.stringify({a:1, b:'two', c:true, d:null})"), "{\"a\":1,\"b\":\"two\",\"c\":true,\"d\":null}");
-    assert_eq!(run_str("JSON.stringify([1, 'x', true, null])"), "[1,\"x\",true,null]");
-    assert_eq!(run_str("JSON.stringify({a:{b:[1,2]}, c:[{d:3}]})"), "{\"a\":{\"b\":[1,2]},\"c\":[{\"d\":3}]}");
+    assert_eq!(
+        run_str("JSON.stringify({a:1, b:'two', c:true, d:null})"),
+        "{\"a\":1,\"b\":\"two\",\"c\":true,\"d\":null}"
+    );
+    assert_eq!(
+        run_str("JSON.stringify([1, 'x', true, null])"),
+        "[1,\"x\",true,null]"
+    );
+    assert_eq!(
+        run_str("JSON.stringify({a:{b:[1,2]}, c:[{d:3}]})"),
+        "{\"a\":{\"b\":[1,2]},\"c\":[{\"d\":3}]}"
+    );
     assert_eq!(run_str("JSON.stringify({})"), "{}");
     assert_eq!(run_str("JSON.stringify([])"), "[]");
     assert_eq!(run_str("JSON.stringify([[1],[2,3]])"), "[[1],[2,3]]");
@@ -52,7 +61,10 @@ fn stringify_objects_and_arrays() {
 
 #[test]
 fn stringify_preserves_key_insertion_order() {
-    assert_eq!(run_str("JSON.stringify({z:1, a:2, m:3})"), "{\"z\":1,\"a\":2,\"m\":3}");
+    assert_eq!(
+        run_str("JSON.stringify({z:1, a:2, m:3})"),
+        "{\"z\":1,\"a\":2,\"m\":3}"
+    );
 }
 
 // ----------------------------------------------------------------------------
@@ -61,29 +73,53 @@ fn stringify_preserves_key_insertion_order() {
 
 #[test]
 fn stringify_drops_undefined_and_functions_in_objects() {
-    assert_eq!(run_str("JSON.stringify({a:1, b:undefined, c:2})"), "{\"a\":1,\"c\":2}");
-    assert_eq!(run_str("JSON.stringify({a:1, f:function(){}, b:2})"), "{\"a\":1,\"b\":2}");
+    assert_eq!(
+        run_str("JSON.stringify({a:1, b:undefined, c:2})"),
+        "{\"a\":1,\"c\":2}"
+    );
+    assert_eq!(
+        run_str("JSON.stringify({a:1, f:function(){}, b:2})"),
+        "{\"a\":1,\"b\":2}"
+    );
 }
 
 #[test]
 fn stringify_array_holes_become_null() {
     assert_eq!(run_str("JSON.stringify([1, undefined, 2])"), "[1,null,2]");
-    assert_eq!(run_str("JSON.stringify([1, function(){}, 2])"), "[1,null,2]");
+    assert_eq!(
+        run_str("JSON.stringify([1, function(){}, 2])"),
+        "[1,null,2]"
+    );
 }
 
 #[test]
 fn stringify_escapes_special_characters() {
-    assert_eq!(run_str("JSON.stringify('line1\\nline2')"), "\"line1\\nline2\"");
+    assert_eq!(
+        run_str("JSON.stringify('line1\\nline2')"),
+        "\"line1\\nline2\""
+    );
     assert_eq!(run_str("JSON.stringify('tab\\there')"), "\"tab\\there\"");
-    assert_eq!(run_str("JSON.stringify('say \"hi\"')"), "\"say \\\"hi\\\"\"");
-    assert_eq!(run_str("JSON.stringify('back\\\\slash')"), "\"back\\\\slash\"");
+    assert_eq!(
+        run_str("JSON.stringify('say \"hi\"')"),
+        "\"say \\\"hi\\\"\""
+    );
+    assert_eq!(
+        run_str("JSON.stringify('back\\\\slash')"),
+        "\"back\\\\slash\""
+    );
     // control characters use \uXXXX escapes
-    assert_eq!(run_str("JSON.stringify('\\u0001\\u0002')"), "\"\\u0001\\u0002\"");
+    assert_eq!(
+        run_str("JSON.stringify('\\u0001\\u0002')"),
+        "\"\\u0001\\u0002\""
+    );
 }
 
 #[test]
 fn stringify_nan_and_infinity_become_null() {
-    assert_eq!(run_str("JSON.stringify({a:NaN, b:Infinity, c:-Infinity})"), "{\"a\":null,\"b\":null,\"c\":null}");
+    assert_eq!(
+        run_str("JSON.stringify({a:NaN, b:Infinity, c:-Infinity})"),
+        "{\"a\":null,\"b\":null,\"c\":null}"
+    );
     assert_eq!(run_str("JSON.stringify([NaN, Infinity])"), "[null,null]");
 }
 
@@ -93,21 +129,39 @@ fn stringify_nan_and_infinity_become_null() {
 
 #[test]
 fn stringify_with_indentation() {
-    assert_eq!(run_str("JSON.stringify({a:1, b:2}, null, 2)"), "{\n  \"a\": 1,\n  \"b\": 2\n}");
-    assert_eq!(run_str("JSON.stringify({a:1}, null, '\\t')"), "{\n\t\"a\": 1\n}");
-    assert_eq!(run_str("JSON.stringify([1, 2], null, 2)"), "[\n  1,\n  2\n]");
+    assert_eq!(
+        run_str("JSON.stringify({a:1, b:2}, null, 2)"),
+        "{\n  \"a\": 1,\n  \"b\": 2\n}"
+    );
+    assert_eq!(
+        run_str("JSON.stringify({a:1}, null, '\\t')"),
+        "{\n\t\"a\": 1\n}"
+    );
+    assert_eq!(
+        run_str("JSON.stringify([1, 2], null, 2)"),
+        "[\n  1,\n  2\n]"
+    );
 }
 
 #[test]
 fn stringify_with_array_replacer_whitelist() {
-    assert_eq!(run_str("JSON.stringify({a:1, b:2, c:3}, ['a', 'c'])"), "{\"a\":1,\"c\":3}");
+    assert_eq!(
+        run_str("JSON.stringify({a:1, b:2, c:3}, ['a', 'c'])"),
+        "{\"a\":1,\"c\":3}"
+    );
     assert_eq!(run_str("JSON.stringify({x:1, y:2}, ['x'])"), "{\"x\":1}");
 }
 
 #[test]
 fn stringify_honors_builtin_date_to_json() {
-    assert_eq!(run_str("JSON.stringify({d: new Date(0)})"), "{\"d\":\"1970-01-01T00:00:00.000Z\"}");
-    assert_eq!(run_str("JSON.stringify(new Date(0))"), "\"1970-01-01T00:00:00.000Z\"");
+    assert_eq!(
+        run_str("JSON.stringify({d: new Date(0)})"),
+        "{\"d\":\"1970-01-01T00:00:00.000Z\"}"
+    );
+    assert_eq!(
+        run_str("JSON.stringify(new Date(0))"),
+        "\"1970-01-01T00:00:00.000Z\""
+    );
 }
 
 // ----------------------------------------------------------------------------
@@ -123,17 +177,26 @@ fn parse_objects_arrays_primitives() {
     assert_eq!(run_str("JSON.parse('true')"), "true");
     assert_eq!(run_str("JSON.parse('\"str\"')"), "str");
     assert_eq!(run_str("String(JSON.parse('null'))"), "null");
-    assert_eq!(run_str("JSON.parse('{\"nested\":{\"deep\":{\"v\":7}}}').nested.deep.v"), "7");
+    assert_eq!(
+        run_str("JSON.parse('{\"nested\":{\"deep\":{\"v\":7}}}').nested.deep.v"),
+        "7"
+    );
 }
 
 #[test]
 fn parse_then_mutate() {
-    assert_eq!(run_str("const o = JSON.parse('{\"items\":[1,2]}'); o.items.push(3); o.items.join(',')"), "1,2,3");
+    assert_eq!(
+        run_str("const o = JSON.parse('{\"items\":[1,2]}'); o.items.push(3); o.items.join(',')"),
+        "1,2,3"
+    );
 }
 
 #[test]
 fn round_trip_stringify_parse() {
-    assert_eq!(run_str("JSON.stringify(JSON.parse(JSON.stringify({x:[1,{y:2}]})))"), "{\"x\":[1,{\"y\":2}]}");
+    assert_eq!(
+        run_str("JSON.stringify(JSON.parse(JSON.stringify({x:[1,{y:2}]})))"),
+        "{\"x\":[1,{\"y\":2}]}"
+    );
     assert_eq!(run_str("const orig = {n:1, list:[true, 'a', null]}; JSON.stringify(JSON.parse(JSON.stringify(orig)))"), "{\"n\":1,\"list\":[true,\"a\",null]}");
 }
 
@@ -161,7 +224,9 @@ fn function_replacer_and_reviver() {
     );
     // A reviver returning undefined drops the property.
     assert_eq!(
-        run_str("JSON.stringify(JSON.parse('{\"a\":1,\"b\":2}', (k, v) => k === 'b' ? undefined : v))"),
+        run_str(
+            "JSON.stringify(JSON.parse('{\"a\":1,\"b\":2}', (k, v) => k === 'b' ? undefined : v))"
+        ),
         "{\"a\":1}"
     );
 }
@@ -171,8 +236,14 @@ fn user_to_json_on_plain_object_honored() {
     // A user-defined `toJSON()` on a PLAIN object is called; its return value is
     // serialized in place of the object (matching built-in `Date#toJSON`, see
     // stringify_honors_builtin_date_to_json).
-    assert_eq!(run_str("JSON.stringify({toJSON(){ return 'custom'; }})"), "\"custom\"");
-    assert_eq!(run_str("JSON.stringify({x: {toJSON(){ return 5; }}})"), "{\"x\":5}");
+    assert_eq!(
+        run_str("JSON.stringify({toJSON(){ return 'custom'; }})"),
+        "\"custom\""
+    );
+    assert_eq!(
+        run_str("JSON.stringify({x: {toJSON(){ return 5; }}})"),
+        "{\"x\":5}"
+    );
 }
 
 // ----------------------------------------------------------------------------
@@ -241,7 +312,10 @@ fn parse_decodes_escapes_left_to_right() {
     // the old order-dependent replace turned "a\\nb" into a real newline.
     assert_eq!(run_str("JSON.parse('\"a\\\\\\\\nb\"')"), "a\\nb");
     // The full short-escape set: \" \\ \/ \b \f \n \r \t.
-    assert_eq!(run_str("JSON.parse('\"\\\\/\\\\b\\\\f\\\\r\\\\t\"')"), "/\u{0008}\u{000C}\r\t");
+    assert_eq!(
+        run_str("JSON.parse('\"\\\\/\\\\b\\\\f\\\\r\\\\t\"')"),
+        "/\u{0008}\u{000C}\r\t"
+    );
     assert_eq!(run_str("JSON.parse('\"q\\\\\"x\"')"), "q\"x");
     // An unescaped control character (a real newline produced by the guest `\n`
     // escape) inside a JSON string is rejected at runtime, matching Node's
@@ -265,9 +339,7 @@ fn parse_reviver_this_is_holder() {
     );
     // The root holder is { "": value }, so the final reviver call has this[''].
     assert_eq!(
-        run_str(
-            "JSON.parse('5', function(k,v){ return k==='' ? this[''] : v; })"
-        ),
+        run_str("JSON.parse('5', function(k,v){ return k==='' ? this[''] : v; })"),
         "5"
     );
 }
@@ -277,7 +349,10 @@ fn stringify_keeps_user_double_underscore_keys() {
     // JSON.stringify must NOT drop user keys that merely start with `__` — only
     // the interpreter's exact reserved internal markers are hidden. Node:
     // JSON.stringify({__v:1,a:2}) === '{"__v":1,"a":2}'.
-    assert_eq!(run_str("JSON.stringify({__v:1,a:2})"), "{\"__v\":1,\"a\":2}");
+    assert_eq!(
+        run_str("JSON.stringify({__v:1,a:2})"),
+        "{\"__v\":1,\"a\":2}"
+    );
     assert_eq!(
         run_str("JSON.stringify({a:{__id__:3},__meta__:1})"),
         "{\"a\":{\"__id__\":3},\"__meta__\":1}"

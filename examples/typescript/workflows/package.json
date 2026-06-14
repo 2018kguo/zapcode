@@ -6,8 +6,8 @@
     "start": "tsx main.ts"
   },
   "dependencies": {
-    "@unchartedfr/zapcode": "file:../../../crates/zapcode-js",
-    "@unchartedfr/zapcode-ai": "file:../../../packages/zapcode-ai"
+    "@arcainc/zapcode": "file:../../../crates/zapcode-js",
+    "@arcainc/zapcode-ai": "file:../../../packages/zapcode-ai"
   },
   "devDependencies": {
     "tsx": "^4.0.0",

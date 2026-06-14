@@ -98,10 +98,7 @@ fn yields_in_order() {
         "1,2,3"
     );
     // single yield
-    assert_eq!(
-        run_str("function* g(){ yield 42; } g().next().value"),
-        "42"
-    );
+    assert_eq!(run_str("function* g(){ yield 42; } g().next().value"), "42");
     // zero yields: immediately done
     assert_eq!(
         run_str("function* g(){} const r=g().next(); `${String(r.value)},${r.done}`"),
@@ -341,7 +338,9 @@ fn return_method_terminates_and_reports_value() {
     );
     // .return() on a fresh generator (never started)
     assert_eq!(
-        run_str("function* g(){ yield 1; } const it=g(); const r=it.return(7); `${r.value},${r.done}`"),
+        run_str(
+            "function* g(){ yield 1; } const it=g(); const r=it.return(7); `${r.value},${r.done}`"
+        ),
         "7,true"
     );
     // a subsequent .next() after return is done with undefined value
@@ -430,7 +429,9 @@ fn generator_consuming_another_iterable_internally() {
 #[test]
 fn yield_star_over_array_flattens() {
     assert_eq!(
-        run_str("function* g(){ yield* [1,2,3]; } let o=[]; for(const x of g()) o.push(x); o.join(',')"),
+        run_str(
+            "function* g(){ yield* [1,2,3]; } let o=[]; for(const x of g()) o.push(x); o.join(',')"
+        ),
         "1,2,3"
     );
     assert_eq!(
@@ -675,7 +676,10 @@ fn generator_throw_method_is_unsupported_divergence() {
     // available). Asserting actual behavior; in JS `it.throw('boom')` would
     // raise inside the generator.
     let out = run_or_err("function* g(){ try { yield 1; } catch(e){ yield 'caught'; } } const it=g(); it.next(); it.throw('boom')");
-    assert!(out.starts_with("ERR:"), "expected it.throw(...) to be unsupported, got {out}");
+    assert!(
+        out.starts_with("ERR:"),
+        "expected it.throw(...) to be unsupported, got {out}"
+    );
 }
 
 #[test]
@@ -684,7 +688,10 @@ fn generator_symbol_iterator_self_reference_unsupported_divergence() {
     // itself via the well-known iterator symbol) is not dispatched. `for...of`
     // over a generator works directly; this explicit form does not.
     let out = run_or_err("function* g(){ yield 1; } const it=g(); it[Symbol.iterator]()");
-    assert!(out.starts_with("ERR:"), "expected it[Symbol.iterator]() to be unsupported, got {out}");
+    assert!(
+        out.starts_with("ERR:"),
+        "expected it[Symbol.iterator]() to be unsupported, got {out}"
+    );
 }
 
 #[test]

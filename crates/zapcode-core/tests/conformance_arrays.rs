@@ -157,7 +157,10 @@ fn length_and_indexing() {
     assert_eq!(run_str("[1, 2, 3][2]"), "3");
     assert_eq!(run_str("String([1, 2, 3][5])"), "undefined");
     assert_eq!(run_str("const a = [1]; a[5] = 9; a.length"), "6");
-    assert_eq!(run_str("const a = [1]; a[5] = 9; String(a[3])"), "undefined");
+    assert_eq!(
+        run_str("const a = [1]; a[5] = 9; String(a[3])"),
+        "undefined"
+    );
 }
 
 // ============================================================================
@@ -166,7 +169,10 @@ fn length_and_indexing() {
 
 #[test]
 fn map_basic_and_index() {
-    assert_eq!(run_str("JSON.stringify([1, 2, 3].map(x => x * x))"), "[1,4,9]");
+    assert_eq!(
+        run_str("JSON.stringify([1, 2, 3].map(x => x * x))"),
+        "[1,4,9]"
+    );
     assert_eq!(run_str("JSON.stringify([].map(x => x))"), "[]");
     assert_eq!(
         run_str("JSON.stringify([10, 20, 30].map((v, i) => i))"),
@@ -233,10 +239,7 @@ fn for_each_side_effects() {
     // forEach returns undefined.
     assert_eq!(run_str("String([1, 2].forEach(() => {}))"), "undefined");
     // empty array: callback never runs.
-    assert_eq!(
-        run_str("let n = 0; [].forEach(() => { n++; }); n"),
-        "0"
-    );
+    assert_eq!(run_str("let n = 0; [].forEach(() => { n++; }); n"), "0");
 }
 
 // ============================================================================
@@ -308,7 +311,10 @@ fn find_and_find_index() {
 fn find_last_and_find_last_index() {
     assert_eq!(run_str("[1, 2, 3, 4].findLast(x => x % 2 === 1)"), "3");
     assert_eq!(run_str("[1, 2, 3, 4].findLastIndex(x => x % 2 === 1)"), "2");
-    assert_eq!(run_str("String([1, 2, 3].findLast(x => x > 9))"), "undefined");
+    assert_eq!(
+        run_str("String([1, 2, 3].findLast(x => x > 9))"),
+        "undefined"
+    );
     assert_eq!(run_str("[1, 2, 3].findLastIndex(x => x > 9)"), "-1");
     assert_eq!(run_str("[5, 6, 7].findLast((v, i) => i === 0)"), "5");
 }
@@ -494,10 +500,22 @@ fn array_string_coercion() {
 
 #[test]
 fn slice_ranges() {
-    assert_eq!(run_str("JSON.stringify([1, 2, 3, 4, 5].slice())"), "[1,2,3,4,5]");
-    assert_eq!(run_str("JSON.stringify([1, 2, 3, 4, 5].slice(1))"), "[2,3,4,5]");
-    assert_eq!(run_str("JSON.stringify([1, 2, 3, 4, 5].slice(1, 3))"), "[2,3]");
-    assert_eq!(run_str("JSON.stringify([1, 2, 3, 4, 5].slice(-3, -1))"), "[3,4]");
+    assert_eq!(
+        run_str("JSON.stringify([1, 2, 3, 4, 5].slice())"),
+        "[1,2,3,4,5]"
+    );
+    assert_eq!(
+        run_str("JSON.stringify([1, 2, 3, 4, 5].slice(1))"),
+        "[2,3,4,5]"
+    );
+    assert_eq!(
+        run_str("JSON.stringify([1, 2, 3, 4, 5].slice(1, 3))"),
+        "[2,3]"
+    );
+    assert_eq!(
+        run_str("JSON.stringify([1, 2, 3, 4, 5].slice(-3, -1))"),
+        "[3,4]"
+    );
     assert_eq!(run_str("JSON.stringify([1, 2, 3].slice(2, 1))"), "[]");
     assert_eq!(run_str("JSON.stringify([1, 2, 3].slice(5))"), "[]");
     assert_eq!(run_str("JSON.stringify([1, 2, 3].slice(-1))"), "[3]");
@@ -527,7 +545,10 @@ fn slice_is_shallow_copy() {
 
 #[test]
 fn concat_spreads_array_args_only() {
-    assert_eq!(run_str("JSON.stringify([1].concat(2, [3, 4]))"), "[1,2,3,4]");
+    assert_eq!(
+        run_str("JSON.stringify([1].concat(2, [3, 4]))"),
+        "[1,2,3,4]"
+    );
     // nested arrays are NOT recursively spread.
     assert_eq!(
         run_str("JSON.stringify([1].concat(2, [3, 4], [[5]]))"),
@@ -649,10 +670,19 @@ fn sort_is_stable() {
 #[test]
 fn fill_ranges() {
     assert_eq!(run_str("JSON.stringify([1, 2, 3].fill(0))"), "[0,0,0]");
-    assert_eq!(run_str("JSON.stringify([1, 2, 3, 4].fill(0, 1, 3))"), "[1,0,0,4]");
-    assert_eq!(run_str("JSON.stringify([1, 2, 3, 4].fill(0, 2))"), "[1,2,0,0]");
+    assert_eq!(
+        run_str("JSON.stringify([1, 2, 3, 4].fill(0, 1, 3))"),
+        "[1,0,0,4]"
+    );
+    assert_eq!(
+        run_str("JSON.stringify([1, 2, 3, 4].fill(0, 2))"),
+        "[1,2,0,0]"
+    );
     // negative start counts from the end.
-    assert_eq!(run_str("JSON.stringify([1, 2, 3, 4].fill(9, -2))"), "[1,2,9,9]");
+    assert_eq!(
+        run_str("JSON.stringify([1, 2, 3, 4].fill(9, -2))"),
+        "[1,2,9,9]"
+    );
 }
 
 #[test]
@@ -696,7 +726,10 @@ fn copy_within_ranges() {
 
 #[test]
 fn copy_within_in_place_same_reference() {
-    assert_eq!(run_str("const a = [1, 2, 3]; a.copyWithin(0, 1) === a"), "true");
+    assert_eq!(
+        run_str("const a = [1, 2, 3]; a.copyWithin(0, 1) === a"),
+        "true"
+    );
 }
 
 // ============================================================================
@@ -804,7 +837,9 @@ fn stack_and_queue_usage() {
     );
     // push/shift as a queue.
     assert_eq!(
-        run_str("const q = []; q.push('a'); q.push('b'); const x = q.shift(); JSON.stringify([x, q])"),
+        run_str(
+            "const q = []; q.push('a'); q.push('b'); const x = q.shift(); JSON.stringify([x, q])"
+        ),
         "[\"a\",[\"b\"]]"
     );
 }
@@ -863,7 +898,10 @@ fn entries_keys_values_spread() {
 
 #[test]
 fn for_of_iteration() {
-    assert_eq!(run_str("let s = 0; for (const x of [1, 2, 3]) s += x; s"), "6");
+    assert_eq!(
+        run_str("let s = 0; for (const x of [1, 2, 3]) s += x; s"),
+        "6"
+    );
     assert_eq!(
         run_str("const r = []; for (const [i, v] of ['a', 'b'].entries()) r.push(i + ':' + v); r.join(',')"),
         "0:a,1:b"
@@ -880,7 +918,10 @@ fn for_of_iteration() {
 
 #[test]
 fn array_spread() {
-    assert_eq!(run_str("JSON.stringify([0, ...[1, 2], 3, ...[4]])"), "[0,1,2,3,4]");
+    assert_eq!(
+        run_str("JSON.stringify([0, ...[1, 2], 3, ...[4]])"),
+        "[0,1,2,3,4]"
+    );
     assert_eq!(run_str("JSON.stringify([...[], ...[1], ...[]])"), "[1]");
     // spread into a call.
     assert_eq!(run_str("Math.max(...[3, 1, 4, 1, 5])"), "5");
@@ -963,11 +1004,17 @@ fn es2023_immutable_change_by_copy_methods() {
     // toSorted / toReversed / with / toSpliced return a NEW array and leave the
     // original untouched.
     assert_eq!(run_str("JSON.stringify([3, 1, 2].toSorted())"), "[1,2,3]");
-    assert_eq!(run_str("JSON.stringify([3, 1, 2, 10].toSorted((a, b) => a - b))"), "[1,2,3,10]");
+    assert_eq!(
+        run_str("JSON.stringify([3, 1, 2, 10].toSorted((a, b) => a - b))"),
+        "[1,2,3,10]"
+    );
     assert_eq!(run_str("JSON.stringify([1, 2, 3].toReversed())"), "[3,2,1]");
     assert_eq!(run_str("JSON.stringify([1, 2, 3].with(1, 9))"), "[1,9,3]");
     assert_eq!(run_str("JSON.stringify([1, 2, 3].with(-1, 9))"), "[1,2,9]");
-    assert_eq!(run_str("JSON.stringify([1, 2, 3, 4].toSpliced(1, 2, 'a'))"), "[1,\"a\",4]");
+    assert_eq!(
+        run_str("JSON.stringify([1, 2, 3, 4].toSpliced(1, 2, 'a'))"),
+        "[1,\"a\",4]"
+    );
     // Originals are unchanged.
     assert_eq!(
         run_str("(function(){ const a = [3, 1, 2]; const b = a.toSorted(); return JSON.stringify(a) + '|' + JSON.stringify(b); })()"),
@@ -980,5 +1027,8 @@ fn es2023_immutable_change_by_copy_methods() {
         "RangeError"
     );
     // Chainable.
-    assert_eq!(run_str("JSON.stringify([3, 1, 2].toSorted().toReversed())"), "[3,2,1]");
+    assert_eq!(
+        run_str("JSON.stringify([3, 1, 2].toSorted().toReversed())"),
+        "[3,2,1]"
+    );
 }

@@ -44,6 +44,7 @@ fn run_str(code: &str) -> String {
 /// unsupported destructuring-assignment forms without asserting a brittle message.
 /// The "unsupported assignment target" error is raised lazily at run time (the
 /// `ZapcodeRun::new` constructor succeeds), so this checks the run result.
+#[allow(dead_code)] // shared test helper; not exercised by every case yet
 fn errors_out(code: &str) -> bool {
     match ZapcodeRun::new(
         code.to_string(),
@@ -63,16 +64,25 @@ fn errors_out(code: &str) -> bool {
 #[test]
 fn array_basic_binding() {
     assert_eq!(run_str("const [a, b] = [1, 2]; a + b"), "3");
-    assert_eq!(run_str("const [a, b, c] = [10, 20, 30]; `${a},${b},${c}`"), "10,20,30");
+    assert_eq!(
+        run_str("const [a, b, c] = [10, 20, 30]; `${a},${b},${c}`"),
+        "10,20,30"
+    );
     assert_eq!(run_str("const [x] = ['only']; x"), "only");
-    assert_eq!(run_str("let [a, b] = [4, 5]; a = a + 1; `${a},${b}`"), "5,5");
+    assert_eq!(
+        run_str("let [a, b] = [4, 5]; a = a + 1; `${a},${b}`"),
+        "5,5"
+    );
 }
 
 #[test]
 fn array_more_targets_than_values_bind_undefined() {
     // Surplus pattern slots bind to undefined, exactly like JS.
     assert_eq!(run_str("const [a, b, c] = [1, 2]; String(c)"), "undefined");
-    assert_eq!(run_str("const [a, b] = [1]; `${a},${String(b)}`"), "1,undefined");
+    assert_eq!(
+        run_str("const [a, b] = [1]; `${a},${String(b)}`"),
+        "1,undefined"
+    );
     assert_eq!(run_str("const [a] = []; String(a)"), "undefined");
 }
 
@@ -84,7 +94,10 @@ fn array_fewer_targets_than_values_ignores_extra() {
 
 #[test]
 fn array_destructure_from_function_return() {
-    assert_eq!(run_str("function pair(){ return [1, 2]; } const [a, b] = pair(); a + b"), "3");
+    assert_eq!(
+        run_str("function pair(){ return [1, 2]; } const [a, b] = pair(); a + b"),
+        "3"
+    );
     assert_eq!(
         run_str("const make = () => ['k', 'v']; const [k, v] = make(); `${k}=${v}`"),
         "k=v"
@@ -100,7 +113,10 @@ fn array_holes_skip_elements() {
     assert_eq!(run_str("const [a, , c] = [1, 2, 3]; `${a},${c}`"), "1,3");
     assert_eq!(run_str("const [, b] = [1, 2]; b"), "2");
     assert_eq!(run_str("const [, , third] = [1, 2, 3]; third"), "3");
-    assert_eq!(run_str("const [a, , , d] = [1, 2, 3, 4]; `${a},${d}`"), "1,4");
+    assert_eq!(
+        run_str("const [a, , , d] = [1, 2, 3, 4]; `${a},${d}`"),
+        "1,4"
+    );
 }
 
 #[test]
@@ -109,7 +125,10 @@ fn array_holes_then_rest() {
         run_str("const [, , ...rest] = [1, 2, 3, 4, 5]; JSON.stringify(rest)"),
         "[3,4,5]"
     );
-    assert_eq!(run_str("const [, second, ...rest] = [1, 2, 3]; `${second}|${rest.join(',')}`"), "2|3");
+    assert_eq!(
+        run_str("const [, second, ...rest] = [1, 2, 3]; `${second}|${rest.join(',')}`"),
+        "2|3"
+    );
 }
 
 // ============================================================================
@@ -118,24 +137,48 @@ fn array_holes_then_rest() {
 
 #[test]
 fn array_rest_basic() {
-    assert_eq!(run_str("const [a, ...rest] = [1, 2, 3]; `${a}:${rest.join(',')}`"), "1:2,3");
-    assert_eq!(run_str("const [...all] = [1, 2, 3]; all.join('-')"), "1-2-3");
-    assert_eq!(run_str("const [first, ...others] = ['x', 'y', 'z']; others.join('-')"), "y-z");
+    assert_eq!(
+        run_str("const [a, ...rest] = [1, 2, 3]; `${a}:${rest.join(',')}`"),
+        "1:2,3"
+    );
+    assert_eq!(
+        run_str("const [...all] = [1, 2, 3]; all.join('-')"),
+        "1-2-3"
+    );
+    assert_eq!(
+        run_str("const [first, ...others] = ['x', 'y', 'z']; others.join('-')"),
+        "y-z"
+    );
 }
 
 #[test]
 fn array_rest_is_a_real_array() {
     // The rest binding must be a genuine Array (length, methods, isArray).
-    assert_eq!(run_str("const [a, ...rest] = [1, 2, 3, 4]; rest.length"), "3");
-    assert_eq!(run_str("const [a, ...rest] = [1, 2, 3, 4]; Array.isArray(rest)"), "true");
-    assert_eq!(run_str("const [a, ...rest] = [1, 2, 3, 4]; rest.map(x => x * 2).join(',')"), "4,6,8");
+    assert_eq!(
+        run_str("const [a, ...rest] = [1, 2, 3, 4]; rest.length"),
+        "3"
+    );
+    assert_eq!(
+        run_str("const [a, ...rest] = [1, 2, 3, 4]; Array.isArray(rest)"),
+        "true"
+    );
+    assert_eq!(
+        run_str("const [a, ...rest] = [1, 2, 3, 4]; rest.map(x => x * 2).join(',')"),
+        "4,6,8"
+    );
 }
 
 #[test]
 fn array_rest_empty_when_exhausted() {
     assert_eq!(run_str("const [a, b, ...rest] = [1, 2]; rest.length"), "0");
-    assert_eq!(run_str("const [a, b, ...rest] = [1, 2]; JSON.stringify(rest)"), "[]");
-    assert_eq!(run_str("const [a, b, ...rest] = [1, 2]; Array.isArray(rest)"), "true");
+    assert_eq!(
+        run_str("const [a, b, ...rest] = [1, 2]; JSON.stringify(rest)"),
+        "[]"
+    );
+    assert_eq!(
+        run_str("const [a, b, ...rest] = [1, 2]; Array.isArray(rest)"),
+        "true"
+    );
 }
 
 #[test]
@@ -159,14 +202,20 @@ fn array_swap_via_temp_works() {
     // The textbook swap uses destructuring assignment; that form is a documented
     // CompileError here (see array_destructuring_assignment_unsupported). The
     // temp-variable swap — the equivalent semantics — works fine.
-    assert_eq!(run_str("let a = 1, b = 2; const t = a; a = b; b = t; `${a},${b}`"), "2,1");
+    assert_eq!(
+        run_str("let a = 1, b = 2; const t = a; a = b; b = t; `${a},${b}`"),
+        "2,1"
+    );
 }
 
 #[test]
 fn array_swap_into_fresh_bindings_works() {
     // You CAN "swap" when both targets are freshly-declared (a new binding-form
     // destructuring, not assignment to existing names).
-    assert_eq!(run_str("let a = 1, b = 2; const [x, y] = [b, a]; `${x},${y}`"), "2,1");
+    assert_eq!(
+        run_str("let a = 1, b = 2; const [x, y] = [b, a]; `${x},${y}`"),
+        "2,1"
+    );
 }
 
 // ============================================================================
@@ -177,7 +226,10 @@ fn array_swap_into_fresh_bindings_works() {
 fn object_basic_shorthand() {
     assert_eq!(run_str("const {a, b} = {a: 1, b: 2}; a + b"), "3");
     assert_eq!(run_str("const {x} = {x: 42}; x"), "42");
-    assert_eq!(run_str("const {a, b, c} = {a: 1, b: 2, c: 3}; `${a},${b},${c}`"), "1,2,3");
+    assert_eq!(
+        run_str("const {a, b, c} = {a: 1, b: 2, c: 3}; `${a},${b},${c}`"),
+        "1,2,3"
+    );
 }
 
 #[test]
@@ -198,7 +250,10 @@ fn object_extra_keys_ignored() {
 #[test]
 fn object_rename_basic() {
     assert_eq!(run_str("const {a: x} = {a: 5}; x"), "5");
-    assert_eq!(run_str("const {a: x, b: y} = {a: 1, b: 2}; `${x},${y}`"), "1,2");
+    assert_eq!(
+        run_str("const {a: x, b: y} = {a: 1, b: 2}; `${x},${y}`"),
+        "1,2"
+    );
     assert_eq!(run_str("const {a: x, b: y} = {a: 3, b: 4}; x * y"), "12");
 }
 
@@ -215,7 +270,10 @@ fn object_rename_original_name_not_bound() {
 #[test]
 fn object_default_applied_when_missing() {
     assert_eq!(run_str("const {z = 42} = {}; z"), "42");
-    assert_eq!(run_str("const {a = 1, b = 2} = {a: 10}; `${a},${b}`"), "10,2");
+    assert_eq!(
+        run_str("const {a = 1, b = 2} = {a: 10}; `${a},${b}`"),
+        "10,2"
+    );
 }
 
 #[test]
@@ -228,14 +286,23 @@ fn object_default_skipped_when_present() {
 fn object_rename_with_default() {
     assert_eq!(run_str("const {a: x = 10} = {}; x"), "10");
     assert_eq!(run_str("const {a: x = 10} = {a: 3}; x"), "3");
-    assert_eq!(run_str("const {a: x = 1, b: y = 2} = {b: 20}; `${x},${y}`"), "1,20");
+    assert_eq!(
+        run_str("const {a: x = 1, b: y = 2} = {b: 20}; `${x},${y}`"),
+        "1,20"
+    );
 }
 
 #[test]
 fn object_default_referencing_earlier_binding() {
     // A later default may reference an earlier-bound name in the same pattern.
-    assert_eq!(run_str("const {a = 5, b = a * 2} = {a: 3}; `${a},${b}`"), "3,6");
-    assert_eq!(run_str("const {a = 5, b = a * 2} = {}; `${a},${b}`"), "5,10");
+    assert_eq!(
+        run_str("const {a = 5, b = a * 2} = {a: 3}; `${a},${b}`"),
+        "3,6"
+    );
+    assert_eq!(
+        run_str("const {a = 5, b = a * 2} = {}; `${a},${b}`"),
+        "5,10"
+    );
 }
 
 #[test]
@@ -257,8 +324,14 @@ fn object_default_expression_is_lazy() {
 
 #[test]
 fn object_rest_basic() {
-    assert_eq!(run_str("const {a, ...rest} = {a: 1, b: 2, c: 3}; JSON.stringify([a, rest])"), r#"[1,{"b":2,"c":3}]"#);
-    assert_eq!(run_str("const {x, ...y} = {x: 1, y: 2}; JSON.stringify(y)"), r#"{"y":2}"#);
+    assert_eq!(
+        run_str("const {a, ...rest} = {a: 1, b: 2, c: 3}; JSON.stringify([a, rest])"),
+        r#"[1,{"b":2,"c":3}]"#
+    );
+    assert_eq!(
+        run_str("const {x, ...y} = {x: 1, y: 2}; JSON.stringify(y)"),
+        r#"{"y":2}"#
+    );
 }
 
 #[test]
@@ -271,7 +344,10 @@ fn object_rest_multiple_extracted_first() {
 
 #[test]
 fn object_rest_empty_when_all_extracted() {
-    assert_eq!(run_str("const {a, b, ...rest} = {a: 1, b: 2}; JSON.stringify(rest)"), "{}");
+    assert_eq!(
+        run_str("const {a, b, ...rest} = {a: 1, b: 2}; JSON.stringify(rest)"),
+        "{}"
+    );
 }
 
 #[test]
@@ -317,8 +393,14 @@ fn object_nested_with_rename_and_siblings() {
 fn object_extract_array_value_whole() {
     // Binding a property whose VALUE is an array (without destructuring into it)
     // works: you get the array itself.
-    assert_eq!(run_str("const {list} = {list: [1, 2, 3]}; list.join('-')"), "1-2-3");
-    assert_eq!(run_str("const {items: xs} = {items: [9, 8]}; xs.length + ':' + xs[0]"), "2:9");
+    assert_eq!(
+        run_str("const {list} = {list: [1, 2, 3]}; list.join('-')"),
+        "1-2-3"
+    );
+    assert_eq!(
+        run_str("const {items: xs} = {items: [9, 8]}; xs.length + ':' + xs[0]"),
+        "2:9"
+    );
 }
 
 // ============================================================================
@@ -329,15 +411,24 @@ fn object_extract_array_value_whole() {
 fn object_computed_key_string_literal() {
     // A computed key that is a string LITERAL is resolved statically and works.
     assert_eq!(run_str("const {['a']: v} = {a: 99}; v"), "99");
-    assert_eq!(run_str("const {['x']: a, ['y']: b} = {x: 1, y: 2}; `${a},${b}`"), "1,2");
+    assert_eq!(
+        run_str("const {['x']: a, ['y']: b} = {x: 1, y: 2}; `${a},${b}`"),
+        "1,2"
+    );
 }
 
 #[test]
 fn object_computed_key_from_variable() {
     // A computed key built from a *variable* (`{[k]: v}`) binds the value of the
     // property whose name is the runtime-evaluated key.
-    assert_eq!(run_str("const k = 'b'; const {[k]: v} = {b: 5}; String(v)"), "5");
-    assert_eq!(run_str("const key = 'x'; const {[key]: v} = {x: 42}; String(v)"), "42");
+    assert_eq!(
+        run_str("const k = 'b'; const {[k]: v} = {b: 5}; String(v)"),
+        "5"
+    );
+    assert_eq!(
+        run_str("const key = 'x'; const {[key]: v} = {x: 42}; String(v)"),
+        "42"
+    );
 }
 
 // ============================================================================
@@ -346,7 +437,10 @@ fn object_computed_key_from_variable() {
 
 #[test]
 fn param_object_shorthand() {
-    assert_eq!(run_str("function f({a, b}){ return a + b; } f({a: 10, b: 20})"), "30");
+    assert_eq!(
+        run_str("function f({a, b}){ return a + b; } f({a: 10, b: 20})"),
+        "30"
+    );
     assert_eq!(run_str("const f = ({a}) => a; f({a: 42})"), "42");
     assert_eq!(run_str("const f = ({x, y}) => x + y; f({x: 1, y: 2})"), "3");
 }
@@ -354,13 +448,19 @@ fn param_object_shorthand() {
 #[test]
 fn param_object_rename() {
     assert_eq!(run_str("const f = ({a: x}) => x; f({a: 5})"), "5");
-    assert_eq!(run_str("function f({a: x, b: y}){ return x * y; } f({a: 3, b: 4})"), "12");
+    assert_eq!(
+        run_str("function f({a: x, b: y}){ return x * y; } f({a: 3, b: 4})"),
+        "12"
+    );
 }
 
 #[test]
 fn param_object_nested() {
     assert_eq!(run_str("const f = ({a: {b}}) => b; f({a: {b: 99}})"), "99");
-    assert_eq!(run_str("function f({a: {b}}){ return b; } f({a: {b: 7}})"), "7");
+    assert_eq!(
+        run_str("function f({a: {b}}){ return b; } f({a: {b: 7}})"),
+        "7"
+    );
     assert_eq!(
         run_str("function f({user: {name}}){ return name; } f({user: {name: 'Z'}})"),
         "Z"
@@ -370,7 +470,9 @@ fn param_object_nested() {
 #[test]
 fn param_object_rest() {
     assert_eq!(
-        run_str("function f({a, ...rest}){ return JSON.stringify([a, rest]); } f({a: 1, b: 2, c: 3})"),
+        run_str(
+            "function f({a, ...rest}){ return JSON.stringify([a, rest]); } f({a: 1, b: 2, c: 3})"
+        ),
         r#"[1,{"b":2,"c":3}]"#
     );
 }
@@ -390,7 +492,10 @@ fn param_object_alongside_positional() {
 #[test]
 fn param_array_basic() {
     assert_eq!(run_str("const f = ([x, y]) => x + y; f([3, 4])"), "7");
-    assert_eq!(run_str("function f([a, b]){ return a * b; } f([5, 6])"), "30");
+    assert_eq!(
+        run_str("function f([a, b]){ return a * b; } f([5, 6])"),
+        "30"
+    );
 }
 
 #[test]
@@ -407,7 +512,10 @@ fn param_array_rest() {
 
 #[test]
 fn param_array_with_holes() {
-    assert_eq!(run_str("function f([a, , c]){ return `${a},${c}`; } f([1, 2, 3])"), "1,3");
+    assert_eq!(
+        run_str("function f([a, , c]){ return `${a},${c}`; } f([1, 2, 3])"),
+        "1,3"
+    );
 }
 
 // ============================================================================
@@ -490,7 +598,9 @@ fn for_of_array_holes() {
 #[test]
 fn for_of_object_shorthand() {
     assert_eq!(
-        run_str("const out = []; for (const {id} of [{id: 7}, {id: 8}]) out.push(id); out.join(',')"),
+        run_str(
+            "const out = []; for (const {id} of [{id: 7}, {id: 8}]) out.push(id); out.join(',')"
+        ),
         "7,8"
     );
     assert_eq!(
@@ -510,11 +620,15 @@ fn for_of_object_rename() {
 #[test]
 fn for_of_object_default() {
     assert_eq!(
-        run_str("const out = []; for (const {id = 0} of [{id: 5}, {}]) out.push(id); out.join(',')"),
+        run_str(
+            "const out = []; for (const {id = 0} of [{id: 5}, {}]) out.push(id); out.join(',')"
+        ),
         "5,0"
     );
     assert_eq!(
-        run_str("const out = []; for (const {id: i = -1} of [{id: 5}, {}]) out.push(i); out.join(',')"),
+        run_str(
+            "const out = []; for (const {id: i = -1} of [{id: 5}, {}]) out.push(i); out.join(',')"
+        ),
         "5,-1"
     );
 }
@@ -572,15 +686,27 @@ fn mixed_realistic_record_shape() {
 #[test]
 fn nested_array_var_decl() {
     // Nested ARRAY patterns in a var-decl bind their inner names.
-    assert_eq!(run_str("const [[a], [b]] = [[1], [2]]; String(a) + ',' + String(b)"), "1,2");
-    assert_eq!(run_str("const [a, [b, c]] = [1, [2, 3]]; `${a},${String(b)},${String(c)}`"), "1,2,3");
+    assert_eq!(
+        run_str("const [[a], [b]] = [[1], [2]]; String(a) + ',' + String(b)"),
+        "1,2"
+    );
+    assert_eq!(
+        run_str("const [a, [b, c]] = [1, [2, 3]]; `${a},${String(b)},${String(c)}`"),
+        "1,2,3"
+    );
 }
 
 #[test]
 fn array_inside_object_var_decl() {
     // An array pattern nested inside an OBJECT pattern binds its inner names.
-    assert_eq!(run_str("const {arr: [x, y]} = {arr: [1, 2]}; String(x) + ',' + String(y)"), "1,2");
-    assert_eq!(run_str("const {p: {q: [r]}} = {p: {q: [42]}}; String(r)"), "42");
+    assert_eq!(
+        run_str("const {arr: [x, y]} = {arr: [1, 2]}; String(x) + ',' + String(y)"),
+        "1,2"
+    );
+    assert_eq!(
+        run_str("const {p: {q: [r]}} = {p: {q: [42]}}; String(r)"),
+        "42"
+    );
 }
 
 #[test]
@@ -604,36 +730,63 @@ fn array_inside_object_param() {
 #[test]
 fn object_inside_array_param() {
     // An object pattern nested inside an ARRAY parameter pattern binds its names.
-    assert_eq!(run_str("function f([{a}, {b}]){ return a + b; } f([{a: 1}, {b: 2}])"), "3");
-    assert_eq!(run_str("const f = ([{name}]) => String(name); f([{name: 'x'}])"), "x");
+    assert_eq!(
+        run_str("function f([{a}, {b}]){ return a + b; } f([{a: 1}, {b: 2}])"),
+        "3"
+    );
+    assert_eq!(
+        run_str("const f = ([{name}]) => String(name); f([{name: 'x'}])"),
+        "x"
+    );
 }
 
 #[test]
 fn array_defaults_var_decl() {
     // ARRAY-pattern element defaults apply when the slot is missing/undefined; a
     // later default may reference an earlier-bound element.
-    assert_eq!(run_str("const [a = 10, b = 20] = [1]; `${a},${String(b)}`"), "1,20");
+    assert_eq!(
+        run_str("const [a = 10, b = 20] = [1]; `${a},${String(b)}`"),
+        "1,20"
+    );
     assert_eq!(run_str("const [a = 10] = []; String(a)"), "10");
-    assert_eq!(run_str("const [a, b = a + 1] = [5]; `${a},${String(b)}`"), "5,6");
+    assert_eq!(
+        run_str("const [a, b = a + 1] = [5]; `${a},${String(b)}`"),
+        "5,6"
+    );
 }
 
 #[test]
 fn param_pattern_defaults() {
     // Destructured-PARAMETER defaults: a default INSIDE the pattern and the
     // whole-arg `={}` / `=[…]` default both apply.
-    assert_eq!(run_str("function f({a = 1, b = 2} = {}){ return a + b; } f({a: 10})"), "12");
-    assert_eq!(run_str("function f({a = 1, b = 2} = {}){ return a + b; } f()"), "3");
-    assert_eq!(run_str("function f([a, b] = [7, 8]){ return a + b; } f()"), "15");
+    assert_eq!(
+        run_str("function f({a = 1, b = 2} = {}){ return a + b; } f({a: 10})"),
+        "12"
+    );
+    assert_eq!(
+        run_str("function f({a = 1, b = 2} = {}){ return a + b; } f()"),
+        "3"
+    );
+    assert_eq!(
+        run_str("function f([a, b] = [7, 8]){ return a + b; } f()"),
+        "15"
+    );
 }
 
 #[test]
 fn destructuring_assignment_to_existing_targets() {
     // Destructuring ASSIGNMENT (to already-declared names or member expressions,
     // i.e. without a `const`/`let`/`var`) binds the targets.
-    assert_eq!(run_str("let a = 1, b = 2; [a, b] = [b, a]; a + ',' + b"), "2,1");
+    assert_eq!(
+        run_str("let a = 1, b = 2; [a, b] = [b, a]; a + ',' + b"),
+        "2,1"
+    );
     assert_eq!(run_str("let a, b; ({a, b} = {a: 1, b: 2}); a + b"), "3");
     assert_eq!(run_str("const o = {}; ({x: o.p} = {x: 7}); o.p"), "7");
-    assert_eq!(run_str("let arr = []; [arr[0], arr[1]] = [1, 2]; JSON.stringify(arr)"), "[1,2]");
+    assert_eq!(
+        run_str("let arr = []; [arr[0], arr[1]] = [1, 2]; JSON.stringify(arr)"),
+        "[1,2]"
+    );
 }
 
 #[test]

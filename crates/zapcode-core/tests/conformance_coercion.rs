@@ -202,7 +202,7 @@ fn number_of_strings_edge_formats() {
     assert_eq!(run_str("Number('  +.5e1  ')"), "5");
     assert_eq!(run_str("Number('0x1F')"), "31");
     assert_eq!(run_str(r"Number('\t\n 12 \n')"), "12"); // tab/newline escapes trimmed
-    // Things that DON'T parse: a partial/garbage tail makes the whole thing NaN.
+                                                        // Things that DON'T parse: a partial/garbage tail makes the whole thing NaN.
     assert_eq!(run_str("String(Number('1,000'))"), "NaN");
     assert_eq!(run_str("String(Number('- 5'))"), "NaN"); // space after sign
     assert_eq!(run_str("String(Number('12px'))"), "NaN");
@@ -239,7 +239,10 @@ fn spread_over_iterables() {
     assert_eq!(run_str("[...[1, 2, 3]].length"), "3");
     assert_eq!(run_str("[...new Set([1, 1, 2])].join(',')"), "1,2");
     assert_eq!(run_str("[...new Map([['a', 1]])].length"), "1");
-    assert_eq!(run_str("JSON.stringify([...new Map([['a', 1]])])"), "[[\"a\",1]]");
+    assert_eq!(
+        run_str("JSON.stringify([...new Map([['a', 1]])])"),
+        "[[\"a\",1]]"
+    );
     // spread into a new array combining iterables
     assert_eq!(run_str("[...[1, 2], ...[3, 4]].join(',')"), "1,2,3,4");
     assert_eq!(run_str("['x', ...'yz'].join('')"), "xyz");
@@ -251,7 +254,10 @@ fn for_of_over_iterables() {
         run_str("let o = []; for (const c of 'abc') o.push(c); o.join('-')"),
         "a-b-c"
     );
-    assert_eq!(run_str("let s = 0; for (const n of [1, 2, 3]) s += n; s"), "6");
+    assert_eq!(
+        run_str("let s = 0; for (const n of [1, 2, 3]) s += n; s"),
+        "6"
+    );
     assert_eq!(
         run_str("let o = []; for (const x of new Set([3, 1, 2])) o.push(x); o.join(',')"),
         "3,1,2"
@@ -265,9 +271,18 @@ fn for_of_over_iterables() {
 #[test]
 fn array_from_over_iterables() {
     assert_eq!(run_str("Array.from('xy').join(',')"), "x,y");
-    assert_eq!(run_str("Array.from(new Set([1, 1, 2, 3])).join(',')"), "1,2,3");
-    assert_eq!(run_str("Array.from([1, 2, 3], x => x * 10).join(',')"), "10,20,30");
-    assert_eq!(run_str("Array.from({length: 4}, (_, i) => i * i).join(',')"), "0,1,4,9");
+    assert_eq!(
+        run_str("Array.from(new Set([1, 1, 2, 3])).join(',')"),
+        "1,2,3"
+    );
+    assert_eq!(
+        run_str("Array.from([1, 2, 3], x => x * 10).join(',')"),
+        "10,20,30"
+    );
+    assert_eq!(
+        run_str("Array.from({length: 4}, (_, i) => i * i).join(',')"),
+        "0,1,4,9"
+    );
 }
 
 #[test]

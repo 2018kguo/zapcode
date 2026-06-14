@@ -1141,17 +1141,19 @@ fn cyclic_array_string_coercion_is_bounded_not_fatal() {
     let result = eval_ts("const a = []; a.push(a); String(a)");
     assert!(result.is_ok(), "String(cycle) must not abort: {result:?}");
     let result = eval_ts("const a = []; a.push(a); `${a}`");
-    assert!(result.is_ok(), "template of cycle must not abort: {result:?}");
+    assert!(
+        result.is_ok(),
+        "template of cycle must not abort: {result:?}"
+    );
     let result = eval_ts("const a = []; a.push(a); a.join(',')");
     assert!(result.is_ok(), "join of cycle must not abort: {result:?}");
 }
 
 #[test]
 fn cyclic_console_log_is_bounded_not_fatal() {
-    let (_, out) = zapcode_core::vm::eval_ts_with_output(
-        "const a = []; a.push(a); console.log(a); 1",
-    )
-    .expect("console.log of a cycle must not abort");
+    let (_, out) =
+        zapcode_core::vm::eval_ts_with_output("const a = []; a.push(a); console.log(a); 1")
+            .expect("console.log of a cycle must not abort");
     // It produced *some* bounded output line.
     assert!(!out.is_empty());
 }
