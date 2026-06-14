@@ -275,6 +275,80 @@ fn rejection_consumed_by_await_is_not_unhandled() {
     );
 }
 
+#[test]
+fn bare_promise_reject_is_unhandled() {
+    // `Promise.reject` mints an already-rejected promise directly (it does not
+    // settle through the reaction path), but an unconsumed one is still an
+    // unhandled rejection — Node exits nonzero. Used to complete cleanly.
+    let err = run_err("Promise.reject(new Error('boom')); 'done'");
+    assert!(
+        err.contains("Unhandled promise rejection") && err.contains("boom"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn promise_reject_handled_by_late_catch_is_not_unhandled() {
+    // A `.catch` attached on a later tick still consumes the rejection: the
+    // creation-time mark is cleared, the run completes (Node parity).
+    assert_eq!(
+        run_str(
+            "async function main() { \
+               const p = Promise.reject(new Error('boom')); \
+               p.catch(() => {}); \
+               await new Promise(r => setTimeout(r, 1)); \
+               return 'survived'; \
+             } main()"
+        ),
+        "survived"
+    );
+    // …and chained in the same expression.
+    assert_eq!(
+        run_str("Promise.reject(new Error('boom')).catch(() => 'caught')"),
+        "caught"
+    );
+}
+
+#[test]
+fn async_fn_returning_rejected_promise_unawaited_is_unhandled() {
+    // An async fn that *returns* (does not await) a rejected promise hands the
+    // same rejected promise to its caller; discarded, it stays unhandled.
+    let err = run_err(
+        "async function f() { return Promise.reject(new Error('x')); } \
+         f(); 'done'",
+    );
+    assert!(
+        err.contains("Unhandled promise rejection") && err.contains("x"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
+fn inline_rejected_combinator_unawaited_is_unhandled() {
+    // `Promise.all`/`race`/`any` over an already-rejected element mint a
+    // rejected result inline; unconsumed, it surfaces (Node crashes on each).
+    for combinator in ["all", "race", "any"] {
+        let err = run_err(&format!(
+            "Promise.{combinator}([Promise.reject(new Error('x'))]); 'done'"
+        ));
+        assert!(
+            err.contains("Unhandled promise rejection"),
+            "{combinator}: unexpected error: {err}"
+        );
+    }
+    // `allSettled` never rejects, so its result is not an unhandled rejection.
+    assert_eq!(
+        run_str(
+            "async function main() { \
+               Promise.allSettled([Promise.reject(new Error('x'))]); \
+               await new Promise(r => setTimeout(r, 1)); \
+               return 'survived'; \
+             } main()"
+        ),
+        "survived"
+    );
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 //  Thenable adoption
 // ════════════════════════════════════════════════════════════════════════════

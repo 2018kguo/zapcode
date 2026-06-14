@@ -1739,6 +1739,28 @@ impl Vm {
         self.unhandled_rejections.retain(|m| *m != h);
     }
 
+    /// Track a builtin-created already-rejected promise as unhandled. Promises
+    /// that settle through `settle_promise` (the reaction path) and rejections
+    /// from a thrown async body are tracked at settle time, but `Promise.reject`
+    /// and the inline-rejected combinator results (`Promise.all`/`race`/`any`
+    /// over already-settled rejections) are minted directly in the rejected
+    /// state, bypassing that path — without this they would never surface as
+    /// unhandled rejections the way Node reports them. Any later handler
+    /// (`.then`/`.catch`/`.finally`/`await`, or adoption by an outer promise)
+    /// clears the mark via `mark_rejection_handled`. A no-op for non-promises
+    /// and for promises already tracked.
+    fn track_rejected_promise(&mut self, v: &Value) {
+        if let Value::Object(h) = v {
+            let is_rejected = self.heap.object(*h).is_some_and(|m| {
+                matches!(m.get("__promise__"), Some(Value::Bool(true)))
+                    && matches!(m.get("status"), Some(Value::String(s)) if s.as_ref() == "rejected")
+            });
+            if is_rejected && !self.unhandled_rejections.contains(h) {
+                self.unhandled_rejections.push(*h);
+            }
+        }
+    }
+
     /// True for a *microtask-pending* internal promise (a `.then` chain link
     /// that settles during the drain) — as opposed to `pending_call`/
     /// `pending_all` host promises or the never-settling pinned promises
@@ -7553,7 +7575,13 @@ impl Vm {
                             )?,
                         };
                         match result {
-                            Some(val) => self.push(val)?,
+                            Some(val) => {
+                                // A freshly minted rejected promise (`Promise.reject`,
+                                // an inline-rejected combinator) is unhandled until
+                                // something consumes it — track it like Node does.
+                                self.track_rejected_promise(&val);
+                                self.push(val)?;
+                            }
                             None => {
                                 return Err(ZapcodeError::TypeError(format!(
                                     "{}.{} is not a function",
