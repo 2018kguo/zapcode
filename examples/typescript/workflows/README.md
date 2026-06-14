@@ -1,7 +1,7 @@
 # Workflow patterns (half-deterministic, half-agentic)
 
 Runnable demos of the orchestration shapes you'd actually build with
-[`@unchartedfr/zapcode-ai`](../../../packages/zapcode-ai): real control flow
+[`@arcainc/zapcode-ai`](../../../packages/zapcode-ai): real control flow
 (loops, conditionals, retries, compensation) with tool calls woven through it,
 run deterministically in the Zapcode sandbox.
 

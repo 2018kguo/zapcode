@@ -26,6 +26,6 @@ npm run agent:anthropic
 
 | File | Description |
 |---|---|
-| `ai-agent-zapcode-ai.ts` | **Recommended** — uses `@unchartedfr/zapcode-ai` wrapper with Vercel AI SDK |
+| `ai-agent-zapcode-ai.ts` | **Recommended** — uses `@arcainc/zapcode-ai` wrapper with Vercel AI SDK |
 | `ai-agent-vercel-ai.ts` | Vercel AI SDK with `generateText` and `streamText` |
 | `ai-agent-anthropic.ts` | Raw Anthropic SDK + manual snapshot/resume loop |

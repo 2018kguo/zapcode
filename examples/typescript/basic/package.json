@@ -6,7 +6,7 @@
     "start": "npx tsx main.ts"
   },
   "dependencies": {
-    "@unchartedfr/zapcode": "file:../../../crates/zapcode-js"
+    "@arcainc/zapcode": "file:../../../crates/zapcode-js"
   },
   "devDependencies": {
     "tsx": "^4.0.0",

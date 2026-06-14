@@ -1,5 +1,5 @@
 {
-    "name": "@unchartedfr/zapcode",
+    "name": "@arcainc/zapcode",
     "version": "1.5.1",
     "description": "A minimal, secure TypeScript interpreter for AI agents — Node.js bindings",
     "main": "index.js",
@@ -22,13 +22,16 @@
         "snapshot",
         "secure"
     ],
-    "homepage": "https://github.com/TheUncharted/zapcode#readme",
-    "bugs": "https://github.com/TheUncharted/zapcode/issues",
+    "homepage": "https://github.com/arcainc/zapcode#readme",
+    "bugs": "https://github.com/arcainc/zapcode/issues",
     "license": "MIT",
-    "author": "Uncharted",
+    "author": "Arca",
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com"
+    },
     "repository": {
         "type": "git",
-        "url": "https://github.com/TheUncharted/zapcode.git",
+        "url": "https://github.com/arcainc/zapcode.git",
         "directory": "crates/zapcode-js"
     },
     "engines": {
@@ -51,7 +54,7 @@
             "x86_64-pc-windows-msvc",
             "aarch64-pc-windows-msvc"
         ],
-        "packageName": "@unchartedfr/zapcode"
+        "packageName": "@arcainc/zapcode"
     },
     "scripts": {
         "build": "napi build --release --platform --js index.js --dts napi.generated.d.ts && node -e \"require('fs').rmSync('napi.generated.d.ts',{force:true})\"",

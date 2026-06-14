@@ -12,7 +12,7 @@
  */
 import assert from "node:assert/strict";
 import { execute, dryRun, forkSnapshot, prepare, createSession } from "../dist/index.js";
-import { Zapcode } from "@unchartedfr/zapcode";
+import { Zapcode } from "@arcainc/zapcode";
 
 let passed = 0;
 async function test(name, fn) {
