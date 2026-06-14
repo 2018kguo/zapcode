@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.1](https://github.com/arcainc/zapcode/compare/v1.6.0...v1.6.1) (2026-06-14)
+
+
+### Bug Fixes
+
+* **release:** publish npm to GitHub Packages without E409 collisions ([840563b](https://github.com/arcainc/zapcode/commit/840563bd3a5f139d2fb3c994b657e3525bc28e0d))
+* **release:** publish to GitHub Packages without E409 (1.6.0 publish failed) ([bf7d872](https://github.com/arcainc/zapcode/commit/bf7d872e99d4327fb94295170914381e5e5946ae))
+
 ## [1.6.0](https://github.com/arcainc/zapcode/compare/v1.5.1...v1.6.0) (2026-06-14)
 
 

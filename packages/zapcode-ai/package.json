@@ -1,6 +1,6 @@
 {
   "name": "@arcainc/zapcode-ai",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "AI SDK integration for Zapcode — let LLMs write and execute TypeScript safely",
   "type": "module",
   "main": "dist/index.js",
