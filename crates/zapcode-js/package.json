@@ -58,7 +58,7 @@
     },
     "scripts": {
         "build": "napi build --release --platform --js index.js --dts napi.generated.d.ts && node -e \"require('fs').rmSync('napi.generated.d.ts',{force:true})\"",
-        "prepublishOnly": "napi prepublish -t npm",
+        "prepublishOnly": "napi prepublish -t npm --skip-optional-publish --no-gh-release",
         "artifacts": "napi artifacts"
     },
     "devDependencies": {
