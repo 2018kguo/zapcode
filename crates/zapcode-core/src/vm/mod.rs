@@ -1739,6 +1739,28 @@ impl Vm {
         self.unhandled_rejections.retain(|m| *m != h);
     }
 
+    /// Track a builtin-created already-rejected promise as unhandled. Promises
+    /// that settle through `settle_promise` (the reaction path) and rejections
+    /// from a thrown async body are tracked at settle time, but `Promise.reject`
+    /// and the inline-rejected combinator results (`Promise.all`/`race`/`any`
+    /// over already-settled rejections) are minted directly in the rejected
+    /// state, bypassing that path — without this they would never surface as
+    /// unhandled rejections the way Node reports them. Any later handler
+    /// (`.then`/`.catch`/`.finally`/`await`, or adoption by an outer promise)
+    /// clears the mark via `mark_rejection_handled`. A no-op for non-promises
+    /// and for promises already tracked.
+    fn track_rejected_promise(&mut self, v: &Value) {
+        if let Value::Object(h) = v {
+            let is_rejected = self.heap.object(*h).is_some_and(|m| {
+                matches!(m.get("__promise__"), Some(Value::Bool(true)))
+                    && matches!(m.get("status"), Some(Value::String(s)) if s.as_ref() == "rejected")
+            });
+            if is_rejected && !self.unhandled_rejections.contains(h) {
+                self.unhandled_rejections.push(*h);
+            }
+        }
+    }
+
     /// True for a *microtask-pending* internal promise (a `.then` chain link
     /// that settles during the drain) — as opposed to `pending_call`/
     /// `pending_all` host promises or the never-settling pinned promises
@@ -7323,15 +7345,10 @@ impl Vm {
                             }
                             // Handing a promise to a combinator attaches a
                             // reaction to it in real JS, so an element's
-                            // rejection is CONSUMED by the combinator
-                            // (`Promise.allSettled([rejected])` reports it; it
-                            // must not surface as an unhandled rejection).
-                            // Clear the marks of already-settled elements, and
-                            // give each still-pending element a sink reaction
-                            // so a LATER settle doesn't mark either — the
-                            // batch reads element status directly, so the sink
-                            // only has to swallow the unhandled-mark.
-                            // Then run the normal builtin.
+                            // rejection is CONSUMED by the combinator and must
+                            // not surface as an element-level unhandled
+                            // rejection. Clear the marks of already-settled
+                            // elements here; pending elements are wired below.
                             "Promise"
                                 if matches!(
                                     method_name.as_ref(),
@@ -7342,20 +7359,33 @@ impl Vm {
                                     for item in self.heap.array_vec(*h) {
                                         if let Value::Object(eh) = &item {
                                             self.mark_rejection_handled(*eh);
-                                            if self.is_internal_pending(&item) {
-                                                self.register_sink_reaction(*eh)?;
-                                            }
                                         }
                                     }
                                 }
-                                builtins::call_global_method(
+                                let batch = builtins::call_global_method(
                                     "Promise",
                                     &method_name,
                                     &args,
                                     &mut self.stdout,
                                     &mut self.stderr,
                                     &mut self.heap,
-                                )?
+                                )?;
+                                // Wire the batch's reactions eagerly, like JS:
+                                // an all-internal batch (no host call to force)
+                                // settles from the drain whether or not it is
+                                // ever awaited. Each pending element gets a
+                                // combine reaction — so its rejection flows to
+                                // the batch instead of going unhandled — and an
+                                // orphaned rejecting batch then surfaces as an
+                                // unhandled rejection (Node parity). Batches
+                                // still holding a host call stay lazy: they must
+                                // suspend to the host at `await`.
+                                if let Some(v) = &batch {
+                                    if self.batch_all_internal(v) {
+                                        self.lower_internal_batch(v)?;
+                                    }
+                                }
+                                batch
                             }
                             // Object.groupBy / Map.groupBy take a guest key
                             // callback, so they group here (the pure builtin
@@ -7553,7 +7583,13 @@ impl Vm {
                             )?,
                         };
                         match result {
-                            Some(val) => self.push(val)?,
+                            Some(val) => {
+                                // A freshly minted rejected promise (`Promise.reject`,
+                                // an inline-rejected combinator) is unhandled until
+                                // something consumes it — track it like Node does.
+                                self.track_rejected_promise(&val);
+                                self.push(val)?;
+                            }
                             None => {
                                 return Err(ZapcodeError::TypeError(format!(
                                     "{}.{} is not a function",
