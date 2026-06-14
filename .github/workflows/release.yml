@@ -157,6 +157,10 @@ jobs:
         run: |
           npm install
           npm run build
+        # Needs auth: `npm install` reads the now-private @arcainc/zapcode
+        # dependency from GitHub Packages (otherwise E401 Unauthorized).
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Copy README to zapcode-ai
         run: cp README.md packages/zapcode-ai/README.md
       - name: Publish zapcode-ai
