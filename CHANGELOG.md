@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.2](https://github.com/arcainc/zapcode/compare/v1.6.1...v1.6.2) (2026-06-14)
+
+
+### Bug Fixes
+
+* **release:** auth the zapcode-ai build step (1.6.1 published native, missed wrapper) ([c0e537b](https://github.com/arcainc/zapcode/commit/c0e537bceac4463c923af832e04b96387adf3d79))
+* **release:** authenticate the zapcode-ai build step for GitHub Packages ([fc53b99](https://github.com/arcainc/zapcode/commit/fc53b9917f0b28aa45ca9b7ad8a167b76d13d66b))
+
 ## [1.6.1](https://github.com/arcainc/zapcode/compare/v1.6.0...v1.6.1) (2026-06-14)
 
 
