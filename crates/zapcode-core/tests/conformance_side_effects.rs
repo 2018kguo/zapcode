@@ -449,9 +449,7 @@ fn callback_invocation_counts() {
 
     // find stops at the first hit. Node: "2|5"
     assert_eq!(
-        run_str(
-            "let n = 0; const r = [1, 5, 2, 7].find(x => { n++; return x > 4; }); n + '|' + r"
-        ),
+        run_str("let n = 0; const r = [1, 5, 2, 7].find(x => { n++; return x > 4; }); n + '|' + r"),
         "2|5"
     );
 
@@ -465,17 +463,13 @@ fn callback_invocation_counts() {
 
     // some stops at the first true. Node: "2|true"
     assert_eq!(
-        run_str(
-            "let n = 0; const r = [1, 5, 2].some(x => { n++; return x > 4; }); n + '|' + r"
-        ),
+        run_str("let n = 0; const r = [1, 5, 2].some(x => { n++; return x > 4; }); n + '|' + r"),
         "2|true"
     );
 
     // every stops at the first false. Node: "2|false"
     assert_eq!(
-        run_str(
-            "let n = 0; const r = [5, 1, 9].every(x => { n++; return x > 4; }); n + '|' + r"
-        ),
+        run_str("let n = 0; const r = [5, 1, 9].every(x => { n++; return x > 4; }); n + '|' + r"),
         "2|false"
     );
 

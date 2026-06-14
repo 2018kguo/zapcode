@@ -399,16 +399,25 @@ fn number_to_string_switches_to_exponential() {
     assert_eq!(run_str("String(1e-7)"), "1e-7");
     assert_eq!(run_str("String(9.999e-7)"), "9.999e-7");
     assert_eq!(run_str("String(-3.14e-8)"), "-3.14e-8");
-    assert_eq!(run_str("String(Number.MAX_VALUE)"), "1.7976931348623157e+308");
+    assert_eq!(
+        run_str("String(Number.MAX_VALUE)"),
+        "1.7976931348623157e+308"
+    );
     // NB: use literals here, not Number.MIN_VALUE — that named constant is
     // currently mis-defined as the smallest *normal* double (a separate bug);
     // these exercise the formatter on the smallest subnormal and EPSILON.
     assert_eq!(run_str("String(5e-324)"), "5e-324");
-    assert_eq!(run_str("String(2.220446049250313e-16)"), "2.220446049250313e-16");
+    assert_eq!(
+        run_str("String(2.220446049250313e-16)"),
+        "2.220446049250313e-16"
+    );
     // Mid-range values keep their plain decimal form.
     assert_eq!(run_str("String(123.456)"), "123.456");
     assert_eq!(run_str("String(0.5)"), "0.5");
-    assert_eq!(run_str("String(123456789012345680000)"), "123456789012345680000");
+    assert_eq!(
+        run_str("String(123456789012345680000)"),
+        "123456789012345680000"
+    );
 }
 
 #[test]
@@ -416,7 +425,10 @@ fn number_to_string_is_shared_across_coercion_paths() {
     // The same formatter must drive templates, Array.join and JSON.stringify,
     // not just String() — they previously emitted full positional decimals.
     assert_eq!(run_str("`${1e21}`"), "1e+21");
-    assert_eq!(run_str("[1e21, 1e-7, 12345678].join(',')"), "1e+21,1e-7,12345678");
+    assert_eq!(
+        run_str("[1e21, 1e-7, 12345678].join(',')"),
+        "1e+21,1e-7,12345678"
+    );
     assert_eq!(
         run_str("JSON.stringify({big: 1e21, small: 1e-7})"),
         "{\"big\":1e+21,\"small\":1e-7}"
@@ -565,7 +577,10 @@ fn parse_int_overflows_to_f64() {
         "-10000000000000000000"
     );
     // It stays a finite number, not NaN.
-    assert_eq!(run_str("Number.isNaN(parseInt('9999999999999999999'))"), "false");
+    assert_eq!(
+        run_str("Number.isNaN(parseInt('9999999999999999999'))"),
+        "false"
+    );
     // Even-wider input keeps round-tripping as a double (matches Node's 1e32).
     assert_eq!(
         run_str("parseInt('99999999999999999999999999999999') === 1e32"),
@@ -740,7 +755,10 @@ fn number_constant_relationships() {
     // smallest normal one (~2.2e-308).
     assert_eq!(run_str("Number.MIN_VALUE === 5e-324"), "true");
     assert_eq!(run_str("String(Number.MIN_VALUE)"), "5e-324");
-    assert_eq!(run_str("Number.MAX_VALUE === 1.7976931348623157e308"), "true");
+    assert_eq!(
+        run_str("Number.MAX_VALUE === 1.7976931348623157e308"),
+        "true"
+    );
 }
 
 // ============================================================================
@@ -994,7 +1012,10 @@ fn point_one_plus_point_two() {
     assert_eq!(run_str("0.3 - 0.2"), "0.09999999999999998");
     assert_eq!(run_str("0.1 * 3"), "0.30000000000000004");
     // The standard "epsilon" workaround works numerically.
-    assert_eq!(run_str("Math.abs(0.1 + 0.2 - 0.3) < Number.EPSILON"), "true");
+    assert_eq!(
+        run_str("Math.abs(0.1 + 0.2 - 0.3) < Number.EPSILON"),
+        "true"
+    );
     assert_eq!(run_str("(0.1 + 0.2).toFixed(2) === '0.30'"), "true");
 }
 

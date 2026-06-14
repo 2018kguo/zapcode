@@ -21,15 +21,13 @@ fn run(code: &str) -> (String, String) {
 #[test]
 fn error_and_warn_go_to_stderr_log_to_stdout() {
     // Ground-truthed against Node: log/info/debug -> stdout; error/warn -> stderr.
-    let (stdout, stderr) = run(
-        r#"
+    let (stdout, stderr) = run(r#"
         console.log("out-log");
         console.info("out-info");
         console.debug("out-debug");
         console.error("err-error");
         console.warn("err-warn");
-        "#,
-    );
+        "#);
     assert_eq!(stdout, "out-log\nout-info\nout-debug\n");
     assert_eq!(stderr, "err-error\nerr-warn\n");
 }
@@ -90,11 +88,9 @@ fn stderr_survives_snapshot_dump_load_resume() {
 
 #[test]
 fn console_assert_writes_to_stderr_only_on_failure() {
-    let (out, err) = run(
-        "console.assert(1 > 2, 'x exceeds y'); \
+    let (out, err) = run("console.assert(1 > 2, 'x exceeds y'); \
          console.assert(2 > 1, 'never shown'); \
-         console.log('after'); 0",
-    );
+         console.log('after'); 0");
     // Passing assert is silent; failing one lands in stderr (not stdout),
     // and execution continues (no throw).
     assert_eq!(out, "after\n");

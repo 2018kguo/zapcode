@@ -53,7 +53,10 @@ fn in_operator_array_membership() {
     // Numeric index membership.
     assert_eq!(run_str(r#"0 in [1,2]"#), "true");
     assert_eq!(run_str(r#"5 in [1,2]"#), "false");
-    assert_eq!(run_str(r#"const a=[10,20,30]; (1 in a)+","+(3 in a)"#), "true,false");
+    assert_eq!(
+        run_str(r#"const a=[10,20,30]; (1 in a)+","+(3 in a)"#),
+        "true,false"
+    );
     // `length` is an own property of every array.
     assert_eq!(run_str(r#""length" in [1,2]"#), "true");
     // Numeric-string keys behave like indices.
@@ -72,13 +75,19 @@ fn in_operator_array_membership() {
 
 #[test]
 fn map_set_chaining_returns_self() {
-    assert_eq!(run_str(r#"const m=new Map(); m.set('a',1).set('b',2); m.size"#), "2");
+    assert_eq!(
+        run_str(r#"const m=new Map(); m.set('a',1).set('b',2); m.size"#),
+        "2"
+    );
     assert_eq!(
         run_str(r#"const m=new Map(); m.set('a',1).set('b',2).set('c',3); m.size"#),
         "3"
     );
     // The return value of set is the map itself (handle identity).
-    assert_eq!(run_str(r#"const m=new Map(); const r=m.set('a',1); r===m"#), "true");
+    assert_eq!(
+        run_str(r#"const m=new Map(); const r=m.set('a',1); r===m"#),
+        "true"
+    );
     // Mutations are visible through every alias of the shared handle.
     assert_eq!(
         run_str(r#"const m=new Map(); const n=m; m.set('x',1).set('y',2); n.size"#),
@@ -88,10 +97,19 @@ fn map_set_chaining_returns_self() {
 
 #[test]
 fn set_add_chaining_returns_self() {
-    assert_eq!(run_str(r#"const s=new Set(); s.add(1).add(2); s.size"#), "2");
+    assert_eq!(
+        run_str(r#"const s=new Set(); s.add(1).add(2); s.size"#),
+        "2"
+    );
     // Duplicate adds are no-ops (SameValueZero), chaining still returns the set.
-    assert_eq!(run_str(r#"const s=new Set(); s.add(1).add(2).add(2).add(3); s.size"#), "3");
-    assert_eq!(run_str(r#"const s=new Set(); const r=s.add(1); r===s"#), "true");
+    assert_eq!(
+        run_str(r#"const s=new Set(); s.add(1).add(2).add(2).add(3); s.size"#),
+        "3"
+    );
+    assert_eq!(
+        run_str(r#"const s=new Set(); const r=s.add(1); r===s"#),
+        "true"
+    );
     assert_eq!(
         run_str(r#"const s=new Set(); const t=s; s.add(1).add(2); t.size"#),
         "2"
@@ -177,9 +195,15 @@ fn symbol_value_is_unique_and_typed() {
     assert_eq!(run_str(r#"const s=Symbol("d"); s===s"#), "true");
     // Optional description, coerced to string; absent description is undefined.
     assert_eq!(run_str(r#"const s=Symbol("hi"); s.description"#), "hi");
-    assert_eq!(run_str(r#"const s=Symbol(); typeof s.description"#), "undefined");
+    assert_eq!(
+        run_str(r#"const s=Symbol(); typeof s.description"#),
+        "undefined"
+    );
     // Simple use as a computed object key does not throw.
-    assert_eq!(run_str(r#"const s=Symbol("k"); const o={}; o[s]=5; o[s]"#), "5");
+    assert_eq!(
+        run_str(r#"const s=Symbol("k"); const o={}; o[s]=5; o[s]"#),
+        "5"
+    );
 }
 
 #[test]

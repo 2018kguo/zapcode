@@ -90,7 +90,10 @@ fn resolve_scalar_values() {
     assert_eq!(run_str("await Promise.resolve('hi')"), "hi");
     assert_eq!(run_str("await Promise.resolve(true)"), "true");
     assert_eq!(run_str("await Promise.resolve(null)"), "null");
-    assert_eq!(run_str("String(await Promise.resolve(undefined))"), "undefined");
+    assert_eq!(
+        run_str("String(await Promise.resolve(undefined))"),
+        "undefined"
+    );
     assert_eq!(run_str("String(await Promise.resolve())"), "undefined");
     assert_eq!(run_str("await Promise.resolve(0)"), "0");
     assert_eq!(run_str("await Promise.resolve(-3.5)"), "-3.5");
@@ -322,7 +325,10 @@ fn race_rejection_first_propagates_as_error() {
 fn race_over_empty_array_stays_pending() {
     // Documented divergence: real JS would hang forever; here the awaited value
     // is a still-pending promise that string-coerces to "[object Promise]".
-    assert_eq!(run_str("String(await Promise.race([]))"), "[object Promise]");
+    assert_eq!(
+        run_str("String(await Promise.race([]))"),
+        "[object Promise]"
+    );
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -446,7 +452,10 @@ fn all_settled_never_rejects_even_when_all_reject() {
 
 #[test]
 fn all_settled_empty_array() {
-    assert_eq!(run_str("JSON.stringify(await Promise.allSettled([]))"), "[]");
+    assert_eq!(
+        run_str("JSON.stringify(await Promise.allSettled([]))"),
+        "[]"
+    );
 }
 
 #[test]
@@ -497,7 +506,9 @@ fn then_unwraps_returned_promise() {
 #[test]
 fn then_returning_rejected_promise_is_caught_downstream() {
     assert_eq!(
-        run_str("await Promise.resolve(1).then(() => Promise.reject('inner')).catch(e => 'c:' + e)"),
+        run_str(
+            "await Promise.resolve(1).then(() => Promise.reject('inner')).catch(e => 'c:' + e)"
+        ),
         "c:inner"
     );
 }
@@ -553,7 +564,10 @@ fn catch_then_continues_with_recovered_value() {
 #[test]
 fn finally_passes_through_fulfilled_value() {
     // finally's return value is ignored; the original resolution flows through.
-    assert_eq!(run_str("await Promise.resolve('v').finally(() => 'x')"), "v");
+    assert_eq!(
+        run_str("await Promise.resolve('v').finally(() => 'x')"),
+        "v"
+    );
     assert_eq!(
         run_str("await Promise.resolve(42).finally(() => 999)"),
         "42"
@@ -607,7 +621,9 @@ fn finally_on_rejection_still_throws() {
 #[test]
 fn await_in_array_literal_positions() {
     assert_eq!(
-        run_str("const a = [await Promise.resolve(1), 2, await Promise.resolve(3)]; JSON.stringify(a)"),
+        run_str(
+            "const a = [await Promise.resolve(1), 2, await Promise.resolve(3)]; JSON.stringify(a)"
+        ),
         "[1,2,3]"
     );
     // Multiple awaits then a transform.
@@ -649,13 +665,13 @@ fn await_in_ternary_branches() {
 fn await_a_selected_promise_from_ternary() {
     // Select a promise via ternary, then await it.
     assert_eq!(
-        run_str("const c = true; const p = c ? Promise.resolve('t') : Promise.resolve('f'); await p"),
+        run_str(
+            "const c = true; const p = c ? Promise.resolve('t') : Promise.resolve('f'); await p"
+        ),
         "t"
     );
     assert_eq!(
-        run_main(
-            "return await (false ? Promise.resolve('t') : Promise.resolve('f'));"
-        ),
+        run_main("return await (false ? Promise.resolve('t') : Promise.resolve('f'));"),
         "f"
     );
 }
@@ -701,15 +717,26 @@ fn await_in_logical_and_arithmetic_expressions() {
 fn await_of_non_promise_values() {
     assert_eq!(run_str("await 42"), "42");
     assert_eq!(run_str("await 'plain'"), "plain");
-    assert_eq!(run_str("String(await null) + ',' + String(await undefined)"), "null,undefined");
-    assert_eq!(run_str("const o = { x: 1 }; JSON.stringify(await o)"), r#"{"x":1}"#);
+    assert_eq!(
+        run_str("String(await null) + ',' + String(await undefined)"),
+        "null,undefined"
+    );
+    assert_eq!(
+        run_str("const o = { x: 1 }; JSON.stringify(await o)"),
+        r#"{"x":1}"#
+    );
 }
 
 #[test]
 fn nested_await() {
-    assert_eq!(run_str("await Promise.resolve(await Promise.resolve(5))"), "5");
     assert_eq!(
-        run_main("return await Promise.resolve(await Promise.resolve(await Promise.resolve('deep')));"),
+        run_str("await Promise.resolve(await Promise.resolve(5))"),
+        "5"
+    );
+    assert_eq!(
+        run_main(
+            "return await Promise.resolve(await Promise.resolve(await Promise.resolve('deep')));"
+        ),
         "deep"
     );
 }
@@ -720,10 +747,7 @@ fn nested_await() {
 
 #[test]
 fn async_function_return_is_awaitable() {
-    assert_eq!(
-        run_str("async function f() { return 7; } await f()"),
-        "7"
-    );
+    assert_eq!(run_str("async function f() { return 7; } await f()"), "7");
     assert_eq!(
         run_str("async function f(x) { return x * 2; } await f(21)"),
         "42"

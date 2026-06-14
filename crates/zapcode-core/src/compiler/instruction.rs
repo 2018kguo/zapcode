@@ -241,12 +241,18 @@ pub enum Instruction {
     /// `class`'s `__super__.__prototype__`, fetch method `method`, bind the current
     /// `this` as receiver, and push the resulting `Value::Function` so a following
     /// `Call` invokes the parent method with the current instance.
-    LoadSuperMethod { class: Arc<str>, method: Arc<str> },
+    LoadSuperMethod {
+        class: Arc<str>,
+        method: Arc<str>,
+    },
     /// Read a parent-class property for `super.prop` (non-call): look up the
     /// lexically-defining `class`'s `__super__.__prototype__` and fetch `prop`.
     /// Bare super-prototype data is rare (instance fields live on `this`), so this
     /// yields `undefined` when absent, matching JS prototype-chain reads.
-    LoadSuperProp { class: Arc<str>, prop: Arc<str> },
+    LoadSuperProp {
+        class: Arc<str>,
+        prop: Arc<str>,
+    },
 
     // Generators
     /// Create a generator object from a function index (like CreateClosure but for generators).

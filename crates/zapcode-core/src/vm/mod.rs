@@ -5,10 +5,10 @@ use std::sync::Arc;
 use indexmap::IndexMap;
 
 use crate::compiler::instruction::{BatchKind, Constant, Instruction};
-use crate::jsstring::JsString;
 use crate::compiler::CompiledProgram;
 use crate::error::{Result, ZapcodeError};
 use crate::heap::{Handle, Heap};
+use crate::jsstring::JsString;
 use crate::sandbox::{ResourceLimits, ResourceTracker};
 use crate::snapshot::ZapcodeSnapshot;
 use crate::trace::{ExecutionTrace, SpanBuilder, TraceStatus};
@@ -45,12 +45,12 @@ pub fn disable_gc_stress_for_tests() {
 
 mod builtins;
 
-/// Re-exported so the napi binding can apply the SAME exact reserved-marker
-/// filter when marshalling guest objects across the host boundary.
-pub use builtins::is_internal_marker_key;
 /// Shared ECMA-262 `Number::toString` formatter, used both by VM string
 /// coercion (`value.rs`) and the builtin number methods so every path agrees.
 pub(crate) use builtins::format_number;
+/// Re-exported so the napi binding can apply the SAME exact reserved-marker
+/// filter when marshalling guest objects across the host boundary.
+pub use builtins::is_internal_marker_key;
 
 /// The result of VM execution.
 #[derive(Debug)]
@@ -933,14 +933,10 @@ impl Vm {
                 } else if let Value::Object(h) = &settled {
                     let map = self.heap.object_map(*h);
                     match map.get("status") {
-                        Some(Value::String(s)) if s.as_ref() == "rejected" => (
-                            map.get("reason").cloned().unwrap_or(Value::Undefined),
-                            true,
-                        ),
-                        _ => (
-                            map.get("value").cloned().unwrap_or(Value::Undefined),
-                            false,
-                        ),
+                        Some(Value::String(s)) if s.as_ref() == "rejected" => {
+                            (map.get("reason").cloned().unwrap_or(Value::Undefined), true)
+                        }
+                        _ => (map.get("value").cloned().unwrap_or(Value::Undefined), false),
                     }
                 } else {
                     (settled, false)
@@ -1206,7 +1202,11 @@ impl Vm {
         );
         record.insert(Arc::from("result"), result);
         let rec = Value::Object(self.heap.alloc_object(record));
-        let reactions = match self.heap.object(receiver).and_then(|m| m.get("__reactions__")) {
+        let reactions = match self
+            .heap
+            .object(receiver)
+            .and_then(|m| m.get("__reactions__"))
+        {
             Some(Value::Array(a)) => *a,
             _ => {
                 return Err(ZapcodeError::RuntimeError(
@@ -1358,14 +1358,12 @@ impl Vm {
                     return Some((v.clone(), false));
                 }
                 match map.get("status") {
-                    Some(Value::String(s)) if s.as_ref() == "resolved" => Some((
-                        map.get("value").cloned().unwrap_or(Value::Undefined),
-                        false,
-                    )),
-                    Some(Value::String(s)) if s.as_ref() == "rejected" => Some((
-                        map.get("reason").cloned().unwrap_or(Value::Undefined),
-                        true,
-                    )),
+                    Some(Value::String(s)) if s.as_ref() == "resolved" => {
+                        Some((map.get("value").cloned().unwrap_or(Value::Undefined), false))
+                    }
+                    Some(Value::String(s)) if s.as_ref() == "rejected" => {
+                        Some((map.get("reason").cloned().unwrap_or(Value::Undefined), true))
+                    }
                     _ => None,
                 }
             }
@@ -1381,7 +1379,11 @@ impl Vm {
         let mut record = IndexMap::new();
         record.insert(Arc::from("mode"), Value::String(JsString::from("sink")));
         let rec = Value::Object(self.heap.alloc_object(record));
-        let reactions = match self.heap.object(receiver).and_then(|m| m.get("__reactions__")) {
+        let reactions = match self
+            .heap
+            .object(receiver)
+            .and_then(|m| m.get("__reactions__"))
+        {
             Some(Value::Array(a)) => *a,
             _ => {
                 return Err(ZapcodeError::RuntimeError(
@@ -1407,7 +1409,11 @@ impl Vm {
         record.insert(Arc::from("mode"), Value::String(JsString::from("task")));
         record.insert(Arc::from("task"), Value::Int(task_id as i64));
         let rec = Value::Object(self.heap.alloc_object(record));
-        let reactions = match self.heap.object(receiver).and_then(|m| m.get("__reactions__")) {
+        let reactions = match self
+            .heap
+            .object(receiver)
+            .and_then(|m| m.get("__reactions__"))
+        {
             Some(Value::Array(a)) => *a,
             _ => {
                 return Err(ZapcodeError::RuntimeError(
@@ -1429,14 +1435,23 @@ impl Vm {
     /// Register a *combine* reaction on a pending internal promise: when it
     /// settles, the outcome feeds element `index` of the lowered combinator
     /// `batch` (see [`Self::lower_internal_batch`]).
-    fn register_combine_reaction(&mut self, receiver: Handle, batch: Value, index: usize) -> Result<()> {
+    fn register_combine_reaction(
+        &mut self,
+        receiver: Handle,
+        batch: Value,
+        index: usize,
+    ) -> Result<()> {
         self.tracker.track_allocation(&self.limits)?;
         let mut record = IndexMap::new();
         record.insert(Arc::from("mode"), Value::String(JsString::from("combine")));
         record.insert(Arc::from("batch"), batch);
         record.insert(Arc::from("index"), Value::Int(index as i64));
         let rec = Value::Object(self.heap.alloc_object(record));
-        let reactions = match self.heap.object(receiver).and_then(|m| m.get("__reactions__")) {
+        let reactions = match self
+            .heap
+            .object(receiver)
+            .and_then(|m| m.get("__reactions__"))
+        {
             Some(Value::Array(a)) => *a,
             _ => {
                 return Err(ZapcodeError::RuntimeError(
@@ -1582,12 +1597,8 @@ impl Vm {
             Some(Value::Int(n)) => *n,
             _ => 0,
         };
-        let mut store = |vm: &mut Self, slot_value: Value| {
-            if let Some(slot) = vm
-                .heap
-                .array_mut(values_h)
-                .and_then(|a| a.get_mut(index))
-            {
+        let store = |vm: &mut Self, slot_value: Value| {
+            if let Some(slot) = vm.heap.array_mut(values_h).and_then(|a| a.get_mut(index)) {
                 *slot = slot_value;
             }
             if let Some(m) = vm.heap.object_mut(*bh) {
@@ -1660,7 +1671,11 @@ impl Vm {
                 }
                 let callback = args.first().cloned().unwrap_or(Value::Undefined);
                 let delay = args.get(1).map(|v| v.to_number()).unwrap_or(0.0);
-                let delay = if delay.is_finite() && delay > 0.0 { delay } else { 0.0 };
+                let delay = if delay.is_finite() && delay > 0.0 {
+                    delay
+                } else {
+                    0.0
+                };
                 let id = self.next_timer_id;
                 self.next_timer_id += 1;
                 self.timers.push(TimerEntry {
@@ -2394,7 +2409,10 @@ impl Vm {
                     let mut entry = IndexMap::new();
                     match map.get("status") {
                         Some(Value::String(s)) if s.as_ref() == "rejected" => {
-                            entry.insert(Arc::from("status"), Value::String(JsString::from("rejected")));
+                            entry.insert(
+                                Arc::from("status"),
+                                Value::String(JsString::from("rejected")),
+                            );
                             entry.insert(
                                 Arc::from("reason"),
                                 map.get("reason").cloned().unwrap_or(Value::Undefined),
@@ -2416,7 +2434,10 @@ impl Vm {
                 other => {
                     // Plain value: fulfilled.
                     let mut entry = IndexMap::new();
-                    entry.insert(Arc::from("status"), Value::String(JsString::from("fulfilled")));
+                    entry.insert(
+                        Arc::from("status"),
+                        Value::String(JsString::from("fulfilled")),
+                    );
                     entry.insert(Arc::from("value"), other);
                     array.push(Value::Object(self.heap.alloc_object(entry)));
                 }
@@ -2499,7 +2520,11 @@ impl Vm {
             });
         }
 
-        self.pending_batch = Some(PendingBatch { kind, items, call_ids });
+        self.pending_batch = Some(PendingBatch {
+            kind,
+            items,
+            call_ids,
+        });
         let mut calls = calls;
         let snapshot = ZapcodeSnapshot::capture_with(self, &mut |f| {
             for c in calls.iter_mut() {
@@ -2527,9 +2552,7 @@ impl Vm {
             .pending_calls
             .iter()
             .position(|c| c.id == id)
-            .ok_or_else(|| {
-                ZapcodeError::RuntimeError(format!("unknown pending call {}", id))
-            })?;
+            .ok_or_else(|| ZapcodeError::RuntimeError(format!("unknown pending call {}", id)))?;
         let pc = self.pending_calls.remove(pos);
         let mut args = pc.args;
         let snapshot = ZapcodeSnapshot::capture_with_values(self, &mut args)?;
@@ -2672,9 +2695,7 @@ impl Vm {
         let (name, message) = match err {
             ZapcodeError::TypeError(s) => ("TypeError", s.clone()),
             ZapcodeError::RangeError(s) => ("RangeError", s.clone()),
-            ZapcodeError::ReferenceError(s) => {
-                ("ReferenceError", format!("{} is not defined", s))
-            }
+            ZapcodeError::ReferenceError(s) => ("ReferenceError", format!("{} is not defined", s)),
             ZapcodeError::UnknownExternalFunction(s) => {
                 ("ReferenceError", format!("{} is not defined", s))
             }
@@ -2684,6 +2705,7 @@ impl Vm {
         make_error_object(name, &message, &mut self.heap)
     }
 
+    #[allow(dead_code)] // retained helper; paired with ReceiverSource reads
     fn write_receiver_source(&mut self, source: &ReceiverSource, value: Value) {
         match source {
             ReceiverSource::Global(name) => {
@@ -3223,19 +3245,15 @@ impl Vm {
         }
         // Slot-count trigger: the heap doubled since the last GC (catches
         // churn of many small objects).
-        let slot_threshold =
-            MIN_GC_SLOTS.max(self.heap_slots_at_last_gc.saturating_mul(GC_GROWTH));
+        let slot_threshold = MIN_GC_SLOTS.max(self.heap_slots_at_last_gc.saturating_mul(GC_GROWTH));
         let slot_trigger = self.heap.len() > slot_threshold;
         // Byte high-water trigger: accounted bytes (live + not-yet-collected
         // garbage) have passed half the memory limit. Compacting here keeps a
         // churn of LARGE temporaries from tripping the limit on garbage —
         // this is what makes `memory_limit_bytes` a LIVE ceiling. Half the
         // limit leaves a full window's worth of headroom before the next tick.
-        let byte_trigger = self
-            .tracker
-            .memory_bytes
-            .saturating_mul(2)
-            > self.limits.memory_limit_bytes;
+        let byte_trigger =
+            self.tracker.memory_bytes.saturating_mul(2) > self.limits.memory_limit_bytes;
         if stress || slot_trigger || byte_trigger {
             self.compact_live_heap();
         }
@@ -3445,7 +3463,8 @@ impl Vm {
                                 self.stack.truncate(stack_base);
                                 match self.continuations.pop() {
                                     Some(Continuation::MicrotaskReaction {
-                                        result_promise, ..
+                                        result_promise,
+                                        ..
                                     }) => {
                                         self.settle_promise(&result_promise, reason, true)?;
                                     }
@@ -3475,8 +3494,7 @@ impl Vm {
                     // leaves its continuation stale: the generator becomes
                     // done (Node) and the exception IS the pull's answer.
                     while let Some(Continuation::GeneratorNext {
-                        caller_frame_depth,
-                        ..
+                        caller_frame_depth, ..
                     }) = self.continuations.last()
                     {
                         if self.frames.len() > *caller_frame_depth {
@@ -3751,7 +3769,9 @@ impl Vm {
                 }
                 Ok(None)
             }
-            Continuation::GeneratorNext { gen_obj, for_of, .. } => {
+            Continuation::GeneratorNext {
+                gen_obj, for_of, ..
+            } => {
                 // The body returned (or fell off the end): the generator is
                 // done; answer the pull with {value, done: true} — or, for a
                 // for…of pull, the protocol pair [done-triple, return-value].
@@ -4046,8 +4066,10 @@ impl Vm {
             done: false,
             this_value: this_value.map(Box::new),
         };
-        self.globals
-            .insert(format!("__gen_{}", gen_id), Value::Generator(gen_obj.clone()));
+        self.globals.insert(
+            format!("__gen_{}", gen_id),
+            Value::Generator(gen_obj.clone()),
+        );
         gen_obj
     }
 
@@ -4061,7 +4083,10 @@ impl Vm {
             Value::Function(c) => c.clone(),
             other => {
                 let msg = other.to_js_string(&self.heap);
-                return Err(ZapcodeError::TypeError(format!("{} is not a function", msg)));
+                return Err(ZapcodeError::TypeError(format!(
+                    "{} is not a function",
+                    msg
+                )));
             }
         };
 
@@ -4179,7 +4204,9 @@ impl Vm {
     ) -> Result<Value> {
         let replacer = args[1].clone();
         // Regex search: walk matches (all for /g or replaceAll, else first).
-        if let Some((pat, flags)) = args.first().and_then(|v| builtins::regexp_parts(v, &self.heap))
+        if let Some((pat, flags)) = args
+            .first()
+            .and_then(|v| builtins::regexp_parts(v, &self.heap))
         {
             let re = builtins::compile_regex(&pat, &flags)?;
             let global = method == "replaceAll" || flags.contains('g');
@@ -4242,7 +4269,7 @@ impl Vm {
                 call_args.push(Value::String(JsString::from(info.whole.as_str())));
                 call_args.extend(info.groups);
                 call_args.push(Value::Int(offset));
-                call_args.push(Value::String(s.clone().into()));
+                call_args.push(Value::String(s.into()));
                 if !info.named.is_empty() {
                     let mut g: IndexMap<Arc<str>, Value> = IndexMap::new();
                     for (k, v) in info.named {
@@ -4271,14 +4298,18 @@ impl Vm {
             // call at offset 0 prepending the result. JS replaceAll('') inserts at
             // every boundary; that's an edge case we don't expect agents to hit, so
             // handle only the first-position case to stay predictable.
-            let result =
-                self.call_function_internal(&replacer, vec![
+            let result = self.call_function_internal(
+                &replacer,
+                vec![
                     Value::String(JsString::from("")),
                     Value::Int(0),
-                    Value::String(s.clone().into()),
-                ])?;
+                    Value::String(s.into()),
+                ],
+            )?;
             let ins = result.to_js_string(&self.heap);
-            return Ok(Value::String(JsString::from(format!("{}{}", ins, subject).as_str())));
+            return Ok(Value::String(JsString::from(
+                format!("{}{}", ins, subject).as_str(),
+            )));
         }
         let mut out = String::with_capacity(subject.len());
         let mut search_from = 0usize;
@@ -4289,11 +4320,14 @@ impl Vm {
                     let abs = search_from + rel;
                     out.push_str(&subject[search_from..abs]);
                     let offset = subject[..abs].chars().count() as i64;
-                    let result = self.call_function_internal(&replacer, vec![
-                        Value::String(JsString::from(search.as_str())),
-                        Value::Int(offset),
-                        Value::String(s.clone().into()),
-                    ])?;
+                    let result = self.call_function_internal(
+                        &replacer,
+                        vec![
+                            Value::String(JsString::from(search.as_str())),
+                            Value::Int(offset),
+                            Value::String(s.into()),
+                        ],
+                    )?;
                     out.push_str(&result.to_js_string(&self.heap));
                     search_from = abs + search.len();
                     if !replace_all {
@@ -4348,10 +4382,7 @@ impl Vm {
         // corrupt the value being serialized — replacers that read `this` are an
         // accepted gap).
         let transformed = if let Some(ref f) = replacer_fn {
-            self.call_function_internal(f, vec![
-                Value::String(JsString::from("")),
-                value.clone(),
-            ])?
+            self.call_function_internal(f, vec![Value::String(JsString::from("")), value.clone()])?
         } else {
             value
         };
@@ -4443,15 +4474,25 @@ impl Vm {
                 for (i, item) in items_src.iter().enumerate() {
                     // Apply the replacer with the array index (as a string) as key.
                     let item = if let Some(f) = replacer {
-                        self.call_function_internal(f, vec![
-                            Value::String(JsString::from(i.to_string().as_str())),
-                            item.clone(),
-                        ])?
+                        self.call_function_internal(
+                            f,
+                            vec![
+                                Value::String(JsString::from(i.to_string().as_str())),
+                                item.clone(),
+                            ],
+                        )?
                     } else {
                         item.clone()
                     };
                     let s = self
-                        .serialize_json_dynamic(&item, replacer, whitelist, indent, depth + 1, seen)?
+                        .serialize_json_dynamic(
+                            &item,
+                            replacer,
+                            whitelist,
+                            indent,
+                            depth + 1,
+                            seen,
+                        )?
                         .unwrap_or_else(|| "null".to_string());
                     items.push(s);
                 }
@@ -4501,16 +4542,18 @@ impl Vm {
                     // stored function (setter-only -> undefined -> omitted).
                     let v = self.enumerable_value(&Value::Object(*h), &k, v.clone())?;
                     let v = if let Some(f) = replacer {
-                        self.call_function_internal(f, vec![
-                            Value::String(k.clone().into()),
-                            v,
-                        ])?
+                        self.call_function_internal(f, vec![Value::String(k.clone().into()), v])?
                     } else {
                         v
                     };
-                    if let Some(s) =
-                        self.serialize_json_dynamic(&v, replacer, whitelist, indent, depth + 1, seen)?
-                    {
+                    if let Some(s) = self.serialize_json_dynamic(
+                        &v,
+                        replacer,
+                        whitelist,
+                        indent,
+                        depth + 1,
+                        seen,
+                    )? {
                         pairs.push((k.to_string(), s));
                     }
                 }
@@ -5040,8 +5083,7 @@ impl Vm {
                             unreachable!("recorded action consumed unexpectedly");
                         };
                         let assembled = self.pop()?;
-                        let settled =
-                            builtins::make_resolved_promise(assembled, &mut self.heap);
+                        let settled = builtins::make_resolved_promise(assembled, &mut self.heap);
                         self.execute_promise_method(settled, &method, args)
                     }
                 };
@@ -5438,9 +5480,7 @@ impl Vm {
                                 .iter()
                                 .find(|(n, _)| n == name)
                                 .map(|(_, v)| v.clone())
-                                .unwrap_or_else(|| {
-                                    Value::Array(self.heap.alloc_array(Vec::new()))
-                                });
+                                .unwrap_or_else(|| Value::Array(self.heap.alloc_array(Vec::new())));
                             let _ = i;
                             locals.push(val);
                         }
@@ -5575,9 +5615,7 @@ impl Vm {
             // frame's Yield belongs to a main-loop pull of another generator
             // running inside the body (`it.next()`), handled by dispatch via
             // its GeneratorNext continuation.
-            if matches!(instr, Instruction::Yield)
-                && self.frames.len() == target_frame_depth + 1
-            {
+            if matches!(instr, Instruction::Yield) && self.frames.len() == target_frame_depth + 1 {
                 self.current_frame_mut().ip += 1;
                 let yielded_value = self.pop()?;
                 let frame = self.frames.pop().unwrap();
@@ -5674,7 +5712,13 @@ impl Vm {
             Some(Value::Int(i)) => (*i).max(0) as usize,
             _ => 0,
         };
-        Some(self.heap.array_vec(items_h).into_iter().skip(cursor).collect())
+        Some(
+            self.heap
+                .array_vec(items_h)
+                .into_iter()
+                .skip(cursor)
+                .collect(),
+        )
     }
 
     fn drain_iterable(&mut self, val: Value) -> Result<Vec<Value>> {
@@ -5682,7 +5726,11 @@ impl Vm {
             // Spread/Array.from/destructuring fully consume the iterator, so
             // advance its cursor past the end.
             if let Value::Object(h) = &val {
-                let len = match self.heap.object(*h).and_then(|m| m.get("__items__").cloned()) {
+                let len = match self
+                    .heap
+                    .object(*h)
+                    .and_then(|m| m.get("__items__").cloned())
+                {
                     Some(Value::Array(a)) => Some(self.heap.array(a).len()),
                     _ => None,
                 };
@@ -5731,7 +5779,8 @@ impl Vm {
                     let m = self.heap.object_map(*h);
                     (
                         m.get("value").cloned().unwrap_or(Value::Undefined),
-                        m.get("done").is_some_and(|v| matches!(v, Value::Bool(true))),
+                        m.get("done")
+                            .is_some_and(|v| matches!(v, Value::Bool(true))),
                     )
                 }
                 _ => (Value::Undefined, true),
@@ -5905,7 +5954,11 @@ impl Vm {
                     self.push(val)?;
                     return Ok(None);
                 }
-                let val = self.globals.get(name.as_ref()).cloned().unwrap_or(Value::Undefined);
+                let val = self
+                    .globals
+                    .get(name.as_ref())
+                    .cloned()
+                    .unwrap_or(Value::Undefined);
                 self.last_global_name = Some(name.to_string());
                 // Only track receiver source for user-defined globals — builtins
                 // (console, Math, JSON, etc.) contain non-serializable BuiltinMethod
@@ -6235,7 +6288,9 @@ impl Vm {
                 let left = self.to_primitive(&left, ToPrimitiveHint::Number)?;
                 let right = self.to_primitive(&right, ToPrimitiveHint::Number)?;
                 // a <= b  <=>  !(b < a), but NaN must make it false either way.
-                self.push(Value::Bool(js_less_than_or_equal(&left, &right, &self.heap)))?;
+                self.push(Value::Bool(js_less_than_or_equal(
+                    &left, &right, &self.heap,
+                )))?;
             }
             Instruction::Gt => {
                 let right = self.pop()?;
@@ -6249,7 +6304,9 @@ impl Vm {
                 let left = self.pop()?;
                 let left = self.to_primitive(&left, ToPrimitiveHint::Number)?;
                 let right = self.to_primitive(&right, ToPrimitiveHint::Number)?;
-                self.push(Value::Bool(js_less_than_or_equal(&right, &left, &self.heap)))?;
+                self.push(Value::Bool(js_less_than_or_equal(
+                    &right, &left, &self.heap,
+                )))?;
             }
 
             // Logical
@@ -6390,10 +6447,9 @@ impl Vm {
                         // A frozen object, or a non-writable own property defined
                         // via Object.defineProperty({writable:false}), silently
                         // ignores the write (sloppy mode).
-                        let non_writable = self
-                            .heap
-                            .object(h)
-                            .is_some_and(|m| builtins::marker_contains(m, "__non_writable__", &name));
+                        let non_writable = self.heap.object(h).is_some_and(|m| {
+                            builtins::marker_contains(m, "__non_writable__", &name)
+                        });
                         if !is_frozen_object(h, &self.heap) && !non_writable {
                             // Intern before the mut-borrow so a repeated property
                             // name shares one backing `Arc<str>` across every
@@ -6430,9 +6486,7 @@ impl Vm {
                         Some(PlaceSeg::Index(*f as usize))
                     }
                     (Value::Object(_), Value::String(key)) => Some(PlaceSeg::Prop(key.to_string())),
-                    (Value::Object(_), _) => {
-                        Some(PlaceSeg::Prop(index.to_js_string(&self.heap)))
-                    }
+                    (Value::Object(_), _) => Some(PlaceSeg::Prop(index.to_js_string(&self.heap))),
                     _ => None,
                 };
                 let result = match (&obj, &index) {
@@ -6546,15 +6600,14 @@ impl Vm {
                             arr[idx] = value;
                         }
                     }
-                    Value::Object(h) => {
+                    Value::Object(h)
                         // Frozen objects ignore index writes too.
-                        if !is_frozen_object(*h, &self.heap) {
+                        if !is_frozen_object(*h, &self.heap) => {
                             let key = self.key_interner.intern(&index.to_js_string(&self.heap));
                             if let Some(map) = self.heap.object_mut(*h) {
                                 map.insert(key, value);
                             }
                         }
-                    }
                     _ => {}
                 }
                 // Push the (same) handle back so compile_store can store it to the variable.
@@ -6925,8 +6978,7 @@ impl Vm {
                             // A generator METHOD binds the receiver as `this`
                             // for the whole body's lifetime.
                             let this_value = self.last_receiver.take();
-                            let gen_obj =
-                                self.make_generator_object(&closure, &args, this_value);
+                            let gen_obj = self.make_generator_object(&closure, &args, this_value);
                             self.push(Value::Generator(gen_obj))?;
                             self.last_receiver = None;
                             self.last_receiver_source = None;
@@ -6997,13 +7049,13 @@ impl Vm {
                                         && matches!(args.get(1), Some(Value::Function(_)))
                                     {
                                         Some(self.string_replace_with_function(
-                                            &s,
+                                            s,
                                             &method_name,
                                             &args,
                                         )?)
                                     } else {
                                         builtins::call_builtin(
-                                            &Value::String(s.clone().into()),
+                                            &Value::String(s.clone()),
                                             &method_name,
                                             &args,
                                             &self.limits,
@@ -7159,9 +7211,11 @@ impl Vm {
                                             return Ok(None);
                                         }
                                     }
-                                    match self
-                                        .execute_promise_method(promise, &method_name, args)?
-                                    {
+                                    match self.execute_promise_method(
+                                        promise,
+                                        &method_name,
+                                        args,
+                                    )? {
                                         PromiseMethodOutcome::Value(v) => Some(v),
                                         // A deferred single-call promise forced its
                                         // host call — propagate the suspension; the
@@ -7207,10 +7261,17 @@ impl Vm {
                                                 }
                                                 Some(self.make_iterator_result(v, false))
                                             } else {
-                                                Some(self.make_iterator_result(Value::Undefined, true))
+                                                Some(
+                                                    self.make_iterator_result(
+                                                        Value::Undefined,
+                                                        true,
+                                                    ),
+                                                )
                                             }
                                         }
-                                        None => Some(self.make_iterator_result(Value::Undefined, true)),
+                                        None => {
+                                            Some(self.make_iterator_result(Value::Undefined, true))
+                                        }
                                     }
                                 } else {
                                     None
@@ -7225,21 +7286,15 @@ impl Vm {
                                     if method_name.as_ref() == "forEach" {
                                         // cb(value, key, map) — needs guest closure.
                                         let cb = args.first().cloned().unwrap_or(Value::Undefined);
-                                        let pairs = map_entry_pairs(
-                                            &Value::Object(map),
-                                            &mut self.heap,
-                                        );
+                                        let pairs =
+                                            map_entry_pairs(&Value::Object(map), &mut self.heap);
                                         for pair in pairs {
                                             if let Value::Array(ph) = pair {
                                                 let kv = self.heap.array_vec(ph);
-                                                let k = kv
-                                                    .first()
-                                                    .cloned()
-                                                    .unwrap_or(Value::Undefined);
-                                                let v = kv
-                                                    .get(1)
-                                                    .cloned()
-                                                    .unwrap_or(Value::Undefined);
+                                                let k =
+                                                    kv.first().cloned().unwrap_or(Value::Undefined);
+                                                let v =
+                                                    kv.get(1).cloned().unwrap_or(Value::Undefined);
                                                 self.call_function_internal(
                                                     &cb,
                                                     vec![v, k, Value::Object(map)],
@@ -7248,12 +7303,7 @@ impl Vm {
                                         }
                                         Some(Value::Undefined)
                                     } else {
-                                        execute_map_method(
-                                            map,
-                                            &method_name,
-                                            &args,
-                                            &mut self.heap,
-                                        )
+                                        execute_map_method(map, &method_name, &args, &mut self.heap)
                                     }
                                 } else {
                                     None
@@ -7265,8 +7315,7 @@ impl Vm {
                                     if method_name.as_ref() == "forEach" {
                                         // cb(value, value, set) — needs guest closure.
                                         let cb = args.first().cloned().unwrap_or(Value::Undefined);
-                                        let items =
-                                            set_items(&Value::Object(map), &self.heap);
+                                        let items = set_items(&Value::Object(map), &self.heap);
                                         for item in items {
                                             self.call_function_internal(
                                                 &cb,
@@ -7279,12 +7328,7 @@ impl Vm {
                                         }
                                         Some(Value::Undefined)
                                     } else {
-                                        execute_set_method(
-                                            map,
-                                            &method_name,
-                                            &args,
-                                            &mut self.heap,
-                                        )
+                                        execute_set_method(map, &method_name, &args, &mut self.heap)
                                     }
                                 } else {
                                     None
@@ -7397,8 +7441,7 @@ impl Vm {
                                     Some(Value::Array(h)) => self.heap.array_vec(*h),
                                     _ => Vec::new(),
                                 };
-                                let callback =
-                                    args.get(1).cloned().unwrap_or(Value::Undefined);
+                                let callback = args.get(1).cloned().unwrap_or(Value::Undefined);
                                 let mut keyed = Vec::with_capacity(items.len());
                                 for (i, item) in items.iter().enumerate() {
                                     let key = self.call_function_internal(
@@ -7428,9 +7471,10 @@ impl Vm {
                                     // Map keyed by SameValueZero identity.
                                     let mut groups: Vec<(Value, Vec<Value>)> = Vec::new();
                                     for (key, item) in keyed {
-                                        match groups.iter_mut().find(|(k, _)| {
-                                            builtins::same_value_zero(k, &key)
-                                        }) {
+                                        match groups
+                                            .iter_mut()
+                                            .find(|(k, _)| builtins::same_value_zero(k, &key))
+                                        {
                                             Some((_, g)) => g.push(item),
                                             None => groups.push((key, vec![item])),
                                         }
@@ -7501,7 +7545,9 @@ impl Vm {
                                     ) =>
                             {
                                 let obj = args[0].clone();
-                                let Value::Object(h) = &obj else { unreachable!() };
+                                let Value::Object(h) = &obj else {
+                                    unreachable!()
+                                };
                                 let keys =
                                     builtins::ordered_visible_keys(&self.heap.object_map(*h));
                                 let want_entries = method_name.as_ref() == "entries";
@@ -7663,10 +7709,7 @@ impl Vm {
                                 m.get("__promise_capability__")
                                     .cloned()
                                     .unwrap_or(Value::Undefined),
-                                matches!(
-                                    m.get("__capability_reject__"),
-                                    Some(Value::Bool(true))
-                                ),
+                                matches!(m.get("__capability_reject__"), Some(Value::Bool(true))),
                             )
                         };
                         let arg = args.first().cloned().unwrap_or(Value::Undefined);
@@ -7690,7 +7733,10 @@ impl Vm {
                     }
                     _ => {
                         let msg = callee.to_js_string(&self.heap);
-                        return Err(ZapcodeError::TypeError(format!("{} is not a function", msg)));
+                        return Err(ZapcodeError::TypeError(format!(
+                            "{} is not a function",
+                            msg
+                        )));
                     }
                 }
             }
@@ -7779,8 +7825,14 @@ impl Vm {
                 let items_arr = Value::Array(self.heap.alloc_array(items));
                 let mut obj = IndexMap::new();
                 obj.insert(Arc::from("__promise__"), Value::Bool(true));
-                obj.insert(Arc::from("status"), Value::String(JsString::from("pending_all")));
-                obj.insert(Arc::from("__batch_kind__"), Value::String(JsString::from(kind.as_str())));
+                obj.insert(
+                    Arc::from("status"),
+                    Value::String(JsString::from("pending_all")),
+                );
+                obj.insert(
+                    Arc::from("__batch_kind__"),
+                    Value::String(JsString::from(kind.as_str())),
+                );
                 obj.insert(Arc::from("items"), items_arr);
                 let h = self.heap.alloc_object(obj);
                 self.push(Value::Object(h))?;
@@ -7801,7 +7853,10 @@ impl Vm {
                 };
                 let mut obj = IndexMap::new();
                 obj.insert(Arc::from("__promise__"), Value::Bool(true));
-                obj.insert(Arc::from("status"), Value::String(JsString::from("pending_call")));
+                obj.insert(
+                    Arc::from("status"),
+                    Value::String(JsString::from("pending_call")),
+                );
                 obj.insert(Arc::from("__call_id__"), Value::Int(id as i64));
                 let h = self.heap.alloc_object(obj);
                 self.push(Value::Object(h))?;
@@ -7857,8 +7912,10 @@ impl Vm {
                     Value::Array(arr) => {
                         // Push an iterator object: [array, index]. Reuse the array
                         // handle so iteration sees live elements.
-                        let iter_obj =
-                            Value::Array(self.heap.alloc_array(vec![Value::Array(arr), Value::Int(0)]));
+                        let iter_obj = Value::Array(
+                            self.heap
+                                .alloc_array(vec![Value::Array(arr), Value::Int(0)]),
+                        );
                         self.push(iter_obj)?;
                     }
                     Value::String(s) => {
@@ -8194,7 +8251,10 @@ impl Vm {
                     Value::Null => "object",
                     // A produced Symbol value reports `typeof === "symbol"`.
                     Value::Object(h)
-                        if self.heap.object(*h).is_some_and(|m| m.contains_key("__symbol__")) =>
+                        if self
+                            .heap
+                            .object(*h)
+                            .is_some_and(|m| m.contains_key("__symbol__")) =>
                     {
                         "symbol"
                     }
@@ -8574,12 +8634,10 @@ impl Vm {
                                 // second await/then on the same promise reuses it.
                                 let id = match map.get("__call_id__") {
                                     Some(Value::Int(n)) => *n as u64,
-                                    _ => {
-                                        return Err(ZapcodeError::RuntimeError(
-                                            "internal error: pending_call promise missing __call_id__"
-                                                .to_string(),
-                                        ))
-                                    }
+                                    _ => return Err(ZapcodeError::RuntimeError(
+                                        "internal error: pending_call promise missing __call_id__"
+                                            .to_string(),
+                                    )),
                                 };
                                 // Already settled (awaited before): reuse the
                                 // value — but still yield the await tick.
@@ -8692,7 +8750,7 @@ impl Vm {
                                     )));
                                 };
                                 let promise = builtins::make_pending_promise(&mut self.heap);
-                                let mut make_capability = |reject: bool, heap: &mut Heap| {
+                                let make_capability = |reject: bool, heap: &mut Heap| {
                                     let mut cap = IndexMap::new();
                                     cap.insert(
                                         Arc::from("__promise_capability__"),
@@ -8772,9 +8830,10 @@ impl Vm {
                                 // options bag has an own `cause` (even undefined),
                                 // it becomes the error's `cause` property.
                                 let cause = match args.get(1) {
-                                    Some(Value::Object(opts)) => {
-                                        self.heap.object(*opts).and_then(|m| m.get("cause").cloned())
-                                    }
+                                    Some(Value::Object(opts)) => self
+                                        .heap
+                                        .object(*opts)
+                                        .and_then(|m| m.get("cause").cloned()),
                                     _ => None,
                                 };
                                 if let (Some(cause), Value::Object(em)) = (cause, &e) {
@@ -8844,8 +8903,7 @@ impl Vm {
                             // `typeof`/`instanceof` work.
                             "Function" => {
                                 return Err(ZapcodeError::SandboxViolation(
-                                    "Function constructor is forbidden in the sandbox"
-                                        .to_string(),
+                                    "Function constructor is forbidden in the sandbox".to_string(),
                                 ));
                             }
                             _ => {}
@@ -8883,7 +8941,7 @@ impl Vm {
                             instance.insert(Arc::from("__error__"), Value::Bool(true));
                             instance
                                 .entry(Arc::from("name"))
-                                .or_insert_with(|| Value::String(base.clone().into()));
+                                .or_insert_with(|| Value::String(base.clone()));
                         }
                         // Carry accessor descriptors onto the instance so a later
                         // GetProperty/SetProperty invokes the getter/setter body.
@@ -9089,7 +9147,10 @@ impl Vm {
                                 _ => base.to_string(),
                             };
                             if let Some(m) = &msg {
-                                map.insert(Arc::from("message"), Value::String(JsString::from(m.as_str())));
+                                map.insert(
+                                    Arc::from("message"),
+                                    Value::String(JsString::from(m.as_str())),
+                                );
                             }
                             let stack_msg = msg.as_deref().unwrap_or("");
                             let stack = if stack_msg.is_empty() {
@@ -9097,7 +9158,10 @@ impl Vm {
                             } else {
                                 format!("{}: {}", name, stack_msg)
                             };
-                            map.insert(Arc::from("stack"), Value::String(JsString::from(stack.as_str())));
+                            map.insert(
+                                Arc::from("stack"),
+                                Value::String(JsString::from(stack.as_str())),
+                            );
                         }
                     }
                     self.push(Value::Undefined)?;
@@ -9183,8 +9247,14 @@ impl Vm {
         builtins::compile_regex(&pattern, &flags)?;
         let mut obj = IndexMap::new();
         obj.insert(Arc::from("__regexp__"), Value::Bool(true));
-        obj.insert(Arc::from("pattern"), Value::String(JsString::from(pattern.as_str())));
-        obj.insert(Arc::from("flags"), Value::String(JsString::from(flags.as_str())));
+        obj.insert(
+            Arc::from("pattern"),
+            Value::String(JsString::from(pattern.as_str())),
+        );
+        obj.insert(
+            Arc::from("flags"),
+            Value::String(JsString::from(flags.as_str())),
+        );
         obj.insert(Arc::from("lastIndex"), Value::Int(0));
         Ok(Value::Object(self.heap.alloc_object(obj)))
     }
@@ -9194,7 +9264,11 @@ impl Vm {
     /// `__…__` keys), so we walk parent class objects skipping those internals.
     /// Returns the first match, mirroring JS static inheritance through the
     /// constructor's prototype chain.
-    fn inherited_static_member(&self, class_map: &IndexMap<Arc<str>, Value>, name: &str) -> Option<Value> {
+    fn inherited_static_member(
+        &self,
+        class_map: &IndexMap<Arc<str>, Value>,
+        name: &str,
+    ) -> Option<Value> {
         let mut current = match class_map.get("__super__") {
             Some(Value::Object(h)) => *h,
             _ => return None,
@@ -9218,7 +9292,11 @@ impl Vm {
     /// constructor (sets `.message`/`.stack`).
     fn class_error_base_of(&self, name: &str) -> Option<Arc<str>> {
         let class_h = self.class_handle_by_name(name)?;
-        match self.heap.object(class_h).and_then(|m| m.get("__error_base__")) {
+        match self
+            .heap
+            .object(class_h)
+            .and_then(|m| m.get("__error_base__"))
+        {
             Some(Value::String(base)) => Some(Arc::from(base.as_str())),
             _ => None,
         }
@@ -9258,7 +9336,11 @@ impl Vm {
     /// ancestors' methods, so this resolves inherited members through the chain.
     fn super_prototype_member(&self, class: &str, member: &str) -> Option<Value> {
         let super_h = self.super_class_handle_of(class)?;
-        let proto_h = match self.heap.object(super_h).and_then(|m| m.get("__prototype__")) {
+        let proto_h = match self
+            .heap
+            .object(super_h)
+            .and_then(|m| m.get("__prototype__"))
+        {
             Some(Value::Object(ph)) => *ph,
             _ => return None,
         };
@@ -9381,7 +9463,10 @@ impl Vm {
 
         // Build the class object
         let mut class_obj = IndexMap::new();
-        class_obj.insert(Arc::from("__class_name__"), Value::String(JsString::from(name)));
+        class_obj.insert(
+            Arc::from("__class_name__"),
+            Value::String(JsString::from(name)),
+        );
         class_obj.insert(Arc::from("__class_chain__"), chain_arr);
         class_obj.insert(Arc::from("__constructor__"), constructor);
         class_obj.insert(Arc::from("__prototype__"), proto_obj);
@@ -9663,11 +9748,20 @@ impl Vm {
             }
             Value::Array(h) => match name {
                 "length" => Ok(Value::Int(self.heap.array(*h).len() as i64)),
-                "constructor" => Ok(self.globals.get("Array").cloned().unwrap_or(Value::Undefined)),
+                "constructor" => Ok(self
+                    .globals
+                    .get("Array")
+                    .cloned()
+                    .unwrap_or(Value::Undefined)),
                 _ if is_array_method(name) => Ok(builtin_method("__array__", name)),
                 _ => {
                     if let Ok(idx) = name.parse::<usize>() {
-                        Ok(self.heap.array(*h).get(idx).cloned().unwrap_or(Value::Undefined))
+                        Ok(self
+                            .heap
+                            .array(*h)
+                            .get(idx)
+                            .cloned()
+                            .unwrap_or(Value::Undefined))
                     } else {
                         Ok(Value::Undefined)
                     }
@@ -9675,16 +9769,24 @@ impl Vm {
             },
             Value::String(s) => match name {
                 "length" => Ok(Value::Int(s.len_utf16() as i64)),
-                "constructor" => Ok(self.globals.get("String").cloned().unwrap_or(Value::Undefined)),
+                "constructor" => Ok(self
+                    .globals
+                    .get("String")
+                    .cloned()
+                    .unwrap_or(Value::Undefined)),
                 _ if is_string_method(name) => Ok(builtin_method("__string__", name)),
                 _ => Ok(Value::Undefined),
             },
-            Value::Int(_) | Value::Float(_) if name == "constructor" => {
-                Ok(self.globals.get("Number").cloned().unwrap_or(Value::Undefined))
-            }
-            Value::Bool(_) if name == "constructor" => {
-                Ok(self.globals.get("Boolean").cloned().unwrap_or(Value::Undefined))
-            }
+            Value::Int(_) | Value::Float(_) if name == "constructor" => Ok(self
+                .globals
+                .get("Number")
+                .cloned()
+                .unwrap_or(Value::Undefined)),
+            Value::Bool(_) if name == "constructor" => Ok(self
+                .globals
+                .get("Boolean")
+                .cloned()
+                .unwrap_or(Value::Undefined)),
             Value::Function(closure) => match name {
                 // Function reflection: `.length` is the arity (params before the
                 // first default/rest), `.name` is the declared/inferred name.
@@ -9709,9 +9811,11 @@ impl Vm {
             Value::BigInt(_) if builtins::is_bigint_method(name) => {
                 Ok(builtin_method("__bigint__", name))
             }
-            Value::BigInt(_) if name == "constructor" => {
-                Ok(self.globals.get("BigInt").cloned().unwrap_or(Value::Undefined))
-            }
+            Value::BigInt(_) if name == "constructor" => Ok(self
+                .globals
+                .get("BigInt")
+                .cloned()
+                .unwrap_or(Value::Undefined)),
             _ => Ok(Value::Undefined),
         }
     }
@@ -9762,7 +9866,9 @@ fn extract_pattern(pattern: &ParamPattern, value: &Value, out: &mut Vec<Value>, 
                         continue;
                     }
                     let item = match value {
-                        Value::Array(a) => heap.array(*a).get(i).cloned().unwrap_or(Value::Undefined),
+                        Value::Array(a) => {
+                            heap.array(*a).get(i).cloned().unwrap_or(Value::Undefined)
+                        }
                         _ => Value::Undefined,
                     };
                     extract_pattern(p, &item, out, heap);
@@ -9808,12 +9914,7 @@ fn extract_object_fields(
 fn is_error_ctor_name(name: &str) -> bool {
     matches!(
         name,
-        "Error"
-            | "TypeError"
-            | "RangeError"
-            | "SyntaxError"
-            | "ReferenceError"
-            | "AggregateError"
+        "Error" | "TypeError" | "RangeError" | "SyntaxError" | "ReferenceError" | "AggregateError"
     )
 }
 
@@ -9930,7 +10031,9 @@ fn iterable_items(v: &Value, heap: &mut Heap) -> Vec<Value> {
             .map(|c| Value::String(JsString::from(c.to_string().as_str())))
             .collect(),
         Value::Object(_) if is_array_iterator(v, heap) => {
-            let Value::Object(h) = v else { return Vec::new() };
+            let Value::Object(h) = v else {
+                return Vec::new();
+            };
             let (items_h, cursor) = match heap.object(*h) {
                 Some(m) => (
                     match m.get("__items__") {
@@ -10381,8 +10484,8 @@ fn date_from_components(args: &[Value]) -> Option<i64> {
     // only ever sees a bounded month. Done in i128 so huge components never panic.
     year += (month as i128).div_euclid(12);
     let month0 = (month as i128).rem_euclid(12); // 0..=11
-    // Reject years outside the representable window before the i64 math (which
-    // would otherwise overflow / panic in debug builds); they are NaN anyway.
+                                                 // Reject years outside the representable window before the i64 math (which
+                                                 // would otherwise overflow / panic in debug builds); they are NaN anyway.
     if year.unsigned_abs() > MAX_TIME_YEAR as u128 {
         return None;
     }
@@ -10498,7 +10601,9 @@ pub(crate) fn parse_date_string(s: &str) -> Option<i64> {
 
 fn is_date_object(value: &Value, heap: &Heap) -> bool {
     match value {
-        Value::Object(h) => heap.object(*h).is_some_and(|m| m.contains_key("__date_ms__")),
+        Value::Object(h) => heap
+            .object(*h)
+            .is_some_and(|m| m.contains_key("__date_ms__")),
         _ => false,
     }
 }
@@ -10668,7 +10773,9 @@ fn execute_date_method(map: &IndexMap<Arc<str>, Value>, method: &str) -> Option<
         return Some(Value::Int(0));
     }
     if matches!(method, "toJSON" | "toString" | "toDateString") {
-        return Some(Value::String(JsString::from(unix_millis_to_iso(millis).as_str())));
+        return Some(Value::String(JsString::from(
+            unix_millis_to_iso(millis).as_str(),
+        )));
     }
     let seconds = millis.div_euclid(1000);
     let ms = millis.rem_euclid(1000);

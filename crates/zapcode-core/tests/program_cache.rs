@@ -79,9 +79,11 @@ fn cached_program_matches_zapcode_run() {
 
 #[test]
 fn dump_load_run_identical() {
-    let program =
-        ZapcodeProgram::compile(r#"["a", "b", "c"].map((s) => s.toUpperCase()).join("")"#, Vec::new())
-            .unwrap();
+    let program = ZapcodeProgram::compile(
+        r#"["a", "b", "c"].map((s) => s.toUpperCase()).join("")"#,
+        Vec::new(),
+    )
+    .unwrap();
     let direct = program.run(Vec::new(), ResourceLimits::default()).unwrap();
 
     let bytes = program.dump().unwrap();
@@ -93,9 +95,15 @@ fn dump_load_run_identical() {
         complete_value(direct.state),
         complete_value(roundtripped.state)
     );
-    assert_eq!(complete_value(
-        loaded.run(Vec::new(), ResourceLimits::default()).unwrap().state
-    ), Value::String("ABC".into()));
+    assert_eq!(
+        complete_value(
+            loaded
+                .run(Vec::new(), ResourceLimits::default())
+                .unwrap()
+                .state
+        ),
+        Value::String("ABC".into())
+    );
 }
 
 #[test]
@@ -129,7 +137,9 @@ fn load_rejects_tampered_payload() {
 fn program_blob_does_not_load_as_snapshot_and_vice_versa() {
     let program = ZapcodeProgram::compile("1 + 1", Vec::new()).unwrap();
     let program_bytes = program.dump().unwrap();
-    let err = ZapcodeSnapshot::load(&program_bytes).unwrap_err().to_string();
+    let err = ZapcodeSnapshot::load(&program_bytes)
+        .unwrap_err()
+        .to_string();
     assert!(
         err.contains("expected a snapshot blob but got a program blob"),
         "unexpected error: {err}"
@@ -141,11 +151,16 @@ fn program_blob_does_not_load_as_snapshot_and_vice_versa() {
         vec!["fetch".to_string()],
     )
     .unwrap();
-    let snapshot_bytes = match fetcher.start(Vec::new(), ResourceLimits::default()).unwrap() {
+    let snapshot_bytes = match fetcher
+        .start(Vec::new(), ResourceLimits::default())
+        .unwrap()
+    {
         VmState::Suspended { snapshot, .. } => snapshot.dump().unwrap(),
         other => panic!("expected suspension, got {other:?}"),
     };
-    let err = ZapcodeProgram::load(&snapshot_bytes).unwrap_err().to_string();
+    let err = ZapcodeProgram::load(&snapshot_bytes)
+        .unwrap_err()
+        .to_string();
     assert!(
         err.contains("expected a program blob but got a snapshot blob"),
         "unexpected error: {err}"

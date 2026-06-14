@@ -39,9 +39,7 @@ fn run_str(code: &str) -> String {
 /// The gate pattern: an internal promise resolved AFTER `.then` registration,
 /// with nothing else in the microtask queue at registration time.
 fn gated(body: &str) -> String {
-    run_str(&format!(
-        "async function main() {{ {body} }} main();"
-    ))
+    run_str(&format!("async function main() {{ {body} }} main();"))
 }
 
 // ════════════════════════════════════════════════════════════════════════════

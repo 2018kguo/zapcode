@@ -135,7 +135,10 @@ fn alias_element_overwrite_does_not_mutate_grabbed_ref() {
         run_str("const a=[{n:1}]; const x=a[0]; a[0]={n:2}; x.n"),
         "1"
     );
-    assert_eq!(run_str("const a=[{n:1}]; const x=a[0]; a[0]={n:2}; a[0].n"), "2");
+    assert_eq!(
+        run_str("const a=[{n:1}]; const x=a[0]; a[0]={n:2}; a[0].n"),
+        "2"
+    );
 }
 
 // ===========================================================================
@@ -156,7 +159,10 @@ fn param_array_mutation_visible_in_caller() {
 
 #[test]
 fn param_object_mutation_visible_in_caller() {
-    assert_eq!(run_str("const o={n:1}; const f=(x)=>{x.n=42}; f(o); o.n"), "42");
+    assert_eq!(
+        run_str("const o={n:1}; const f=(x)=>{x.n=42}; f(o); o.n"),
+        "42"
+    );
     assert_eq!(
         run_str("const o={}; const f=(x)=>{x.added=true}; f(o); JSON.stringify(o)"),
         "{\"added\":true}"
@@ -397,7 +403,10 @@ fn map_get_returns_same_handle_as_set() {
 #[test]
 fn map_object_key_uses_reference_identity() {
     // The same object handle round-trips as a key.
-    assert_eq!(run_str("const k={}; const m=new Map(); m.set(k,9); m.get(k)"), "9");
+    assert_eq!(
+        run_str("const k={}; const m=new Map(); m.set(k,9); m.get(k)"),
+        "9"
+    );
     // A distinct same-shaped object is a different key (miss).
     assert_true("const k={}; const m=new Map(); m.set(k,9); m.get({})===undefined");
     assert_false("const k={}; const m=new Map(); m.set(k,9); m.has({})");
@@ -428,14 +437,22 @@ fn set_membership_uses_reference_identity() {
     assert_true("const o={}; const s=new Set(); s.add(o); s.has(o)");
     assert_false("const s=new Set(); s.add({}); s.has({})");
     // Adding the same handle twice keeps size 1.
-    assert_eq!(run_str("const o={}; const s=new Set(); s.add(o); s.add(o); s.size"), "1");
+    assert_eq!(
+        run_str("const o={}; const s=new Set(); s.add(o); s.add(o); s.size"),
+        "1"
+    );
     // Two distinct objects are two members.
-    assert_eq!(run_str("const s=new Set(); s.add({}); s.add({}); s.size"), "2");
+    assert_eq!(
+        run_str("const s=new Set(); s.add({}); s.add({}); s.size"),
+        "2"
+    );
 }
 
 #[test]
 fn set_iteration_yields_live_handles() {
-    assert_true("const o={n:1}; const s=new Set([o]); let ok=false; for(const x of s){ok=(x===o)} ok");
+    assert_true(
+        "const o={n:1}; const s=new Set([o]); let ok=false; for(const x of s){ok=(x===o)} ok",
+    );
     assert_eq!(
         run_str("const o={n:1}; const s=new Set([o]); for(const x of s){x.n=9} o.n"),
         "9"
@@ -498,7 +515,12 @@ fn structured_clone_array_of_arrays_independent() {
 #[test]
 fn structured_clone_of_class_instance_independent() {
     // Cloning a class instance yields a fresh, independent object with the data.
-    assert_eq!(run_str("class P{constructor(n){this.n=n}} const p=new P(5); const c=structuredClone(p); c.n"), "5");
+    assert_eq!(
+        run_str(
+            "class P{constructor(n){this.n=n}} const p=new P(5); const c=structuredClone(p); c.n"
+        ),
+        "5"
+    );
     assert_eq!(
         run_str(
             "class P{constructor(n){this.n=n}} const p=new P(1); const c=structuredClone(p); c.n=9; p.n"
@@ -553,7 +575,10 @@ fn structured_clone_primitives_pass_through() {
 #[test]
 fn structured_clone_of_date_keeps_value_and_brand() {
     assert_true("const d=new Date(0); const c=structuredClone(d); c instanceof Date");
-    assert_eq!(run_str("const d=new Date(1000); const c=structuredClone(d); c.getTime()"), "1000");
+    assert_eq!(
+        run_str("const d=new Date(1000); const c=structuredClone(d); c.getTime()"),
+        "1000"
+    );
     assert_false("const d=new Date(0); const c=structuredClone(d); c===d");
 }
 
@@ -564,7 +589,9 @@ fn structured_clone_preserves_internal_shared_refs() {
     // (clone.a === clone.b) — matching real JS. The heap-with-handles clone
     // walks a visited map so a node reached twice is cloned ONCE and both
     // paths point at the single cloned handle.
-    assert_true("const shared={n:1}; const o={a:shared,b:shared}; const c=structuredClone(o); c.a===c.b");
+    assert_true(
+        "const shared={n:1}; const o={a:shared,b:shared}; const c=structuredClone(o); c.a===c.b",
+    );
     // Mutating through one path is visible through the other (single shared node).
     assert_eq!(
         run_str(
@@ -637,7 +664,9 @@ fn object_assign_is_shallow() {
 #[test]
 fn object_spread_merge_preserves_shared_ref() {
     // Same inner object reachable through two spread sources stays one handle.
-    assert_true("const inner={n:1}; const a={x:inner}; const b={y:inner}; const m={...a,...b}; m.x===m.y");
+    assert_true(
+        "const inner={n:1}; const a={x:inner}; const b={y:inner}; const m={...a,...b}; m.x===m.y",
+    );
 }
 
 #[test]
@@ -656,7 +685,10 @@ fn json_roundtrip_breaks_identity_and_is_independent() {
 fn array_fill_with_object_shares_one_handle() {
     // new Array(n).fill(obj) puts the SAME object in every slot.
     assert_true("const o={n:0}; const a=new Array(3).fill(o); a[0]===a[1]");
-    assert_eq!(run_str("const o={n:0}; const a=new Array(3).fill(o); a[0].n=5; a[2].n"), "5");
+    assert_eq!(
+        run_str("const o={n:0}; const a=new Array(3).fill(o); a[0].n=5; a[2].n"),
+        "5"
+    );
 }
 
 // ===========================================================================
@@ -671,7 +703,9 @@ fn find_filter_return_live_element_handles() {
 
 #[test]
 fn splice_returns_live_removed_handles() {
-    assert_true("const inner={n:1}; const a=[inner]; const removed=a.splice(0,1); removed[0]===inner");
+    assert_true(
+        "const inner={n:1}; const a=[inner]; const removed=a.splice(0,1); removed[0]===inner",
+    );
     // mutating the removed object is the same object that was in the array.
     assert_eq!(
         run_str("const inner={n:1}; const a=[inner]; const r=a.splice(0,1); const e=r[0]; e.n=9; inner.n"),
@@ -725,7 +759,10 @@ fn reduce_accumulator_is_threaded_by_reference() {
 
 #[test]
 fn matrix_row_alias_write_visible() {
-    assert_eq!(run_str("const grid=[[0,0],[0,0]]; const row=grid[0]; row[1]=9; grid[0][1]"), "9");
+    assert_eq!(
+        run_str("const grid=[[0,0],[0,0]]; const row=grid[0]; row[1]=9; grid[0][1]"),
+        "9"
+    );
     // build identity matrix via shared row refs in a loop.
     assert_eq!(
         run_str(
@@ -739,7 +776,9 @@ fn matrix_row_alias_write_visible() {
 #[test]
 fn deep_path_alias_push_visible() {
     assert_eq!(
-        run_str("const o={a:{b:{c:{d:[1]}}}}; const p=o.a.b.c.d; p.push(2); JSON.stringify(o.a.b.c.d)"),
+        run_str(
+            "const o={a:{b:{c:{d:[1]}}}}; const p=o.a.b.c.d; p.push(2); JSON.stringify(o.a.b.c.d)"
+        ),
         "[1,2]"
     );
 }
@@ -777,9 +816,15 @@ fn adjacency_list_shared_bucket_push() {
 
 #[test]
 fn nested_map_in_object_mutation() {
-    assert_eq!(run_str("const o={m:new Map()}; o.m.set('k',1); o.m.get('k')"), "1");
+    assert_eq!(
+        run_str("const o={m:new Map()}; o.m.set('k',1); o.m.get('k')"),
+        "1"
+    );
     // array holding a map; mutating through the array view is visible on the map.
-    assert_eq!(run_str("const m=new Map(); const a=[m]; a[0].set('x',1); m.get('x')"), "1");
+    assert_eq!(
+        run_str("const m=new Map(); const a=[m]; a[0].set('x',1); m.get('x')"),
+        "1"
+    );
 }
 
 // ===========================================================================
@@ -834,9 +879,15 @@ fn destructuring_aliases_the_same_nested_handle() {
     // Two destructured names over the same source give the same handle.
     assert_true("const o={p:{n:1}}; const {p}=o; const {p:p2}=o; p===p2");
     // Array destructuring aliases the element.
-    assert_eq!(run_str("const inner={n:1}; const a=[inner]; const [first]=a; first.n=7; a[0].n"), "7");
+    assert_eq!(
+        run_str("const inner={n:1}; const a=[inner]; const [first]=a; first.n=7; a[0].n"),
+        "7"
+    );
     // Object destructuring aliases the nested object.
-    assert_eq!(run_str("const o={inner:{n:1}}; const {inner}=o; inner.n=7; o.inner.n"), "7");
+    assert_eq!(
+        run_str("const o={inner:{n:1}}; const {inner}=o; inner.n=7; o.inner.n"),
+        "7"
+    );
     // Rest pattern copies handles (shallow).
     assert_true("const inner={n:1}; const a=[0,inner]; const [,...rest]=a; rest[0]===inner");
 }
@@ -899,8 +950,16 @@ fn captured_object_outlives_function_call() {
 
 #[test]
 fn class_instance_alias_shares_state() {
-    assert_eq!(run_str("class P{constructor(n){this.n=n}} const p=new P(1); const q=p; q.n=9; p.n"), "9");
-    assert_eq!(run_str("class P{constructor(n){this.n=n}} const a=[new P(1)]; const x=a[0]; x.n=5; a[0].n"), "5");
+    assert_eq!(
+        run_str("class P{constructor(n){this.n=n}} const p=new P(1); const q=p; q.n=9; p.n"),
+        "9"
+    );
+    assert_eq!(
+        run_str(
+            "class P{constructor(n){this.n=n}} const a=[new P(1)]; const x=a[0]; x.n=5; a[0].n"
+        ),
+        "5"
+    );
 }
 
 #[test]

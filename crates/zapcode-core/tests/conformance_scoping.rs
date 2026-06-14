@@ -54,7 +54,12 @@ fn run_str(code: &str) -> String {
 /// (Syntax) error — e.g. a duplicate `let` in the same scope. The error may
 /// surface either when building the run or when it executes.
 fn compile_err(code: &str) -> String {
-    match ZapcodeRun::new(code.to_string(), Vec::new(), Vec::new(), ResourceLimits::default()) {
+    match ZapcodeRun::new(
+        code.to_string(),
+        Vec::new(),
+        Vec::new(),
+        ResourceLimits::default(),
+    ) {
         Err(e) => format!("{e:?}"),
         Ok(run) => match run.run(Vec::new()) {
             Err(e) => format!("{e:?}"),
@@ -70,7 +75,10 @@ fn compile_err(code: &str) -> String {
 #[test]
 fn var_is_hoisted_to_undefined() {
     // A `var` read before its initializer sees `undefined`, not a ReferenceError.
-    assert_eq!(run_str("(function(){ return x; var x = 1; })()"), "undefined");
+    assert_eq!(
+        run_str("(function(){ return x; var x = 1; })()"),
+        "undefined"
+    );
     assert_eq!(
         run_str("(function(){ var a = typeof b; var b = 2; return a; })()"),
         "undefined"
@@ -230,7 +238,9 @@ fn const_reassignment_throws_type_error() {
         "true"
     );
     assert_eq!(
-        run_str("(function(){ try { const c = 1; c++; return 'no'; } catch (e) { return e.name; } })()"),
+        run_str(
+            "(function(){ try { const c = 1; c++; return 'no'; } catch (e) { return e.name; } })()"
+        ),
         "TypeError"
     );
     assert_eq!(
@@ -238,9 +248,20 @@ fn const_reassignment_throws_type_error() {
         "TypeError"
     );
     // Mutating through a const reference is fine.
-    assert_eq!(run_str("(function(){ const o = { x: 1 }; o.x = 2; return o.x; })()"), "2");
-    assert_eq!(run_str("(function(){ const a = [1]; a.push(2); a[0] = 9; return a[0] + ',' + a.length; })()"), "9,2");
-    assert_eq!(run_str("(function(){ const o = { a: { b: 1 } }; o.a.b = 5; return o.a.b; })()"), "5");
+    assert_eq!(
+        run_str("(function(){ const o = { x: 1 }; o.x = 2; return o.x; })()"),
+        "2"
+    );
+    assert_eq!(
+        run_str(
+            "(function(){ const a = [1]; a.push(2); a[0] = 9; return a[0] + ',' + a.length; })()"
+        ),
+        "9,2"
+    );
+    assert_eq!(
+        run_str("(function(){ const o = { a: { b: 1 } }; o.a.b = 5; return o.a.b; })()"),
+        "5"
+    );
     assert_eq!(run_str("(function(){ const o = { x: 1, y: 2 }; delete o.x; return Object.keys(o).join(','); })()"), "y");
 }
 
@@ -249,12 +270,19 @@ fn duplicate_let_in_same_scope_is_rejected() {
     // A duplicate `let`/`const` in the same scope is an early SyntaxError in JS;
     // here it surfaces as a compile error ("Identifier 'a' has already been
     // declared"). A same-name binding in an INNER block is fine (shadowing).
-    assert!(compile_err("(function(){ let a = 1; let a = 2; return a; })()")
-        .contains("has already been declared"));
-    assert!(compile_err("(function(){ const a = 1; const a = 2; return a; })()")
-        .contains("has already been declared"));
+    assert!(
+        compile_err("(function(){ let a = 1; let a = 2; return a; })()")
+            .contains("has already been declared")
+    );
+    assert!(
+        compile_err("(function(){ const a = 1; const a = 2; return a; })()")
+            .contains("has already been declared")
+    );
     // Shadowing in a nested block is allowed.
-    assert_eq!(run_str("(function(){ let a = 1; { let a = 2; } return a; })()"), "1");
+    assert_eq!(
+        run_str("(function(){ let a = 1; { let a = 2; } return a; })()"),
+        "1"
+    );
 }
 
 #[test]
@@ -285,7 +313,10 @@ fn let_const_block_redeclaration_shadows_and_restores_outer() {
 fn let_const_do_not_leak_out_of_blocks() {
     // `let`/`const` are block-scoped: after the block the name is not bound, so
     // `typeof` (which doesn't throw on an unbound name) is "undefined".
-    assert_eq!(run_str("(function(){ { let a = 1; } return typeof a; })()"), "undefined");
+    assert_eq!(
+        run_str("(function(){ { let a = 1; } return typeof a; })()"),
+        "undefined"
+    );
     assert_eq!(
         run_str("(function(){ { const k = 'x'; } return typeof k; })()"),
         "undefined"
@@ -310,7 +341,9 @@ fn nested_function_locals_do_not_leak_outward() {
         "1"
     );
     assert_eq!(
-        run_str("(function(){ let x = 1; const g = () => { let x = 2; return x; }; g(); return x; })()"),
+        run_str(
+            "(function(){ let x = 1; const g = () => { let x = 2; return x; }; g(); return x; })()"
+        ),
         "1"
     );
     // And the helper itself returns its own shadowed value when read directly.
@@ -471,7 +504,9 @@ fn iife_forms() {
     assert_eq!(run_str("(function(){ return 'inner'; }())"), "inner");
     // Nested IIFEs.
     assert_eq!(
-        run_str("(function(){ return (function(){ return (function(){ return 1; })() + 1; })(); })()"),
+        run_str(
+            "(function(){ return (function(){ return (function(){ return 1; })() + 1; })(); })()"
+        ),
         "2"
     );
 }

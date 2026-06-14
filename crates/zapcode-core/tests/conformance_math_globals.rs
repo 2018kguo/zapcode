@@ -201,7 +201,10 @@ fn math_constant_relationships() {
     // Internal numeric consistency checks (don't depend on String() formatting).
     assert_eq!(run_str("(Math.SQRT2 * Math.SQRT2).toFixed(5)"), "2.00000");
     assert_eq!(run_str("(Math.LOG2E * Math.LN2).toFixed(5)"), "1.00000");
-    assert_eq!(run_str("Math.abs(Math.SQRT1_2 - 1 / Math.SQRT2) < 1e-12"), "true");
+    assert_eq!(
+        run_str("Math.abs(Math.SQRT1_2 - 1 / Math.SQRT2) < 1e-12"),
+        "true"
+    );
 }
 
 // ============================================================================
@@ -235,7 +238,10 @@ fn object_implemented_statics() {
     assert_eq!(run_str("Object.keys({ a: 1, b: 2 }).join(',')"), "a,b");
     assert_eq!(run_str("Object.values({ a: 1, b: 2 }).join(',')"), "1,2");
     assert_eq!(run_str("Object.entries({ a: 1 }).length"), "1");
-    assert_eq!(run_str("JSON.stringify(Object.fromEntries([['a', 1]]))"), "{\"a\":1}");
+    assert_eq!(
+        run_str("JSON.stringify(Object.fromEntries([['a', 1]]))"),
+        "{\"a\":1}"
+    );
     assert_eq!(run_str("Object.assign({}, { a: 1 }, { b: 2 }).b"), "2");
     assert_eq!(run_str("Object.hasOwn({ a: 1 }, 'a')"), "true");
 }
@@ -264,7 +270,10 @@ fn object_reflection_statics() {
     // Object.getPrototypeOf returns an object for object/array operands.
     assert_eq!(run_str("typeof Object.getPrototypeOf({})"), "object");
     // Object.getOwnPropertyNames lists own (data) property names.
-    assert_eq!(run_str("Object.getOwnPropertyNames({ a: 1, b: 2 }).join(',')"), "a,b");
+    assert_eq!(
+        run_str("Object.getOwnPropertyNames({ a: 1, b: 2 }).join(',')"),
+        "a,b"
+    );
 }
 
 // ============================================================================
@@ -278,7 +287,10 @@ fn string_normalize() {
     assert_eq!(run_str("'café'.normalize()"), "café");
     // A decomposed "e + combining acute" normalizes (NFC) to the single é.
     assert_eq!(run_str("'cafe\\u0301'.normalize('NFC') === 'café'"), "true");
-    assert_eq!(run_str("String('cafe\\u0301'.normalize('NFC').length)"), "4");
+    assert_eq!(
+        run_str("String('cafe\\u0301'.normalize('NFC').length)"),
+        "4"
+    );
     // NFD decomposes the composed é into two code units.
     assert_eq!(run_str("String('café'.normalize('NFD').length)"), "5");
     // An invalid form throws a RangeError (as in real JS).

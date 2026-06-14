@@ -62,10 +62,9 @@ fn uncaught_error_propagates_to_host() {
     match err {
         // starts_with, not eq: the uncaught failure now appends the
         // "    at line:col" of the awaited call for agent self-correction.
-        ZapcodeError::ExternalError(msg) => assert!(
-            msg.starts_with("upstream 500"),
-            "unexpected message: {msg}"
-        ),
+        ZapcodeError::ExternalError(msg) => {
+            assert!(msg.starts_with("upstream 500"), "unexpected message: {msg}")
+        }
         other => panic!("expected ExternalError, got {other:?}"),
     }
 }
@@ -106,7 +105,11 @@ fn execution_continues_normally_after_a_caught_error() {
         VmState::SuspendedMany { .. } => panic!("unexpected batch suspension"),
     };
 
-    match retry.resume(Value::String("recovered".into())).unwrap().state {
+    match retry
+        .resume(Value::String("recovered".into()))
+        .unwrap()
+        .state
+    {
         VmState::Complete(v) => assert_eq!(v, Value::String("recovered".into())),
         VmState::Suspended { .. } => panic!("expected completion"),
         VmState::SuspendedMany { .. } => panic!("unexpected batch suspension"),

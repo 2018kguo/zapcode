@@ -20,7 +20,8 @@ fn run(code: &str) -> String {
 }
 
 fn main() {
-    let fib = "function fib(n) { if (n <= 1) { return n; } return fib(n - 1) + fib(n - 2); } fib(22)";
+    let fib =
+        "function fib(n) { if (n <= 1) { return n; } return fib(n - 1) + fib(n - 2); } fib(22)";
     let lop = "let sum = 0; for (let i = 0; i < 200000; i++) { sum += i * 2 + 1; } sum";
     let t = std::time::Instant::now();
     let a = run(fib);

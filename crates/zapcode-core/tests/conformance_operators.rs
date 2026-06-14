@@ -368,8 +368,14 @@ fn in_operator() {
 
 #[test]
 fn delete_operator() {
-    assert_eq!(run_str("const o = {a: 1, b: 2}; delete o.a; 'a' in o"), "false");
-    assert_eq!(run_str("const o = {a: 1, b: 2}; delete o.a; JSON.stringify(o)"), "{\"b\":2}");
+    assert_eq!(
+        run_str("const o = {a: 1, b: 2}; delete o.a; 'a' in o"),
+        "false"
+    );
+    assert_eq!(
+        run_str("const o = {a: 1, b: 2}; delete o.a; JSON.stringify(o)"),
+        "{\"b\":2}"
+    );
     assert_eq!(run_str("const o = {a: 1}; delete o.a"), "true"); // returns true
     assert_eq!(run_str("const o = {a: 1}; delete o.missing"), "true");
 }
@@ -875,12 +881,30 @@ fn nullish_and_logical_with_parens() {
 #[test]
 fn logical_short_circuit_side_effect_counts() {
     // Track how many times the RHS side effect fires.
-    assert_eq!(run_str("let n = 0; const f = () => { n++; return 1; }; true && f(); n"), "1");
-    assert_eq!(run_str("let n = 0; const f = () => { n++; return 1; }; false && f(); n"), "0");
-    assert_eq!(run_str("let n = 0; const f = () => { n++; return 1; }; true || f(); n"), "0");
-    assert_eq!(run_str("let n = 0; const f = () => { n++; return 1; }; false || f(); n"), "1");
-    assert_eq!(run_str("let n = 0; const f = () => { n++; return 1; }; null ?? f(); n"), "1");
-    assert_eq!(run_str("let n = 0; const f = () => { n++; return 1; }; 7 ?? f(); n"), "0");
+    assert_eq!(
+        run_str("let n = 0; const f = () => { n++; return 1; }; true && f(); n"),
+        "1"
+    );
+    assert_eq!(
+        run_str("let n = 0; const f = () => { n++; return 1; }; false && f(); n"),
+        "0"
+    );
+    assert_eq!(
+        run_str("let n = 0; const f = () => { n++; return 1; }; true || f(); n"),
+        "0"
+    );
+    assert_eq!(
+        run_str("let n = 0; const f = () => { n++; return 1; }; false || f(); n"),
+        "1"
+    );
+    assert_eq!(
+        run_str("let n = 0; const f = () => { n++; return 1; }; null ?? f(); n"),
+        "1"
+    );
+    assert_eq!(
+        run_str("let n = 0; const f = () => { n++; return 1; }; 7 ?? f(); n"),
+        "0"
+    );
 }
 
 #[test]
@@ -1018,13 +1042,28 @@ fn void_evaluates_operand_but_yields_undefined() {
 
 #[test]
 fn delete_own_object_properties() {
-    assert_eq!(run_str("const o = {a:1, b:2}; delete o.a; 'a' in o"), "false");
-    assert_eq!(run_str("const o = {a:1, b:2}; delete o.a; 'b' in o"), "true");
-    assert_eq!(run_str("const o = {a:1}; delete o.a; Object.keys(o).length"), "0");
+    assert_eq!(
+        run_str("const o = {a:1, b:2}; delete o.a; 'a' in o"),
+        "false"
+    );
+    assert_eq!(
+        run_str("const o = {a:1, b:2}; delete o.a; 'b' in o"),
+        "true"
+    );
+    assert_eq!(
+        run_str("const o = {a:1}; delete o.a; Object.keys(o).length"),
+        "0"
+    );
     assert_eq!(run_str("const o = {a:1}; delete o.a"), "true"); // returns true
     assert_eq!(run_str("const o = {a:1}; delete o.missing"), "true"); // absent prop -> true
-    assert_eq!(run_str("const o = {a:1, b:2}; delete o['b']; JSON.stringify(o)"), "{\"a\":1}");
-    assert_eq!(run_str("const k='a'; const o = {a:1}; delete o[k]; 'a' in o"), "false");
+    assert_eq!(
+        run_str("const o = {a:1, b:2}; delete o['b']; JSON.stringify(o)"),
+        "{\"a\":1}"
+    );
+    assert_eq!(
+        run_str("const k='a'; const o = {a:1}; delete o[k]; 'a' in o"),
+        "false"
+    );
 }
 
 #[test]
@@ -1050,7 +1089,10 @@ fn in_operator_keys() {
     assert_eq!(run_str("2 in [10, 20]"), "false");
     assert_eq!(run_str("'length' in [1, 2]"), "true");
     assert_eq!(run_str("'0' in {0: 'x'}"), "true");
-    assert_eq!(run_str("const o = {x:1, y:2}; ('x' in o) && ('y' in o)"), "true");
+    assert_eq!(
+        run_str("const o = {x:1, y:2}; ('x' in o) && ('y' in o)"),
+        "true"
+    );
 }
 
 // ----------------------------------------------------------------------------
@@ -1142,15 +1184,24 @@ fn increment_decrement_value_and_coercion() {
     // here; the numeric-state-after-++ behavior above matches Node.
     assert_eq!(run_str("let x; x = 'abc'; x++; x"), "NaN"); // final state is NaN (matches Node)
     assert_eq!(run_str("const o = {n: 5}; o.n++; o.n"), "6");
-    assert_eq!(run_str("const o = {n: 5}; let r = o.n++; `${o.n},${r}`"), "6,5");
+    assert_eq!(
+        run_str("const o = {n: 5}; let r = o.n++; `${o.n},${r}`"),
+        "6,5"
+    );
     assert_eq!(run_str("const a = [1,2,3]; ++a[0]; a[0]"), "2");
     assert_eq!(run_str("const a = [1,2,3]; a[2]--; a.join(',')"), "1,2,2");
 }
 
 #[test]
 fn increment_in_larger_expressions() {
-    assert_eq!(run_str("let i = 0; let a = [i++, i++, i++]; a.join(',')"), "0,1,2");
-    assert_eq!(run_str("let i = 0; let a = [++i, ++i, ++i]; a.join(',')"), "1,2,3");
+    assert_eq!(
+        run_str("let i = 0; let a = [i++, i++, i++]; a.join(',')"),
+        "0,1,2"
+    );
+    assert_eq!(
+        run_str("let i = 0; let a = [++i, ++i, ++i]; a.join(',')"),
+        "1,2,3"
+    );
     assert_eq!(run_str("let x = 5; x++ + ++x"), "12"); // 5 + 7
     assert_eq!(run_str("let x = 1; (x++) + (x++) + (x++)"), "6"); // 1+2+3
 }
@@ -1279,7 +1330,10 @@ fn right_associativity_of_exponent() {
 
 #[test]
 fn right_associativity_of_assignment() {
-    assert_eq!(run_str("let a, b, c; a = b = c = 7; `${a},${b},${c}`"), "7,7,7");
+    assert_eq!(
+        run_str("let a, b, c; a = b = c = 7; `${a},${b},${c}`"),
+        "7,7,7"
+    );
     assert_eq!(run_str("let a, b; a = b = 1 + 1; `${a},${b}`"), "2,2");
     assert_eq!(run_str("let x = 1, y = 1; x += y += 5; `${x},${y}`"), "7,6");
 }

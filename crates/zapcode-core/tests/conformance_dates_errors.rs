@@ -36,16 +36,28 @@ fn run_str(code: &str) -> String {
 fn date_construction_from_epoch_and_string() {
     assert_eq!(run_str("new Date(0).getTime()"), "0");
     assert_eq!(run_str("new Date(1000).getTime()"), "1000");
-    assert_eq!(run_str("new Date('1970-01-01T00:00:00.000Z').getTime()"), "0");
-    assert_eq!(run_str("new Date('2020-01-01T00:00:00.000Z').getTime()"), "1577836800000");
+    assert_eq!(
+        run_str("new Date('1970-01-01T00:00:00.000Z').getTime()"),
+        "0"
+    );
+    assert_eq!(
+        run_str("new Date('2020-01-01T00:00:00.000Z').getTime()"),
+        "1577836800000"
+    );
 }
 
 #[test]
 fn date_static_utc_and_parse() {
     assert_eq!(run_str("Date.UTC(2020, 0, 1)"), "1577836800000"); // month is 0-based
     assert_eq!(run_str("Date.parse('1970-01-01T00:00:00.000Z')"), "0");
-    assert_eq!(run_str("Date.parse('2020-01-01T00:00:00.000Z')"), "1577836800000");
-    assert_eq!(run_str("new Date(Date.UTC(2000, 0, 1)).toISOString()"), "2000-01-01T00:00:00.000Z");
+    assert_eq!(
+        run_str("Date.parse('2020-01-01T00:00:00.000Z')"),
+        "1577836800000"
+    );
+    assert_eq!(
+        run_str("new Date(Date.UTC(2000, 0, 1)).toISOString()"),
+        "2000-01-01T00:00:00.000Z"
+    );
 }
 
 // ----------------------------------------------------------------------------
@@ -65,10 +77,19 @@ fn date_utc_component_getters() {
 
 #[test]
 fn date_iso_and_json() {
-    assert_eq!(run_str("new Date(0).toISOString()"), "1970-01-01T00:00:00.000Z");
+    assert_eq!(
+        run_str("new Date(0).toISOString()"),
+        "1970-01-01T00:00:00.000Z"
+    );
     assert_eq!(run_str("new Date(0).toJSON()"), "1970-01-01T00:00:00.000Z");
-    assert_eq!(run_str("new Date(1577836800000).toISOString()"), "2020-01-01T00:00:00.000Z");
-    assert_eq!(run_str("JSON.stringify({when: new Date(0)})"), "{\"when\":\"1970-01-01T00:00:00.000Z\"}");
+    assert_eq!(
+        run_str("new Date(1577836800000).toISOString()"),
+        "2020-01-01T00:00:00.000Z"
+    );
+    assert_eq!(
+        run_str("JSON.stringify({when: new Date(0)})"),
+        "{\"when\":\"1970-01-01T00:00:00.000Z\"}"
+    );
 }
 
 // ----------------------------------------------------------------------------
@@ -78,7 +99,10 @@ fn date_iso_and_json() {
 #[test]
 fn date_arithmetic_and_coercion() {
     // Subtracting two dates coerces to ms.
-    assert_eq!(run_str("const a = new Date(1000); const b = new Date(3000); b - a"), "2000");
+    assert_eq!(
+        run_str("const a = new Date(1000); const b = new Date(3000); b - a"),
+        "2000"
+    );
     assert_eq!(run_str("Number(new Date(5000))"), "5000"); // numeric coercion -> epoch ms
     assert_eq!(run_str("typeof Number(new Date(0))"), "number");
 }
@@ -145,8 +169,14 @@ fn rethrow_chains_to_outer_catch() {
 #[test]
 fn caught_runtime_error_is_real_error() {
     // A native runtime error (not an explicit throw) is a real Error with a message.
-    assert_eq!(run_str("let t; try { null.x; } catch(e){ t = e instanceof Error; } t"), "true");
-    assert_eq!(run_str("let t; try { undefinedFn(); } catch(e){ t = typeof e.message; } t"), "string");
+    assert_eq!(
+        run_str("let t; try { null.x; } catch(e){ t = e instanceof Error; } t"),
+        "true"
+    );
+    assert_eq!(
+        run_str("let t; try { undefinedFn(); } catch(e){ t = typeof e.message; } t"),
+        "string"
+    );
 }
 
 // ----------------------------------------------------------------------------

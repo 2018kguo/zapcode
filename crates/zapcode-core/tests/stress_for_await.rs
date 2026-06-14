@@ -8,10 +8,15 @@ use zapcode_core::vm::{eval_ts, VmState};
 use zapcode_core::{ResourceLimits, Value, ZapcodeRun};
 
 fn run_str(code: &str) -> String {
-    let result = ZapcodeRun::new(code.to_string(), Vec::new(), Vec::new(), ResourceLimits::default())
-        .unwrap()
-        .run(Vec::new())
-        .unwrap();
+    let result = ZapcodeRun::new(
+        code.to_string(),
+        Vec::new(),
+        Vec::new(),
+        ResourceLimits::default(),
+    )
+    .unwrap()
+    .run(Vec::new())
+    .unwrap();
     match result.state {
         VmState::Complete(v) => v.to_js_string(&result.heap),
         other => panic!("expected completion, got {other:?}"),

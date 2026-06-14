@@ -4,8 +4,15 @@ use zapcode_core::vm::VmState;
 use zapcode_core::{ResourceLimits, ZapcodeRun};
 
 fn run_str(code: &str) -> String {
-    let result = ZapcodeRun::new(code.to_string(), Vec::new(), Vec::new(), ResourceLimits::default())
-        .unwrap().run(Vec::new()).unwrap();
+    let result = ZapcodeRun::new(
+        code.to_string(),
+        Vec::new(),
+        Vec::new(),
+        ResourceLimits::default(),
+    )
+    .unwrap()
+    .run(Vec::new())
+    .unwrap();
     match result.state {
         VmState::Complete(v) => v.to_js_string(&result.heap),
         other => panic!("expected completion, got {other:?}"),
@@ -14,8 +21,14 @@ fn run_str(code: &str) -> String {
 
 #[test]
 fn nested_function_declaration() {
-    assert_eq!(run_str("function outer(){ function inner(){ return 5; } return inner(); } outer()"), "5");
-    assert_eq!(run_str("(() => { function f(){ return 3; } return f(); })()"), "3");
+    assert_eq!(
+        run_str("function outer(){ function inner(){ return 5; } return inner(); } outer()"),
+        "5"
+    );
+    assert_eq!(
+        run_str("(() => { function f(){ return 3; } return f(); })()"),
+        "3"
+    );
 }
 
 #[test]
@@ -25,7 +38,10 @@ fn forward_reference_top_level() {
 
 #[test]
 fn forward_reference_inside_function() {
-    assert_eq!(run_str("function run(){ return helper(2); function helper(x){ return x*10; } } run()"), "20");
+    assert_eq!(
+        run_str("function run(){ return helper(2); function helper(x){ return x*10; } } run()"),
+        "20"
+    );
 }
 
 #[test]
@@ -38,5 +54,8 @@ fn mutual_recursion() {
 
 #[test]
 fn function_decl_in_block_still_works() {
-    assert_eq!(run_str("let out; if (true) { function g(){ return 7; } out = g(); } out"), "7");
+    assert_eq!(
+        run_str("let out; if (true) { function g(){ return 7; } out = g(); } out"),
+        "7"
+    );
 }

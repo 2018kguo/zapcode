@@ -239,7 +239,10 @@ pub(crate) fn decode_frame(
                         max_decompressed
                     ))
                 } else {
-                    ZapcodeError::SnapshotError(format!("snapshot decompression failed: {:?}", e.status))
+                    ZapcodeError::SnapshotError(format!(
+                        "snapshot decompression failed: {:?}",
+                        e.status
+                    ))
                 }
             })
         }

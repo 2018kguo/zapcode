@@ -72,23 +72,41 @@ fn date_construct_from_epoch_millis() {
 #[test]
 fn date_construct_from_iso_string() {
     check("new Date('1970-01-01T00:00:00.000Z').getTime()", "0");
-    check("new Date('2020-01-01T00:00:00.000Z').getTime()", "1577836800000");
+    check(
+        "new Date('2020-01-01T00:00:00.000Z').getTime()",
+        "1577836800000",
+    );
     check(
         "new Date('2009-02-13T23:31:30.123Z').getTime()",
         "1234567890123",
     );
     // Fractional seconds shorter than 3 digits pad on the right (.5 -> 500ms).
-    check("new Date('2020-06-15T13:45:30.5Z').getUTCMilliseconds()", "500");
-    check("new Date('2020-06-15T13:45:30.05Z').getUTCMilliseconds()", "50");
+    check(
+        "new Date('2020-06-15T13:45:30.5Z').getUTCMilliseconds()",
+        "500",
+    );
+    check(
+        "new Date('2020-06-15T13:45:30.05Z').getUTCMilliseconds()",
+        "50",
+    );
     // No seconds component.
-    check("new Date('2020-01-01T12:00Z').toISOString()", "2020-01-01T12:00:00.000Z");
+    check(
+        "new Date('2020-01-01T12:00Z').toISOString()",
+        "2020-01-01T12:00:00.000Z",
+    );
 }
 
 #[test]
 fn date_construct_date_only_string_is_utc() {
     // A date-only string is interpreted as UTC midnight (matches Node).
-    check("new Date('2020-01-01').toISOString()", "2020-01-01T00:00:00.000Z");
-    check("new Date('2020-02-29').toISOString()", "2020-02-29T00:00:00.000Z"); // leap day
+    check(
+        "new Date('2020-01-01').toISOString()",
+        "2020-01-01T00:00:00.000Z",
+    );
+    check(
+        "new Date('2020-02-29').toISOString()",
+        "2020-02-29T00:00:00.000Z",
+    ); // leap day
     check("new Date('1999-12-31').getUTCFullYear()", "1999");
     check("new Date('2020-06-15').getUTCMonth()", "5"); // June -> 5
 }
@@ -111,15 +129,27 @@ fn date_construct_string_with_offset_and_space() {
 #[test]
 fn date_construct_multi_arg_utc() {
     // Multi-arg construction is UTC in this sandbox; month is 0-based.
-    check("new Date(2020, 0, 1).toISOString()", "2020-01-01T00:00:00.000Z");
-    check("new Date(2020, 5, 15).toISOString()", "2020-06-15T00:00:00.000Z");
+    check(
+        "new Date(2020, 0, 1).toISOString()",
+        "2020-01-01T00:00:00.000Z",
+    );
+    check(
+        "new Date(2020, 5, 15).toISOString()",
+        "2020-06-15T00:00:00.000Z",
+    );
     check(
         "new Date(1999, 11, 31, 23, 59, 59, 999).toISOString()",
         "1999-12-31T23:59:59.999Z",
     );
     // Omitted trailing components default to 0 (day defaults to 1).
-    check("new Date(2021, 2).toISOString()", "2021-03-01T00:00:00.000Z");
-    check("new Date(2021, 2, 10, 6).toISOString()", "2021-03-10T06:00:00.000Z");
+    check(
+        "new Date(2021, 2).toISOString()",
+        "2021-03-01T00:00:00.000Z",
+    );
+    check(
+        "new Date(2021, 2, 10, 6).toISOString()",
+        "2021-03-10T06:00:00.000Z",
+    );
 }
 
 #[test]
@@ -128,7 +158,10 @@ fn date_construct_two_digit_year_maps_to_1900s() {
     check("new Date(99, 0, 1).getUTCFullYear()", "1999");
     check("new Date(0, 0, 1).getUTCFullYear()", "1900");
     check("new Date(50, 0, 1).getUTCFullYear()", "1950");
-    check("new Date(99, 5, 15, 10, 30, 0).toISOString()", "1999-06-15T10:30:00.000Z");
+    check(
+        "new Date(99, 5, 15, 10, 30, 0).toISOString()",
+        "1999-06-15T10:30:00.000Z",
+    );
     // 100 and up are taken literally (NOT offset).
     check("new Date(100, 0, 1).getUTCFullYear()", "100");
     check("new Date(1999, 0, 1).getUTCFullYear()", "1999");
@@ -169,7 +202,10 @@ fn date_static_utc() {
     check("Date.UTC(1970, 0, 1)", "0");
     check("Date.UTC(2020, 1, 29)", "1582934400000"); // leap day
     check("Date.UTC(1999, 11, 31, 23, 59, 59, 999)", "946684799999");
-    check("new Date(Date.UTC(2000, 0, 1)).toISOString()", "2000-01-01T00:00:00.000Z");
+    check(
+        "new Date(Date.UTC(2000, 0, 1)).toISOString()",
+        "2000-01-01T00:00:00.000Z",
+    );
     // Defaults: missing day -> 1, missing time -> 0.
     check("Date.UTC(2021, 5)", "1622505600000");
 }
@@ -183,7 +219,7 @@ fn date_utc_nonfinite_component_is_nan() {
     check("String(Date.UTC(2020, 0, Infinity))", "NaN");
     check("String(Date.UTC(2020, 0, -Infinity))", "NaN");
     check("String(Date.UTC(2020, 'x', 1))", "NaN"); // ToNumber('x') -> NaN
-    // A finite call is unaffected.
+                                                    // A finite call is unaffected.
     check("Date.UTC(2020, 0, 1)", "1577836800000");
     // Two-digit year is mapped to 1900+yy here too (MakeFullYear).
     check("new Date(Date.UTC(99, 0, 1)).getUTCFullYear()", "1999");
@@ -206,11 +242,11 @@ fn date_parse_iso_time_components_are_range_checked() {
     check("String(Date.parse('2020-01-01T25:00:00Z'))", "NaN"); // hour > 24
     check("String(Date.parse('2020-01-01T23:60:00Z'))", "NaN"); // minute > 59
     check("String(Date.parse('2020-01-01T23:59:60Z'))", "NaN"); // second > 59
-    // Hour 24 is the one over-23 value JS allows, but ONLY as 24:00:00.000.
+                                                                // Hour 24 is the one over-23 value JS allows, but ONLY as 24:00:00.000.
     check("Date.parse('2020-01-01T24:00:00Z')", "1577923200000");
     check("String(Date.parse('2020-01-01T24:00:01Z'))", "NaN"); // 24 with non-zero sec -> NaN
     check("String(Date.parse('2020-01-01T24:01:00Z'))", "NaN"); // 24 with non-zero min -> NaN
-    // In-range fields still parse.
+                                                                // In-range fields still parse.
     check("Date.parse('2020-01-01T23:59:59Z')", "1577923199000");
 }
 
@@ -222,7 +258,7 @@ fn date_parse_bare_far_future_integer_is_nan() {
     check("String(new Date('1234567890123').getTime())", "NaN");
     check("String(Date.parse('1234567'))", "NaN"); // year 1,234,567 is out of range
     check("String(Date.parse('275761'))", "NaN"); // one past the max representable year
-    // Years that DO fit still parse (verified against Node).
+                                                  // Years that DO fit still parse (verified against Node).
     check("Date.parse('2020')", "1577836800000");
     check("Date.parse('123456')", "3833727840000000");
     check("Date.parse('275760')", "8639977881600000"); // the boundary year
@@ -272,7 +308,10 @@ fn date_get_utc_day_of_week() {
 fn date_local_getters_alias_utc() {
     // No timezone in the sandbox: local getters equal the UTC getters.
     let d = "const d = new Date('2020-06-15T13:45:30.123Z');";
-    check(&format!("{d} d.getFullYear() === d.getUTCFullYear()"), "true");
+    check(
+        &format!("{d} d.getFullYear() === d.getUTCFullYear()"),
+        "true",
+    );
     check(&format!("{d} d.getMonth() === d.getUTCMonth()"), "true");
     check(&format!("{d} d.getDate() === d.getUTCDate()"), "true");
     check(&format!("{d} d.getHours() === d.getUTCHours()"), "true");
@@ -297,8 +336,14 @@ fn date_components_before_epoch() {
 
 #[test]
 fn date_components_far_future() {
-    check("new Date('2099-12-31T23:59:59.999Z').getUTCFullYear()", "2099");
-    check("new Date('2099-12-31T23:59:59.999Z').toISOString()", "2099-12-31T23:59:59.999Z");
+    check(
+        "new Date('2099-12-31T23:59:59.999Z').getUTCFullYear()",
+        "2099",
+    );
+    check(
+        "new Date('2099-12-31T23:59:59.999Z').toISOString()",
+        "2099-12-31T23:59:59.999Z",
+    );
     check("new Date('2099-12-31T23:59:59.999Z').getUTCMonth()", "11");
 }
 
@@ -308,8 +353,14 @@ fn date_components_far_future() {
 
 #[test]
 fn date_subtraction_yields_millis() {
-    check("const a = new Date(1000); const b = new Date(3000); b - a", "2000");
-    check("const a = new Date(1000); const b = new Date(3000); a - b", "-2000");
+    check(
+        "const a = new Date(1000); const b = new Date(3000); b - a",
+        "2000",
+    );
+    check(
+        "const a = new Date(1000); const b = new Date(3000); a - b",
+        "-2000",
+    );
     check(
         "new Date('2020-01-02T00:00:00Z') - new Date('2020-01-01T00:00:00Z')",
         "86400000", // one day in ms
@@ -351,8 +402,8 @@ fn date_invalid_time_is_nan() {
     check("String(new Date('garbage').getTime())", "NaN");
     check("String(new Date('not a date').valueOf())", "NaN");
     check("String(new Date('2021-13-01').getTime())", "NaN"); // month out of 1..12 range
-    // NOTE: day 30 in February is NOT rejected — both Node and zapcode accept the
-    // raw day-of-month and roll it into a valid epoch (no per-month day validation).
+                                                              // NOTE: day 30 in February is NOT rejected — both Node and zapcode accept the
+                                                              // raw day-of-month and roll it into a valid epoch (no per-month day validation).
     check("new Date('2020-02-30').getTime()", "1583020800000");
 }
 
@@ -392,19 +443,34 @@ fn date_instanceof() {
 #[test]
 fn date_to_iso_string() {
     check("new Date(0).toISOString()", "1970-01-01T00:00:00.000Z");
-    check("new Date(1577836800000).toISOString()", "2020-01-01T00:00:00.000Z");
-    check("new Date(1234567890123).toISOString()", "2009-02-13T23:31:30.123Z");
+    check(
+        "new Date(1577836800000).toISOString()",
+        "2020-01-01T00:00:00.000Z",
+    );
+    check(
+        "new Date(1234567890123).toISOString()",
+        "2009-02-13T23:31:30.123Z",
+    );
     // toISOString always renders fixed-width fields with millisecond precision.
     // (Constructed from raw epoch ms, not `Date.UTC(5,…)`, since a two-digit year
     // in the multi-arg / Date.UTC form is mapped to 1900+yy by MakeFullYear.)
-    check("new Date(-62009366400000).toISOString()", "0005-01-01T00:00:00.000Z");
+    check(
+        "new Date(-62009366400000).toISOString()",
+        "0005-01-01T00:00:00.000Z",
+    );
 }
 
 #[test]
 fn date_to_json_equals_to_iso_string() {
     check("new Date(0).toJSON()", "1970-01-01T00:00:00.000Z");
-    check("new Date(12345).toJSON() === new Date(12345).toISOString()", "true");
-    check("new Date(1577836800000).toJSON()", "2020-01-01T00:00:00.000Z");
+    check(
+        "new Date(12345).toJSON() === new Date(12345).toISOString()",
+        "true",
+    );
+    check(
+        "new Date(1577836800000).toJSON()",
+        "2020-01-01T00:00:00.000Z",
+    );
 }
 
 #[test]
@@ -446,12 +512,18 @@ fn json_stringify_objects() {
     check("JSON.stringify({})", "{}");
     check("JSON.stringify({single: 1})", "{\"single\":1}");
     // Key insertion order is preserved.
-    check("JSON.stringify({z:1, a:2, m:3})", "{\"z\":1,\"a\":2,\"m\":3}");
+    check(
+        "JSON.stringify({z:1, a:2, m:3})",
+        "{\"z\":1,\"a\":2,\"m\":3}",
+    );
 }
 
 #[test]
 fn json_stringify_arrays() {
-    check("JSON.stringify([1, 'x', true, null])", "[1,\"x\",true,null]");
+    check(
+        "JSON.stringify([1, 'x', true, null])",
+        "[1,\"x\",true,null]",
+    );
     check("JSON.stringify([])", "[]");
     check("JSON.stringify([1])", "[1]");
     check("JSON.stringify([[1],[2,3]])", "[[1],[2,3]]");
@@ -476,8 +548,14 @@ fn json_stringify_nested_mixed() {
 
 #[test]
 fn json_stringify_drops_undefined_and_functions_in_objects() {
-    check("JSON.stringify({a:1, b:undefined, c:2})", "{\"a\":1,\"c\":2}");
-    check("JSON.stringify({a:1, f:function(){}, b:2})", "{\"a\":1,\"b\":2}");
+    check(
+        "JSON.stringify({a:1, b:undefined, c:2})",
+        "{\"a\":1,\"c\":2}",
+    );
+    check(
+        "JSON.stringify({a:1, f:function(){}, b:2})",
+        "{\"a\":1,\"b\":2}",
+    );
     check("JSON.stringify({a:undefined})", "{}");
     check("JSON.stringify({f(){}})", "{}");
 }
@@ -533,8 +611,14 @@ fn json_stringify_nan_and_infinity_become_null() {
     check("JSON.stringify(NaN)", "null");
     check("JSON.stringify(Infinity)", "null");
     check("JSON.stringify(-Infinity)", "null");
-    check("JSON.stringify({a:NaN, b:Infinity, c:-Infinity})", "{\"a\":null,\"b\":null,\"c\":null}");
-    check("JSON.stringify([NaN, Infinity, -Infinity])", "[null,null,null]");
+    check(
+        "JSON.stringify({a:NaN, b:Infinity, c:-Infinity})",
+        "{\"a\":null,\"b\":null,\"c\":null}",
+    );
+    check(
+        "JSON.stringify([NaN, Infinity, -Infinity])",
+        "[null,null,null]",
+    );
 }
 
 // ============================================================================
@@ -543,7 +627,10 @@ fn json_stringify_nan_and_infinity_become_null() {
 
 #[test]
 fn json_stringify_numeric_indent() {
-    check("JSON.stringify({a:1, b:2}, null, 2)", "{\n  \"a\": 1,\n  \"b\": 2\n}");
+    check(
+        "JSON.stringify({a:1, b:2}, null, 2)",
+        "{\n  \"a\": 1,\n  \"b\": 2\n}",
+    );
     check("JSON.stringify({a:1}, null, 1)", "{\n \"a\": 1\n}");
     check("JSON.stringify([1, 2], null, 2)", "[\n  1,\n  2\n]");
 }
@@ -551,7 +638,10 @@ fn json_stringify_numeric_indent() {
 #[test]
 fn json_stringify_string_indent() {
     check("JSON.stringify({a:1}, null, '\\t')", "{\n\t\"a\": 1\n}");
-    check("JSON.stringify([1, 2, 3], null, '--')", "[\n--1,\n--2,\n--3\n]");
+    check(
+        "JSON.stringify([1, 2, 3], null, '--')",
+        "[\n--1,\n--2,\n--3\n]",
+    );
 }
 
 #[test]
@@ -580,7 +670,10 @@ fn json_stringify_indent_edge_cases() {
     check("JSON.stringify({a:1}, null, 0)", "{\"a\":1}");
     check("JSON.stringify({a:1}, null, '')", "{\"a\":1}");
     // Numeric indent clamps to a max of 10 spaces (matches Node).
-    check("JSON.stringify({a:1}, null, 20)", "{\n          \"a\": 1\n}");
+    check(
+        "JSON.stringify({a:1}, null, 20)",
+        "{\n          \"a\": 1\n}",
+    );
     // Empty container with indent stays on one line.
     check("JSON.stringify({}, null, 2)", "{}");
     check("JSON.stringify([], null, 2)", "[]");
@@ -592,7 +685,10 @@ fn json_stringify_indent_edge_cases() {
 
 #[test]
 fn json_stringify_array_replacer_whitelist() {
-    check("JSON.stringify({a:1, b:2, c:3}, ['a', 'c'])", "{\"a\":1,\"c\":3}");
+    check(
+        "JSON.stringify({a:1, b:2, c:3}, ['a', 'c'])",
+        "{\"a\":1,\"c\":3}",
+    );
     check("JSON.stringify({x:1, y:2}, ['x'])", "{\"x\":1}");
     // A key not present in the object is simply skipped.
     check("JSON.stringify({a:1}, ['a', 'missing'])", "{\"a\":1}");
@@ -606,7 +702,10 @@ fn json_stringify_array_replacer_whitelist() {
 fn json_stringify_array_replacer_numeric_keys() {
     // Numeric replacer entries are coerced to string keys.
     check("JSON.stringify({1:'x', 2:'y'}, [1])", "{\"1\":\"x\"}");
-    check("JSON.stringify({1:'x', 2:'y'}, [1, 2])", "{\"1\":\"x\",\"2\":\"y\"}");
+    check(
+        "JSON.stringify({1:'x', 2:'y'}, [1, 2])",
+        "{\"1\":\"x\",\"2\":\"y\"}",
+    );
 }
 
 // ============================================================================
@@ -615,9 +714,18 @@ fn json_stringify_array_replacer_numeric_keys() {
 
 #[test]
 fn json_stringify_date_to_iso() {
-    check("JSON.stringify(new Date(0))", "\"1970-01-01T00:00:00.000Z\"");
-    check("JSON.stringify({when: new Date(0)})", "{\"when\":\"1970-01-01T00:00:00.000Z\"}");
-    check("JSON.stringify([new Date(0)])", "[\"1970-01-01T00:00:00.000Z\"]");
+    check(
+        "JSON.stringify(new Date(0))",
+        "\"1970-01-01T00:00:00.000Z\"",
+    );
+    check(
+        "JSON.stringify({when: new Date(0)})",
+        "{\"when\":\"1970-01-01T00:00:00.000Z\"}",
+    );
+    check(
+        "JSON.stringify([new Date(0)])",
+        "[\"1970-01-01T00:00:00.000Z\"]",
+    );
     check(
         "JSON.stringify({d: new Date(1577836800000)})",
         "{\"d\":\"2020-01-01T00:00:00.000Z\"}",
@@ -675,7 +783,10 @@ fn json_parse_string_escapes() {
     check("JSON.parse('\"a\\\\\\\\nb\"')", "a\\nb");
     check("JSON.parse('\"\\\\u0041\\\\u0042\"')", "AB"); // \uXXXX escapes -> "AB"
     check("JSON.parse('\"\\\\u0041\"').length", "1"); // single A is one char
-    check("JSON.parse('\"\\\\/\\\\b\\\\f\\\\r\"')", "/\u{0008}\u{000C}\r"); // \/ \b \f \r
+    check(
+        "JSON.parse('\"\\\\/\\\\b\\\\f\\\\r\"')",
+        "/\u{0008}\u{000C}\r",
+    ); // \/ \b \f \r
     check("JSON.parse('\"quote\\\\\"in\"')", "quote\"in"); // escaped quote
 }
 
@@ -688,8 +799,14 @@ fn json_parse_ignores_surrounding_whitespace() {
 
 #[test]
 fn json_parse_deeply_nested() {
-    check("JSON.parse('{\"x\":{\"y\":{\"z\":[1,2,3]}}}').x.y.z[2]", "3");
-    check("JSON.parse('{\"nested\":{\"deep\":{\"v\":7}}}').nested.deep.v", "7");
+    check(
+        "JSON.parse('{\"x\":{\"y\":{\"z\":[1,2,3]}}}').x.y.z[2]",
+        "3",
+    );
+    check(
+        "JSON.parse('{\"nested\":{\"deep\":{\"v\":7}}}').nested.deep.v",
+        "7",
+    );
     check("JSON.parse('[[[[42]]]]')[0][0][0][0]", "42");
 }
 
@@ -699,7 +816,10 @@ fn json_parse_deeply_nested() {
 
 #[test]
 fn json_round_trip_stringify_parse() {
-    check("JSON.stringify(JSON.parse(JSON.stringify({x:[1,{y:2}]})))", "{\"x\":[1,{\"y\":2}]}");
+    check(
+        "JSON.stringify(JSON.parse(JSON.stringify({x:[1,{y:2}]})))",
+        "{\"x\":[1,{\"y\":2}]}",
+    );
     check(
         "const orig = {n:1, list:[true, 'a', null]}; JSON.stringify(JSON.parse(JSON.stringify(orig)))",
         "{\"n\":1,\"list\":[true,\"a\",null]}",
@@ -765,6 +885,9 @@ fn json_reviver_invoked() {
 fn json_user_to_json_on_plain_object_honored() {
     // A user-defined `toJSON()` on a PLAIN object is called (as is Date#toJSON —
     // see json_stringify_date_to_iso).
-    check("JSON.stringify({toJSON(){ return 'custom'; }})", "\"custom\"");
+    check(
+        "JSON.stringify({toJSON(){ return 'custom'; }})",
+        "\"custom\"",
+    );
     check("JSON.stringify({x: {toJSON(){ return 5; }}})", "{\"x\":5}");
 }

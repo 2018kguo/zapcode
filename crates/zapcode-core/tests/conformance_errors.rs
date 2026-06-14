@@ -68,7 +68,10 @@ fn subtype_names() {
     assert_eq!(run_str("new RangeError('r').name"), "RangeError");
     assert_eq!(run_str("new ReferenceError('ref').name"), "ReferenceError");
     assert_eq!(run_str("new SyntaxError('syn').name"), "SyntaxError");
-    assert_eq!(run_str("new AggregateError([], 'agg').name"), "AggregateError");
+    assert_eq!(
+        run_str("new AggregateError([], 'agg').name"),
+        "AggregateError"
+    );
 }
 
 #[test]
@@ -133,7 +136,10 @@ fn string_of_error_is_name_colon_message() {
     assert_eq!(run_str("String(new Error('boom'))"), "Error: boom");
     assert_eq!(run_str("String(new TypeError('msg'))"), "TypeError: msg");
     assert_eq!(run_str("String(new RangeError('r'))"), "RangeError: r");
-    assert_eq!(run_str("String(new ReferenceError('x'))"), "ReferenceError: x");
+    assert_eq!(
+        run_str("String(new ReferenceError('x'))"),
+        "ReferenceError: x"
+    );
     assert_eq!(run_str("String(new SyntaxError('y'))"), "SyntaxError: y");
 }
 
@@ -149,12 +155,18 @@ fn string_of_error_without_message_is_just_name() {
 fn error_in_template_and_concat() {
     assert_eq!(run_str("'' + new Error('cat')"), "Error: cat");
     assert_eq!(run_str("`${new TypeError('boom')}`"), "TypeError: boom");
-    assert_eq!(run_str("'<' + new RangeError('r') + '>'"), "<RangeError: r>");
+    assert_eq!(
+        run_str("'<' + new RangeError('r') + '>'"),
+        "<RangeError: r>"
+    );
 }
 
 #[test]
 fn string_of_aggregate_error() {
-    assert_eq!(run_str("String(new AggregateError([], 'oops'))"), "AggregateError: oops");
+    assert_eq!(
+        run_str("String(new AggregateError([], 'oops'))"),
+        "AggregateError: oops"
+    );
     assert_eq!(run_str("String(new AggregateError([]))"), "AggregateError");
 }
 
@@ -204,8 +216,14 @@ fn subtype_instanceof_error_base() {
 fn subtype_instanceof_self() {
     assert_eq!(run_str("new TypeError('t') instanceof TypeError"), "true");
     assert_eq!(run_str("new RangeError('r') instanceof RangeError"), "true");
-    assert_eq!(run_str("new ReferenceError('x') instanceof ReferenceError"), "true");
-    assert_eq!(run_str("new SyntaxError('y') instanceof SyntaxError"), "true");
+    assert_eq!(
+        run_str("new ReferenceError('x') instanceof ReferenceError"),
+        "true"
+    );
+    assert_eq!(
+        run_str("new SyntaxError('y') instanceof SyntaxError"),
+        "true"
+    );
 }
 
 #[test]
@@ -239,14 +257,26 @@ fn base_error_is_not_a_subtype() {
 
 #[test]
 fn aggregate_error_construct() {
-    assert_eq!(run_str("new AggregateError([1,2], 'all failed').name"), "AggregateError");
-    assert_eq!(run_str("new AggregateError([1,2], 'all failed').message"), "all failed");
-    assert_eq!(run_str("new AggregateError([1,2,3], 'x').errors.length"), "3");
+    assert_eq!(
+        run_str("new AggregateError([1,2], 'all failed').name"),
+        "AggregateError"
+    );
+    assert_eq!(
+        run_str("new AggregateError([1,2], 'all failed').message"),
+        "all failed"
+    );
+    assert_eq!(
+        run_str("new AggregateError([1,2,3], 'x').errors.length"),
+        "3"
+    );
 }
 
 #[test]
 fn aggregate_error_errors_array_contents() {
-    assert_eq!(run_str("new AggregateError([10,20,30], 'x').errors[1]"), "20");
+    assert_eq!(
+        run_str("new AggregateError([10,20,30], 'x').errors[1]"),
+        "20"
+    );
     assert_eq!(
         run_str("new AggregateError([new Error('a'), new Error('b')], 'x').errors[0].message"),
         "a"
@@ -316,15 +346,24 @@ fn catch_classifies_error_types() {
 #[test]
 fn catch_optional_binding() {
     // `catch {` with no binding parameter.
-    assert_eq!(run_str("let r='no'; try { throw 1; } catch { r='yes'; } r"), "yes");
-    assert_eq!(run_str("let r='no'; try { throw new Error('x'); } catch { r='handled'; } r"), "handled");
+    assert_eq!(
+        run_str("let r='no'; try { throw 1; } catch { r='yes'; } r"),
+        "yes"
+    );
+    assert_eq!(
+        run_str("let r='no'; try { throw new Error('x'); } catch { r='handled'; } r"),
+        "handled"
+    );
 }
 
 #[test]
 fn catch_parameter_is_block_scoped() {
     // The catch parameter is its own block-scoped binding that shadows an outer
     // `let e` only inside the catch clause, so `e` is restored afterward.
-    assert_eq!(run_str("let e = 'outer'; try { throw 'inner'; } catch(e){ } e"), "outer");
+    assert_eq!(
+        run_str("let e = 'outer'; try { throw 'inner'; } catch(e){ } e"),
+        "outer"
+    );
     assert_eq!(
         run_str("let e = 'outer'; let seen; try { throw 'inner'; } catch(e){ seen = e; } seen + '|' + e"),
         "inner|outer"
@@ -335,8 +374,14 @@ fn catch_parameter_is_block_scoped() {
 fn catch_with_distinct_name_leaves_outer_untouched() {
     // A catch parameter with a name that doesn't collide with an outer binding
     // does not affect that outer binding (matches Node).
-    assert_eq!(run_str("let x = 'outer'; try { throw 'inner'; } catch(err){ } x"), "outer");
-    assert_eq!(run_str("let x = 'outer'; try { throw 'inner'; } catch(err){ x = err; } x"), "inner");
+    assert_eq!(
+        run_str("let x = 'outer'; try { throw 'inner'; } catch(err){ } x"),
+        "outer"
+    );
+    assert_eq!(
+        run_str("let x = 'outer'; try { throw 'inner'; } catch(err){ x = err; } x"),
+        "inner"
+    );
 }
 
 // ============================================================================
@@ -345,31 +390,58 @@ fn catch_with_distinct_name_leaves_outer_untouched() {
 
 #[test]
 fn throw_string_value() {
-    assert_eq!(run_str("let e2; try { throw 'boom'; } catch (e) { e2 = e; } e2"), "boom");
-    assert_eq!(run_str("let t; try { throw 'hi'; } catch(e){ t = typeof e; } t"), "string");
+    assert_eq!(
+        run_str("let e2; try { throw 'boom'; } catch (e) { e2 = e; } e2"),
+        "boom"
+    );
+    assert_eq!(
+        run_str("let t; try { throw 'hi'; } catch(e){ t = typeof e; } t"),
+        "string"
+    );
 }
 
 #[test]
 fn throw_number_value() {
-    assert_eq!(run_str("let e2; try { throw 42; } catch (e) { e2 = e; } e2"), "42");
-    assert_eq!(run_str("let t; try { throw 3.5; } catch(e){ t = typeof e; } t"), "number");
+    assert_eq!(
+        run_str("let e2; try { throw 42; } catch (e) { e2 = e; } e2"),
+        "42"
+    );
+    assert_eq!(
+        run_str("let t; try { throw 3.5; } catch(e){ t = typeof e; } t"),
+        "number"
+    );
 }
 
 #[test]
 fn throw_boolean_value() {
-    assert_eq!(run_str("let r; try { throw true; } catch(e){ r = e; } r"), "true");
-    assert_eq!(run_str("let r; try { throw false; } catch(e){ r = (e === false); } r"), "true");
+    assert_eq!(
+        run_str("let r; try { throw true; } catch(e){ r = e; } r"),
+        "true"
+    );
+    assert_eq!(
+        run_str("let r; try { throw false; } catch(e){ r = (e === false); } r"),
+        "true"
+    );
 }
 
 #[test]
 fn throw_null_and_undefined() {
-    assert_eq!(run_str("let r; try { throw null; } catch(e){ r = (e === null); } r"), "true");
-    assert_eq!(run_str("let r; try { throw undefined; } catch(e){ r = (e === undefined); } r"), "true");
+    assert_eq!(
+        run_str("let r; try { throw null; } catch(e){ r = (e === null); } r"),
+        "true"
+    );
+    assert_eq!(
+        run_str("let r; try { throw undefined; } catch(e){ r = (e === undefined); } r"),
+        "true"
+    );
 }
 
 #[test]
 fn throw_object_literal() {
-    assert_eq!(run_str("let r; try { throw {code:42}; } catch(e){ r = e.code; } r"), "42");
+    assert_eq!(
+        run_str("let r; try { throw {code:42}; } catch(e){ r = e.code; } r"),
+        "42"
+    );
     assert_eq!(
         run_str("let r; try { throw {code:'E1', detail:'x'}; } catch(e){ r = e.code + '/' + e.detail; } r"),
         "E1/x"
@@ -378,7 +450,10 @@ fn throw_object_literal() {
 
 #[test]
 fn throw_array_value() {
-    assert_eq!(run_str("let r; try { throw [1,2,3]; } catch(e){ r = e.length + ':' + e[2]; } r"), "3:3");
+    assert_eq!(
+        run_str("let r; try { throw [1,2,3]; } catch(e){ r = e.length + ':' + e[2]; } r"),
+        "3:3"
+    );
 }
 
 // ============================================================================
@@ -481,8 +556,14 @@ fn throw_from_called_function() {
 
 #[test]
 fn return_short_circuits_try_on_error() {
-    assert_eq!(run_str("function f(){ try { return 1; } catch(e){ return 2; } } f()"), "1");
-    assert_eq!(run_str("function f(){ try { throw 1; return 1; } catch(e){ return 2; } } f()"), "2");
+    assert_eq!(
+        run_str("function f(){ try { return 1; } catch(e){ return 2; } } f()"),
+        "1"
+    );
+    assert_eq!(
+        run_str("function f(){ try { throw 1; return 1; } catch(e){ return 2; } } f()"),
+        "2"
+    );
 }
 
 // ============================================================================
@@ -645,9 +726,18 @@ fn finally_side_effects_run_on_return_path() {
 
 #[test]
 fn member_access_on_null_throws_typeerror() {
-    assert_eq!(run_str("let n; try { null.x; } catch(e){ n = e.name; } n"), "TypeError");
-    assert_eq!(run_str("let b; try { null.x; } catch(e){ b = e instanceof TypeError; } b"), "true");
-    assert_eq!(run_str("let b; try { null.x; } catch(e){ b = e instanceof Error; } b"), "true");
+    assert_eq!(
+        run_str("let n; try { null.x; } catch(e){ n = e.name; } n"),
+        "TypeError"
+    );
+    assert_eq!(
+        run_str("let b; try { null.x; } catch(e){ b = e instanceof TypeError; } b"),
+        "true"
+    );
+    assert_eq!(
+        run_str("let b; try { null.x; } catch(e){ b = e instanceof Error; } b"),
+        "true"
+    );
     assert_eq!(
         run_str("let b; try { null.x; } catch(e){ b = typeof e.message === 'string' && e.message.length > 0; } b"),
         "true"
@@ -656,20 +746,38 @@ fn member_access_on_null_throws_typeerror() {
 
 #[test]
 fn member_access_on_undefined_throws_typeerror() {
-    assert_eq!(run_str("let n; try { let u; u.x; } catch(e){ n = e.name; } n"), "TypeError");
-    assert_eq!(run_str("let b; try { let u; u.x; } catch(e){ b = e instanceof Error; } b"), "true");
+    assert_eq!(
+        run_str("let n; try { let u; u.x; } catch(e){ n = e.name; } n"),
+        "TypeError"
+    );
+    assert_eq!(
+        run_str("let b; try { let u; u.x; } catch(e){ b = e instanceof Error; } b"),
+        "true"
+    );
 }
 
 #[test]
 fn calling_non_function_throws_typeerror() {
-    assert_eq!(run_str("let n; try { const x = 5; x(); } catch (e) { n = e.name; } n"), "TypeError");
-    assert_eq!(run_str("let n; try { (5)(); } catch(e){ n = e.name; } n"), "TypeError");
-    assert_eq!(run_str("let b; try { const x = 5; x(); } catch (e) { b = e instanceof TypeError; } b"), "true");
+    assert_eq!(
+        run_str("let n; try { const x = 5; x(); } catch (e) { n = e.name; } n"),
+        "TypeError"
+    );
+    assert_eq!(
+        run_str("let n; try { (5)(); } catch(e){ n = e.name; } n"),
+        "TypeError"
+    );
+    assert_eq!(
+        run_str("let b; try { const x = 5; x(); } catch (e) { b = e instanceof TypeError; } b"),
+        "true"
+    );
 }
 
 #[test]
 fn runtime_typeerror_has_string_stack() {
-    assert_eq!(run_str("let s; try { null.x; } catch(e){ s = typeof e.stack; } s"), "string");
+    assert_eq!(
+        run_str("let s; try { null.x; } catch(e){ s = typeof e.stack; } s"),
+        "string"
+    );
 }
 
 #[test]
@@ -686,9 +794,18 @@ fn divergence_calling_unbound_identifier_is_typeerror() {
     // DIVERGENCE: real Node throws a ReferenceError ("undefinedFn is not
     // defined") when *calling* an unbound name; zapcode reads the name as
     // `undefined` and then throws a TypeError ("undefined is not a function").
-    assert_eq!(run_str("let n='none'; try { undefinedFn(); } catch(e){ n = e.name; } n"), "TypeError");
-    assert_eq!(run_str("let m='none'; try { undefinedFn(); } catch(e){ m = e.message; } m"), "undefined is not a function");
-    assert_eq!(run_str("let b='none'; try { undefinedFn(); } catch(e){ b = e instanceof Error; } b"), "true");
+    assert_eq!(
+        run_str("let n='none'; try { undefinedFn(); } catch(e){ n = e.name; } n"),
+        "TypeError"
+    );
+    assert_eq!(
+        run_str("let m='none'; try { undefinedFn(); } catch(e){ m = e.message; } m"),
+        "undefined is not a function"
+    );
+    assert_eq!(
+        run_str("let b='none'; try { undefinedFn(); } catch(e){ b = e instanceof Error; } b"),
+        "true"
+    );
 }
 
 #[test]
@@ -720,7 +837,9 @@ fn user_subclass_chain_instanceof_all_ancestors() {
 #[test]
 fn user_subclass_instance_not_instanceof_unrelated() {
     assert_eq!(
-        run_str("class A{} class B extends A{} class Other{} let b = new B(); (b instanceof Other)"),
+        run_str(
+            "class A{} class B extends A{} class Other{} let b = new B(); (b instanceof Other)"
+        ),
         "false"
     );
 }
@@ -778,14 +897,23 @@ fn user_error_subclass_throw_catch_distinguishes_by_self_type() {
 
 #[test]
 fn custom_property_on_error_is_readable() {
-    assert_eq!(run_str("let e = new Error('x'); e.code = 'E1'; e.code"), "E1");
-    assert_eq!(run_str("let e = new TypeError('x'); e.detail = {n:7}; e.detail.n"), "7");
+    assert_eq!(
+        run_str("let e = new Error('x'); e.code = 'E1'; e.code"),
+        "E1"
+    );
+    assert_eq!(
+        run_str("let e = new TypeError('x'); e.detail = {n:7}; e.detail.n"),
+        "7"
+    );
 }
 
 #[test]
 fn error_stored_in_array_and_object() {
     assert_eq!(run_str("let a = [new Error('x')]; a[0].message"), "x");
-    assert_eq!(run_str("let o = { err: new RangeError('r') }; o.err.name + ':' + o.err.message"), "RangeError:r");
+    assert_eq!(
+        run_str("let o = { err: new RangeError('r') }; o.err.name + ':' + o.err.message"),
+        "RangeError:r"
+    );
 }
 
 #[test]
@@ -802,8 +930,14 @@ fn divergence_json_stringify_error_drops_custom_props() {
     // serialize to `{}` regardless of custom props (the error brand suppresses
     // all keys for JSON). The property is still readable via member access and
     // shows up in Object.keys. Pinned to actual behavior.
-    assert_eq!(run_str("let e = new Error('x'); e.code = 'E1'; JSON.stringify(e)"), "{}");
-    assert_eq!(run_str("let e = new Error('x'); e.code = 'E1'; e.code"), "E1");
+    assert_eq!(
+        run_str("let e = new Error('x'); e.code = 'E1'; JSON.stringify(e)"),
+        "{}"
+    );
+    assert_eq!(
+        run_str("let e = new Error('x'); e.code = 'E1'; e.code"),
+        "E1"
+    );
 }
 
 // ============================================================================
@@ -840,7 +974,9 @@ fn finally_then_value_completion() {
     // After a caught throw + finally, subsequent code runs and the program's
     // completion value is the trailing expression.
     assert_eq!(
-        run_str("let acc = 0; try { throw 1; } catch(e){ acc += e; } finally { acc += 10; } acc + 100"),
+        run_str(
+            "let acc = 0; try { throw 1; } catch(e){ acc += e; } finally { acc += 10; } acc + 100"
+        ),
         "111"
     );
 }
@@ -859,7 +995,10 @@ fn error_cause_option() {
     assert_eq!(run_str("new Error('e', {}).cause === undefined"), "true");
     // The message/toString/JSON behavior is unchanged.
     assert_eq!(run_str("new Error('boom', { cause: 'x' }).message"), "boom");
-    assert_eq!(run_str("JSON.stringify(new Error('x', { cause: 'y' }))"), "{}");
+    assert_eq!(
+        run_str("JSON.stringify(new Error('x', { cause: 'y' }))"),
+        "{}"
+    );
 }
 
 #[test]

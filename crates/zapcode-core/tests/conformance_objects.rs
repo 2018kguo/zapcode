@@ -57,7 +57,10 @@ fn run_str(code: &str) -> String {
 fn literal_basic_and_empty() {
     assert_eq!(run_str("JSON.stringify({})"), "{}");
     assert_eq!(run_str("JSON.stringify({a: 1})"), "{\"a\":1}");
-    assert_eq!(run_str("JSON.stringify({a: 1, b: 2, c: 3})"), "{\"a\":1,\"b\":2,\"c\":3}");
+    assert_eq!(
+        run_str("JSON.stringify({a: 1, b: 2, c: 3})"),
+        "{\"a\":1,\"b\":2,\"c\":3}"
+    );
     // nested literals
     assert_eq!(
         run_str("JSON.stringify({a: {b: {c: 1}}})"),
@@ -73,15 +76,24 @@ fn literal_basic_and_empty() {
 #[test]
 fn literal_string_keys_quoted_and_unquoted() {
     assert_eq!(run_str("JSON.stringify({'a-b': 1})"), "{\"a-b\":1}");
-    assert_eq!(run_str("JSON.stringify({'with space': 1})"), "{\"with space\":1}");
+    assert_eq!(
+        run_str("JSON.stringify({'with space': 1})"),
+        "{\"with space\":1}"
+    );
     assert_eq!(run_str("JSON.stringify({\"\": 0})"), "{\"\":0}");
     // unquoted reserved-ish identifiers are valid keys
-    assert_eq!(run_str("JSON.stringify({if: 1, class: 2})"), "{\"if\":1,\"class\":2}");
+    assert_eq!(
+        run_str("JSON.stringify({if: 1, class: 2})"),
+        "{\"if\":1,\"class\":2}"
+    );
 }
 
 #[test]
 fn literal_shorthand() {
-    assert_eq!(run_str("const a = 1, b = 2; JSON.stringify({a, b})"), "{\"a\":1,\"b\":2}");
+    assert_eq!(
+        run_str("const a = 1, b = 2; JSON.stringify({a, b})"),
+        "{\"a\":1,\"b\":2}"
+    );
     assert_eq!(
         run_str("const x = 'hi'; JSON.stringify({x, y: x + '!'})"),
         "{\"x\":\"hi\",\"y\":\"hi!\"}"
@@ -95,7 +107,10 @@ fn literal_shorthand() {
 
 #[test]
 fn literal_computed_keys() {
-    assert_eq!(run_str("const k = 'foo'; JSON.stringify({[k]: 1})"), "{\"foo\":1}");
+    assert_eq!(
+        run_str("const k = 'foo'; JSON.stringify({[k]: 1})"),
+        "{\"foo\":1}"
+    );
     assert_eq!(
         run_str("JSON.stringify({['a' + 'b']: 1, ['x' + 1]: 2})"),
         "{\"ab\":1,\"x1\":2}"
@@ -113,7 +128,10 @@ fn literal_computed_keys() {
 
 #[test]
 fn literal_method_shorthand() {
-    assert_eq!(run_str("const o = { greet() { return 'hi'; } }; o.greet()"), "hi");
+    assert_eq!(
+        run_str("const o = { greet() { return 'hi'; } }; o.greet()"),
+        "hi"
+    );
     assert_eq!(
         run_str("const o = { add(a, b) { return a + b; } }; o.add(2, 3)"),
         "5"
@@ -134,7 +152,10 @@ fn literal_method_shorthand() {
 fn literal_duplicate_keys_last_wins() {
     // In modern JS a duplicate data key keeps the last value, single slot.
     assert_eq!(run_str("JSON.stringify({a: 1, a: 2})"), "{\"a\":2}");
-    assert_eq!(run_str("JSON.stringify({a: 1, b: 2, a: 3})"), "{\"a\":3,\"b\":2}");
+    assert_eq!(
+        run_str("JSON.stringify({a: 1, b: 2, a: 3})"),
+        "{\"a\":3,\"b\":2}"
+    );
 }
 
 // ============================================================================
@@ -146,9 +167,15 @@ fn literal_duplicate_keys_last_wins() {
 fn object_literal_getter_is_invoked_on_read() {
     // Reading invokes the getter and yields the computed value (not the fn).
     assert_eq!(run_str("const o = { get x() { return 42; } }; o.x"), "42");
-    assert_eq!(run_str("const o = { get x() { return 42; } }; typeof o.x"), "number");
+    assert_eq!(
+        run_str("const o = { get x() { return 42; } }; typeof o.x"),
+        "number"
+    );
     // `this` inside the getter is the object.
-    assert_eq!(run_str("const o = { base: 10, get total() { return this.base + 5; } }; o.total"), "15");
+    assert_eq!(
+        run_str("const o = { base: 10, get total() { return this.base + 5; } }; o.total"),
+        "15"
+    );
 }
 
 #[test]
@@ -167,25 +194,46 @@ fn object_literal_setter_is_invoked_on_write() {
 #[test]
 fn accessor_properties_are_enumerable_in_source_order() {
     // The accessor key enumerates in source order, like a data property.
-    assert_eq!(run_str("Object.keys({ a: 1, get b() { return 2; }, c: 3 }).join(',')"), "a,b,c");
+    assert_eq!(
+        run_str("Object.keys({ a: 1, get b() { return 2; }, c: 3 }).join(',')"),
+        "a,b,c"
+    );
     assert_eq!(
         run_str("let o = { a: 1, get b() { return 2; } }; let r = []; for (const k in o) r.push(k); r.join(',')"),
         "a,b"
     );
     // A setter-only property is enumerable too.
-    assert_eq!(run_str("Object.keys({ a: 1, set x(v) {} }).join(',')"), "a,x");
+    assert_eq!(
+        run_str("Object.keys({ a: 1, set x(v) {} }).join(',')"),
+        "a,x"
+    );
 }
 
 #[test]
 fn getter_invoked_by_json_spread_and_object_helpers() {
     // JSON.stringify invokes the getter and serializes its result.
-    assert_eq!(run_str("JSON.stringify({ a: 1, get b() { return 2; } })"), "{\"a\":1,\"b\":2}");
-    assert_eq!(run_str("JSON.stringify({ get x() { return 5; } })"), "{\"x\":5}");
+    assert_eq!(
+        run_str("JSON.stringify({ a: 1, get b() { return 2; } })"),
+        "{\"a\":1,\"b\":2}"
+    );
+    assert_eq!(
+        run_str("JSON.stringify({ get x() { return 5; } })"),
+        "{\"x\":5}"
+    );
     // A setter-only property reads as undefined -> omitted from JSON.
-    assert_eq!(run_str("JSON.stringify({ a: 1, set x(v) {} })"), "{\"a\":1}");
+    assert_eq!(
+        run_str("JSON.stringify({ a: 1, set x(v) {} })"),
+        "{\"a\":1}"
+    );
     // Spread / Object.values / Object.entries / Object.assign invoke the getter.
-    assert_eq!(run_str("JSON.stringify({ ...{ a: 1, get b() { return 7; } } })"), "{\"a\":1,\"b\":7}");
-    assert_eq!(run_str("JSON.stringify(Object.values({ a: 1, get b() { return 9; } }))"), "[1,9]");
+    assert_eq!(
+        run_str("JSON.stringify({ ...{ a: 1, get b() { return 7; } } })"),
+        "{\"a\":1,\"b\":7}"
+    );
+    assert_eq!(
+        run_str("JSON.stringify(Object.values({ a: 1, get b() { return 9; } }))"),
+        "[1,9]"
+    );
     assert_eq!(
         run_str("JSON.stringify(Object.entries({ a: 1, get b() { return 9; } }))"),
         "[[\"a\",1],[\"b\",9]]"
@@ -212,7 +260,10 @@ fn read_dot_and_bracket_equivalent() {
 
 #[test]
 fn write_creates_and_updates() {
-    assert_eq!(run_str("const o = {}; o.a = 1; JSON.stringify(o)"), "{\"a\":1}");
+    assert_eq!(
+        run_str("const o = {}; o.a = 1; JSON.stringify(o)"),
+        "{\"a\":1}"
+    );
     assert_eq!(run_str("const o = {a: 1}; o.a = 2; o.a"), "2");
     assert_eq!(run_str("const o = {}; o['k'] = 5; o.k"), "5");
     // assignment expression yields the assigned value
@@ -269,7 +320,7 @@ fn in_operator_own_keys() {
     assert_eq!(run_str("'a' in {a: 1}"), "true");
     assert_eq!(run_str("'b' in {a: 1}"), "false");
     assert_eq!(run_str("const o = {x: undefined}; 'x' in o"), "true"); // present, value undefined
-    // numeric key membership (key coerced to string)
+                                                                       // numeric key membership (key coerced to string)
     assert_eq!(run_str("1 in {1: 'a'}"), "true");
     assert_eq!(run_str("'1' in {1: 'a'}"), "true");
 }
@@ -278,7 +329,10 @@ fn in_operator_own_keys() {
 fn in_operator_after_mutation() {
     assert_eq!(run_str("const o = {a: 1}; delete o.a; 'a' in o"), "false");
     assert_eq!(run_str("const o = {}; o.k = 1; 'k' in o"), "true");
-    assert_eq!(run_str("const o = {a: 1}; o.a = undefined; 'a' in o"), "true");
+    assert_eq!(
+        run_str("const o = {a: 1}; o.a = undefined; 'a' in o"),
+        "true"
+    );
 }
 
 #[test]
@@ -296,12 +350,18 @@ fn in_operator_reports_object_prototype_members() {
 
 #[test]
 fn delete_removes_key_and_returns_true() {
-    assert_eq!(run_str("const o = {a: 1, b: 2}; delete o.a; JSON.stringify(o)"), "{\"b\":2}");
+    assert_eq!(
+        run_str("const o = {a: 1, b: 2}; delete o.a; JSON.stringify(o)"),
+        "{\"b\":2}"
+    );
     assert_eq!(run_str("const o = {a: 1}; delete o.a"), "true");
     // deleting an absent key still returns true
     assert_eq!(run_str("const o = {a: 1}; delete o.zzz"), "true");
     // bracket form
-    assert_eq!(run_str("const o = {x: 1, y: 2}; delete o['x']; JSON.stringify(o)"), "{\"y\":2}");
+    assert_eq!(
+        run_str("const o = {x: 1, y: 2}; delete o['x']; JSON.stringify(o)"),
+        "{\"y\":2}"
+    );
 }
 
 #[test]
@@ -327,7 +387,10 @@ fn delete_numeric_key() {
         run_str("const o = {1: 'a', 2: 'b'}; delete o[1]; JSON.stringify(o)"),
         "{\"2\":\"b\"}"
     );
-    assert_eq!(run_str("const o = {1: 'a'}; delete o['1']; '1' in o"), "false");
+    assert_eq!(
+        run_str("const o = {1: 'a'}; delete o['1']; '1' in o"),
+        "false"
+    );
 }
 
 // ============================================================================
@@ -336,8 +399,14 @@ fn delete_numeric_key() {
 
 #[test]
 fn spread_basic_merge() {
-    assert_eq!(run_str("JSON.stringify({...{a: 1}, ...{b: 2}})"), "{\"a\":1,\"b\":2}");
-    assert_eq!(run_str("JSON.stringify({...{a: 1, b: 2}})"), "{\"a\":1,\"b\":2}");
+    assert_eq!(
+        run_str("JSON.stringify({...{a: 1}, ...{b: 2}})"),
+        "{\"a\":1,\"b\":2}"
+    );
+    assert_eq!(
+        run_str("JSON.stringify({...{a: 1, b: 2}})"),
+        "{\"a\":1,\"b\":2}"
+    );
     assert_eq!(
         run_str("const base = {a: 1, b: 2}; JSON.stringify({...base, c: 3})"),
         "{\"a\":1,\"b\":2,\"c\":3}"
@@ -347,9 +416,15 @@ fn spread_basic_merge() {
 #[test]
 fn spread_override_order_last_wins() {
     // later occurrence wins
-    assert_eq!(run_str("JSON.stringify({...{a: 1, b: 1}, b: 2})"), "{\"a\":1,\"b\":2}");
+    assert_eq!(
+        run_str("JSON.stringify({...{a: 1, b: 1}, b: 2})"),
+        "{\"a\":1,\"b\":2}"
+    );
     // explicit key before a spread is overridden by the spread
-    assert_eq!(run_str("JSON.stringify({a: 9, ...{a: 1, b: 2}})"), "{\"a\":1,\"b\":2}");
+    assert_eq!(
+        run_str("JSON.stringify({a: 9, ...{a: 1, b: 2}})"),
+        "{\"a\":1,\"b\":2}"
+    );
     // interleaved: spread's `a` overrides earlier, later literal keeps its slot
     assert_eq!(
         run_str("JSON.stringify({a: 1, ...{a: 2, c: 3}, b: 4})"),
@@ -366,7 +441,10 @@ fn spread_override_order_last_wins() {
 fn spread_with_nullish_sources_is_ignored() {
     assert_eq!(run_str("JSON.stringify({...null, a: 1})"), "{\"a\":1}");
     assert_eq!(run_str("JSON.stringify({...undefined, a: 1})"), "{\"a\":1}");
-    assert_eq!(run_str("JSON.stringify({a: 1, ...null, ...undefined})"), "{\"a\":1}");
+    assert_eq!(
+        run_str("JSON.stringify({a: 1, ...null, ...undefined})"),
+        "{\"a\":1}"
+    );
 }
 
 #[test]
@@ -383,14 +461,23 @@ fn spread_of_string_or_array_into_object() {
 
 #[test]
 fn object_keys_insertion_order() {
-    assert_eq!(run_str("JSON.stringify(Object.keys({z: 1, a: 2, m: 3}))"), "[\"z\",\"a\",\"m\"]");
+    assert_eq!(
+        run_str("JSON.stringify(Object.keys({z: 1, a: 2, m: 3}))"),
+        "[\"z\",\"a\",\"m\"]"
+    );
     assert_eq!(run_str("JSON.stringify(Object.keys({}))"), "[]");
-    assert_eq!(run_str("JSON.stringify(Object.keys({only: 1}))"), "[\"only\"]");
+    assert_eq!(
+        run_str("JSON.stringify(Object.keys({only: 1}))"),
+        "[\"only\"]"
+    );
 }
 
 #[test]
 fn object_values_and_entries() {
-    assert_eq!(run_str("JSON.stringify(Object.values({a: 1, b: 2}))"), "[1,2]");
+    assert_eq!(
+        run_str("JSON.stringify(Object.values({a: 1, b: 2}))"),
+        "[1,2]"
+    );
     assert_eq!(run_str("JSON.stringify(Object.values({}))"), "[]");
     assert_eq!(
         run_str("JSON.stringify(Object.entries({a: 1, b: 2}))"),
@@ -417,8 +504,14 @@ fn object_entries_destructuring_loop() {
 
 #[test]
 fn object_keys_values_entries_on_array() {
-    assert_eq!(run_str("JSON.stringify(Object.keys([10, 20, 30]))"), "[\"0\",\"1\",\"2\"]");
-    assert_eq!(run_str("JSON.stringify(Object.values([10, 20]))"), "[10,20]");
+    assert_eq!(
+        run_str("JSON.stringify(Object.keys([10, 20, 30]))"),
+        "[\"0\",\"1\",\"2\"]"
+    );
+    assert_eq!(
+        run_str("JSON.stringify(Object.values([10, 20]))"),
+        "[10,20]"
+    );
     assert_eq!(
         run_str("JSON.stringify(Object.entries(['x', 'y']))"),
         "[[\"0\",\"x\"],[\"1\",\"y\"]]"
@@ -437,8 +530,14 @@ fn object_keys_on_string() {
 
 #[test]
 fn object_assign_merge_and_override() {
-    assert_eq!(run_str("JSON.stringify(Object.assign({}, {a: 1}))"), "{\"a\":1}");
-    assert_eq!(run_str("JSON.stringify(Object.assign({}, {a: 1}, {b: 2}))"), "{\"a\":1,\"b\":2}");
+    assert_eq!(
+        run_str("JSON.stringify(Object.assign({}, {a: 1}))"),
+        "{\"a\":1}"
+    );
+    assert_eq!(
+        run_str("JSON.stringify(Object.assign({}, {a: 1}, {b: 2}))"),
+        "{\"a\":1,\"b\":2}"
+    );
     // later source wins
     assert_eq!(
         run_str("JSON.stringify(Object.assign({a: 1}, {a: 9, b: 2}))"),
@@ -464,7 +563,9 @@ fn object_assign_mutates_and_returns_target() {
     );
     // an alias sees the mutation
     assert_eq!(
-        run_str("const t = {a: 1}; const alias = t; Object.assign(t, {z: 9}); JSON.stringify(alias)"),
+        run_str(
+            "const t = {a: 1}; const alias = t; Object.assign(t, {z: 9}); JSON.stringify(alias)"
+        ),
         "{\"a\":1,\"z\":9}"
     );
 }
@@ -491,7 +592,9 @@ fn object_from_entries() {
     assert_eq!(run_str("JSON.stringify(Object.fromEntries([]))"), "{}");
     // round-trips with entries, preserving order
     assert_eq!(
-        run_str("const o = {a: 1, b: 2, c: 3}; JSON.stringify(Object.fromEntries(Object.entries(o)))"),
+        run_str(
+            "const o = {a: 1, b: 2, c: 3}; JSON.stringify(Object.fromEntries(Object.entries(o)))"
+        ),
         "{\"a\":1,\"b\":2,\"c\":3}"
     );
     // later pair with same key wins
@@ -523,7 +626,7 @@ fn object_has_own() {
     assert_eq!(run_str("Object.hasOwn({a: 1}, 'a')"), "true");
     assert_eq!(run_str("Object.hasOwn({a: 1}, 'b')"), "false");
     assert_eq!(run_str("Object.hasOwn({a: undefined}, 'a')"), "true"); // present though undefined
-    // numeric key, looked up by number or its string form
+                                                                       // numeric key, looked up by number or its string form
     assert_eq!(run_str("Object.hasOwn({1: 'a'}, 1)"), "true");
     assert_eq!(run_str("Object.hasOwn({1: 'a'}, '1')"), "true");
 }
@@ -539,7 +642,10 @@ fn has_own_property_method() {
 
 #[test]
 fn has_own_after_delete() {
-    assert_eq!(run_str("const o = {a: 1}; delete o.a; Object.hasOwn(o, 'a')"), "false");
+    assert_eq!(
+        run_str("const o = {a: 1}; delete o.a; Object.hasOwn(o, 'a')"),
+        "false"
+    );
 }
 
 // ============================================================================
@@ -554,7 +660,10 @@ fn freeze_returns_same_object() {
 #[test]
 fn freeze_prevents_write() {
     // A frozen object silently ignores property writes (sloppy mode).
-    assert_eq!(run_str("const o = Object.freeze({a: 1}); o.a = 9; o.a"), "1");
+    assert_eq!(
+        run_str("const o = Object.freeze({a: 1}); o.a = 9; o.a"),
+        "1"
+    );
 }
 
 #[test]
@@ -577,7 +686,10 @@ fn freeze_prevents_add_or_delete() {
 
 #[test]
 fn is_frozen_reports_frozen_state() {
-    assert_eq!(run_str("const o = {a: 1}; String(Object.isFrozen(o))"), "false");
+    assert_eq!(
+        run_str("const o = {a: 1}; String(Object.isFrozen(o))"),
+        "false"
+    );
     assert_eq!(
         run_str("const o = Object.freeze({a: 1}); String(Object.isFrozen(o))"),
         "true"
@@ -604,7 +716,10 @@ fn string_key_insertion_order_is_preserved() {
 fn numeric_keys_ordered_ascending() {
     // Integer-index keys enumerate in ascending NUMERIC order (not insertion or
     // lexicographic), matching JS.
-    assert_eq!(run_str("JSON.stringify(Object.keys({3: 1, 1: 2, 2: 3}))"), "[\"1\",\"2\",\"3\"]");
+    assert_eq!(
+        run_str("JSON.stringify(Object.keys({3: 1, 1: 2, 2: 3}))"),
+        "[\"1\",\"2\",\"3\"]"
+    );
     assert_eq!(
         run_str("const o = {}; o[3] = 'a'; o[1] = 'b'; o[2] = 'c'; JSON.stringify(Object.keys(o))"),
         "[\"1\",\"2\",\"3\"]"
@@ -638,9 +753,15 @@ fn numeric_key_coercion_and_access() {
     assert_eq!(run_str("const o = {}; o[1] = 'a'; o['1'] === 'a'"), "true");
     assert_eq!(run_str("const o = {1: 'x'}; o['1'] === o[1]"), "true");
     // float key keeps its source string form
-    assert_eq!(run_str("const o = {}; o[1.5] = 'a'; JSON.stringify(Object.keys(o))"), "[\"1.5\"]");
+    assert_eq!(
+        run_str("const o = {}; o[1.5] = 'a'; JSON.stringify(Object.keys(o))"),
+        "[\"1.5\"]"
+    );
     // negative key is a string key, so the integer key 0 sorts ahead of it.
-    assert_eq!(run_str("JSON.stringify(Object.keys({[-1]: 'a', 0: 'b'}))"), "[\"0\",\"-1\"]");
+    assert_eq!(
+        run_str("JSON.stringify(Object.keys({[-1]: 'a', 0: 'b'}))"),
+        "[\"0\",\"-1\"]"
+    );
 }
 
 // ============================================================================
@@ -707,7 +828,10 @@ fn delete_all_keys_leaves_empty() {
 #[test]
 fn double_underscore_user_keys_are_enumerable() {
     // Object.keys / values / entries keep user `__`-keys (Node-verified).
-    assert_eq!(run_str("const o={__id__:5,a:1}; Object.keys(o).join(',')"), "__id__,a");
+    assert_eq!(
+        run_str("const o={__id__:5,a:1}; Object.keys(o).join(',')"),
+        "__id__,a"
+    );
     assert_eq!(
         run_str("Object.values({__typename:'X',a:1}).join(',')"),
         "X,1"
@@ -743,7 +867,10 @@ fn double_underscore_user_keys_survive_spread() {
 fn double_underscore_user_keys_reflection_self_consistent() {
     // Object.hasOwn / `in` / get-property all already expose user `__`-keys;
     // keys/values/entries/stringify now agree.
-    assert_eq!(run_str("String(Object.hasOwn({__id__:1}, '__id__'))"), "true");
+    assert_eq!(
+        run_str("String(Object.hasOwn({__id__:1}, '__id__'))"),
+        "true"
+    );
     assert_eq!(run_str("String('__id__' in {__id__:1})"), "true");
     assert_eq!(run_str("String(({__id__:7}).__id__)"), "7");
 }
@@ -753,9 +880,7 @@ fn class_instance_internal_markers_stay_hidden_on_spread() {
     // Spreading a class instance must NOT leak internal brand keys
     // (`__class__`, `__class_chain__`, …) — only real own data props copy.
     assert_eq!(
-        run_str(
-            "class C { constructor(){ this.a=1; this.b=2; } } JSON.stringify({...new C()})"
-        ),
+        run_str("class C { constructor(){ this.a=1; this.b=2; } } JSON.stringify({...new C()})"),
         "{\"a\":1,\"b\":2}"
     );
     assert_eq!(
@@ -769,28 +894,49 @@ fn property_enumeration_order_matches_ecma() {
     // Integer-index keys ascending, then string keys in insertion order — the
     // single OrdinaryOwnPropertyKeys order shared by keys/values/entries,
     // for-in, and JSON.stringify.
-    assert_eq!(run_str("Object.keys({2:'a',1:'b',10:'c',z:'d',a:'e'}).join(',')"), "1,2,10,z,a");
-    assert_eq!(run_str("JSON.stringify({2:'a',1:'b',z:'c'})"), "{\"1\":\"b\",\"2\":\"a\",\"z\":\"c\"}");
+    assert_eq!(
+        run_str("Object.keys({2:'a',1:'b',10:'c',z:'d',a:'e'}).join(',')"),
+        "1,2,10,z,a"
+    );
+    assert_eq!(
+        run_str("JSON.stringify({2:'a',1:'b',z:'c'})"),
+        "{\"1\":\"b\",\"2\":\"a\",\"z\":\"c\"}"
+    );
     // Canonical-index edge cases: leading zero, 2^32-1, and negatives are STRING
     // keys (not integer indices), so they sort after and in insertion order.
-    assert_eq!(run_str("Object.keys({'01':1, 1:2, '0':3}).join(',')"), "0,1,01");
+    assert_eq!(
+        run_str("Object.keys({'01':1, 1:2, '0':3}).join(',')"),
+        "0,1,01"
+    );
     assert_eq!(
         run_str("Object.keys({4294967295:'a', 5:'b', 4294967294:'c'}).join(',')"),
         "5,4294967294,4294967295"
     );
-    assert_eq!(run_str("Object.keys({'-1':1, 2:2, 1:3}).join(',')"), "1,2,-1");
+    assert_eq!(
+        run_str("Object.keys({'-1':1, 2:2, 1:3}).join(',')"),
+        "1,2,-1"
+    );
     // Spread / assign results reorder when read, too.
     assert_eq!(run_str("Object.keys({...{2:'a',1:'b'}}).join(',')"), "1,2");
-    assert_eq!(run_str("JSON.stringify(Object.assign({}, {3:'c'}, {1:'a'}))"), "{\"1\":\"a\",\"3\":\"c\"}");
+    assert_eq!(
+        run_str("JSON.stringify(Object.assign({}, {3:'c'}, {1:'a'}))"),
+        "{\"1\":\"a\",\"3\":\"c\"}"
+    );
 }
 
 #[test]
 fn define_property_data_accessor_and_descriptors() {
     // Data descriptor: value installed; enumerable defaults to false (hidden
     // from keys/JSON), writable defaults to false (assignment ignored).
-    assert_eq!(run_str("const o = {}; Object.defineProperty(o, 'x', { value: 5 }); o.x"), "5");
+    assert_eq!(
+        run_str("const o = {}; Object.defineProperty(o, 'x', { value: 5 }); o.x"),
+        "5"
+    );
     assert_eq!(run_str("const o = {a:1}; Object.defineProperty(o, 'x', { value: 5 }); Object.keys(o).join(',')"), "a");
-    assert_eq!(run_str("const o = {}; Object.defineProperty(o, 'x', { value: 5 }); JSON.stringify(o)"), "{}");
+    assert_eq!(
+        run_str("const o = {}; Object.defineProperty(o, 'x', { value: 5 }); JSON.stringify(o)"),
+        "{}"
+    );
     assert_eq!(run_str("const o = {}; Object.defineProperty(o, 'x', { value: 5, writable: false }); o.x = 9; o.x"), "5");
     assert_eq!(run_str("const o = {}; Object.defineProperty(o, 'x', { value: 5, enumerable: true }); Object.keys(o).join(',')"), "x");
     // Accessor descriptor: get/set installed and invoked.
@@ -799,7 +945,12 @@ fn define_property_data_accessor_and_descriptors() {
         "9,3"
     );
     // Non-enumerable property is not spread or for-in'd; getOwnPropertyNames includes it.
-    assert_eq!(run_str("const o = {a:1}; Object.defineProperty(o, 'h', { value: 2 }); JSON.stringify({...o})"), "{\"a\":1}");
+    assert_eq!(
+        run_str(
+            "const o = {a:1}; Object.defineProperty(o, 'h', { value: 2 }); JSON.stringify({...o})"
+        ),
+        "{\"a\":1}"
+    );
     assert_eq!(run_str("const o = {a:1}; Object.defineProperty(o, 'h', { value: 2 }); Object.getOwnPropertyNames(o).sort().join(',')"), "a,h");
     // defineProperties applies several at once; returns the object.
     assert_eq!(
@@ -826,7 +977,10 @@ fn get_own_property_descriptor() {
         "function,true,false"
     );
     // A missing property -> undefined.
-    assert_eq!(run_str("Object.getOwnPropertyDescriptor({a:1}, 'zzz') === undefined"), "true");
+    assert_eq!(
+        run_str("Object.getOwnPropertyDescriptor({a:1}, 'zzz') === undefined"),
+        "true"
+    );
     // RESIDUAL: configurable:false is recorded/reported but its redefine-throws
     // restriction is NOT enforced (a second defineProperty succeeds here; JS
     // throws "Cannot redefine property").
@@ -842,13 +996,25 @@ fn constructor_property_resolves_to_the_global() {
     assert_eq!(run_str("(5).constructor === Number"), "true");
     assert_eq!(run_str("(true).constructor === Boolean"), "true");
     assert_eq!(run_str("new Error('x').constructor === Error"), "true");
-    assert_eq!(run_str("new TypeError('x').constructor === TypeError"), "true");
+    assert_eq!(
+        run_str("new TypeError('x').constructor === TypeError"),
+        "true"
+    );
     assert_eq!(run_str("new TypeError('x').constructor.name"), "TypeError");
-    assert_eq!(run_str("new RangeError('x').constructor.name"), "RangeError");
+    assert_eq!(
+        run_str("new RangeError('x').constructor.name"),
+        "RangeError"
+    );
     // A caught built-in error reports its constructor.
-    assert_eq!(run_str("(function(){ try { null.x; } catch (e) { return e.constructor.name; } })()"), "TypeError");
+    assert_eq!(
+        run_str("(function(){ try { null.x; } catch (e) { return e.constructor.name; } })()"),
+        "TypeError"
+    );
     // Object.name / Array.name reflect the constructor name.
     assert_eq!(run_str("Object.name + ',' + Array.name"), "Object,Array");
     // A custom error subclass keeps reporting its own class.
-    assert_eq!(run_str("class E extends Error {} new E().constructor.name"), "E");
+    assert_eq!(
+        run_str("class E extends Error {} new E().constructor.name"),
+        "E"
+    );
 }

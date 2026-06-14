@@ -5,8 +5,15 @@ use zapcode_core::vm::VmState;
 use zapcode_core::{ResourceLimits, ZapcodeRun};
 
 fn run_str(code: &str) -> String {
-    let result = ZapcodeRun::new(code.to_string(), Vec::new(), Vec::new(), ResourceLimits::default())
-        .unwrap().run(Vec::new()).unwrap();
+    let result = ZapcodeRun::new(
+        code.to_string(),
+        Vec::new(),
+        Vec::new(),
+        ResourceLimits::default(),
+    )
+    .unwrap()
+    .run(Vec::new())
+    .unwrap();
     match result.state {
         VmState::Complete(v) => v.to_js_string(&result.heap),
         other => panic!("expected completion, got {other:?}"),
@@ -41,7 +48,10 @@ fn nested_for_of_with_break_continue() {
 fn for_of_over_map_set_string_still_works() {
     assert_eq!(run_str("let s=''; for (const c of 'abc') s+=c; s"), "abc");
     assert_eq!(run_str("const m=new Map([['a',1],['b',2]]); let o=[]; for (const [k,v] of m) o.push(k+v); o.join(',')"), "a1,b2");
-    assert_eq!(run_str("let t=0; for (const x of new Set([1,2,2,3])) t+=x; t"), "6");
+    assert_eq!(
+        run_str("let t=0; for (const x of new Set([1,2,2,3])) t+=x; t"),
+        "6"
+    );
     // nested map-in-array
     assert_eq!(run_str("let o=[]; for (const row of [['a','b'],['c']]) { for (const x of row) o.push(x); } o.join('')"), "abc");
 }

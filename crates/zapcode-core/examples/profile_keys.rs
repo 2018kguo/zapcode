@@ -105,10 +105,7 @@ fn main() {
 
     let unique_strings = stats.len();
     let total_allocations: usize = stats.values().map(|s| s.allocations.len()).sum();
-    let total_key_bytes: usize = stats
-        .iter()
-        .map(|(k, s)| k.len() * s.occurrences)
-        .sum();
+    let total_key_bytes: usize = stats.iter().map(|(k, s)| k.len() * s.occurrences).sum();
     let allocated_key_bytes: usize = stats
         .iter()
         // Each distinct allocation pays the string bytes + ~16B Arc refcount header.
@@ -116,13 +113,14 @@ fn main() {
         .sum();
     let interned_key_bytes: usize = stats.keys().map(|k| k.len() + 16).sum();
 
-    println!("heap slots: {} ({object_slots} objects, {array_slots} arrays)", heap.len());
+    println!(
+        "heap slots: {} ({object_slots} objects, {array_slots} arrays)",
+        heap.len()
+    );
     println!("object-key occurrences: {total_occurrences}");
     println!("unique key strings:     {unique_strings}");
     println!("distinct Arc<str> allocations backing them: {total_allocations}");
-    println!(
-        "key bytes if every occurrence owned its string: {total_key_bytes}"
-    );
+    println!("key bytes if every occurrence owned its string: {total_key_bytes}");
     println!(
         "key bytes actually allocated (string + 16B Arc header per allocation): {allocated_key_bytes}"
     );

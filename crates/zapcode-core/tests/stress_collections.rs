@@ -23,7 +23,10 @@ fn run_str(code: &str) -> String {
 
 #[test]
 fn sort_mutates_in_place() {
-    assert_eq!(run_str("const a=[3,1,2]; a.sort((x,y)=>x-y); a.join(',')"), "1,2,3");
+    assert_eq!(
+        run_str("const a=[3,1,2]; a.sort((x,y)=>x-y); a.join(',')"),
+        "1,2,3"
+    );
     assert_eq!(run_str("const a=[3,1,2]; a.sort(); a.join(',')"), "1,2,3");
     // Multi-key comparator (regression of the O1 string-relational bug).
     assert_eq!(
@@ -45,7 +48,10 @@ fn spread_map_and_set() {
 
 #[test]
 fn map_and_set_from_iterables() {
-    assert_eq!(run_str("const m=new Map([['a',1]]); new Map(m).get('a')"), "1");
+    assert_eq!(
+        run_str("const m=new Map([['a',1]]); new Map(m).get('a')"),
+        "1"
+    );
     assert_eq!(run_str("new Set('aab').size"), "2");
     assert_eq!(run_str("[...new Set('aab')].join('')"), "ab");
 }

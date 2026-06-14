@@ -115,10 +115,7 @@ fn falls_back_to_tostring_when_valueof_returns_object() {
 #[test]
 fn this_is_bound_inside_hook() {
     // The hook body can read `this` to compute its result.
-    assert_eq!(
-        run_str("({n: 41, valueOf(){return this.n + 1}}) + 0"),
-        "42"
-    );
+    assert_eq!(run_str("({n: 41, valueOf(){return this.n + 1}}) + 0"), "42");
 }
 
 #[test]
@@ -190,7 +187,9 @@ fn symbol_to_primitive_returning_object_is_a_type_error() {
 fn symbol_to_primitive_key_is_hidden_from_reflection() {
     // The sentinel key must not leak as an own enumerable property.
     assert_eq!(
-        run_str("const o = { [Symbol.toPrimitive]() { return 1; }, a: 2 }; Object.keys(o).join(',')"),
+        run_str(
+            "const o = { [Symbol.toPrimitive]() { return 1; }, a: 2 }; Object.keys(o).join(',')"
+        ),
         "a"
     );
 }

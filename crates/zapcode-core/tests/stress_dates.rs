@@ -6,8 +6,15 @@ use zapcode_core::vm::VmState;
 use zapcode_core::{ResourceLimits, ZapcodeRun};
 
 fn run_str(code: &str) -> String {
-    let result = ZapcodeRun::new(code.to_string(), Vec::new(), Vec::new(), ResourceLimits::default())
-        .unwrap().run(Vec::new()).unwrap();
+    let result = ZapcodeRun::new(
+        code.to_string(),
+        Vec::new(),
+        Vec::new(),
+        ResourceLimits::default(),
+    )
+    .unwrap()
+    .run(Vec::new())
+    .unwrap();
     match result.state {
         VmState::Complete(v) => v.to_js_string(&result.heap),
         other => panic!("expected completion, got {other:?}"),
@@ -16,11 +23,23 @@ fn run_str(code: &str) -> String {
 
 #[test]
 fn parse_iso_strings() {
-    assert_eq!(run_str("new Date('2023-11-14T22:13:20.000Z').getTime()"), "1700000000000");
-    assert_eq!(run_str("new Date('2023-11-14T22:13:20.123Z').getUTCFullYear()"), "2023");
+    assert_eq!(
+        run_str("new Date('2023-11-14T22:13:20.000Z').getTime()"),
+        "1700000000000"
+    );
+    assert_eq!(
+        run_str("new Date('2023-11-14T22:13:20.123Z').getUTCFullYear()"),
+        "2023"
+    );
     assert_eq!(run_str("new Date('2024-03-10').getTime()"), "1710028800000");
-    assert_eq!(run_str("new Date('2023-11-14T22:13:20+05:00').getTime()"), "1699982000000");
-    assert_eq!(run_str("Date.parse('2023-11-14T22:13:20.000Z')"), "1700000000000");
+    assert_eq!(
+        run_str("new Date('2023-11-14T22:13:20+05:00').getTime()"),
+        "1699982000000"
+    );
+    assert_eq!(
+        run_str("Date.parse('2023-11-14T22:13:20.000Z')"),
+        "1700000000000"
+    );
 }
 
 #[test]
@@ -33,10 +52,16 @@ fn multi_arg_construction() {
 
 #[test]
 fn arithmetic_and_coercion() {
-    assert_eq!(run_str("new Date(1700000005000) - new Date(1700000000000)"), "5000");
+    assert_eq!(
+        run_str("new Date(1700000005000) - new Date(1700000000000)"),
+        "5000"
+    );
     assert_eq!(run_str("+new Date(1700000000000)"), "1700000000000");
     assert_eq!(run_str("Number(new Date(1700000000000))"), "1700000000000");
-    assert_eq!(run_str("new Date(1700000000000) < new Date(1700000005000)"), "true");
+    assert_eq!(
+        run_str("new Date(1700000000000) < new Date(1700000005000)"),
+        "true"
+    );
     assert_eq!(run_str("new Date(1700000000000) instanceof Date"), "true");
 }
 
@@ -48,8 +73,17 @@ fn invalid_date() {
 
 #[test]
 fn formatters_and_string_coercion() {
-    assert_eq!(run_str("new Date(1700000000123).toISOString()"), "2023-11-14T22:13:20.123Z");
-    assert_eq!(run_str("new Date(1700000000123).toJSON()"), "2023-11-14T22:13:20.123Z");
-    assert_eq!(run_str("String(new Date(1700000000000))"), "2023-11-14T22:13:20.000Z");
+    assert_eq!(
+        run_str("new Date(1700000000123).toISOString()"),
+        "2023-11-14T22:13:20.123Z"
+    );
+    assert_eq!(
+        run_str("new Date(1700000000123).toJSON()"),
+        "2023-11-14T22:13:20.123Z"
+    );
+    assert_eq!(
+        run_str("String(new Date(1700000000000))"),
+        "2023-11-14T22:13:20.000Z"
+    );
     assert_eq!(run_str("new Date(1700000000000).getTimezoneOffset()"), "0");
 }

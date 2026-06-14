@@ -36,7 +36,10 @@ fn if_else_chains() {
         run_str("function f(n){ if (n<0) return 'neg'; else if (n===0) return 'zero'; else return 'pos'; } f(-1)+f(0)+f(7)"),
         "negzeropos"
     );
-    assert_eq!(run_str("let r='none'; if (false) r='a'; else if (true) r='b'; r"), "b");
+    assert_eq!(
+        run_str("let r='none'; if (false) r='a'; else if (true) r='b'; r"),
+        "b"
+    );
 }
 
 #[test]
@@ -69,16 +72,28 @@ fn for_loop_variants() {
     assert_eq!(run_str("let s=0; for(let i=0;i<5;i++) s+=i; s"), "10");
     assert_eq!(run_str("let s=0; for(let i=10;i>0;i-=2) s+=i; s"), "30");
     // multiple init / update via comma
-    assert_eq!(run_str("let out=[]; for(let i=0,j=5;i<j;i++,j--) out.push(`${i}-${j}`); out.join(',')"), "0-5,1-4,2-3");
+    assert_eq!(
+        run_str("let out=[]; for(let i=0,j=5;i<j;i++,j--) out.push(`${i}-${j}`); out.join(',')"),
+        "0-5,1-4,2-3"
+    );
     // empty body / no-init
     assert_eq!(run_str("let i=0; for(;i<3;) i++; i"), "3");
 }
 
 #[test]
 fn break_and_continue() {
-    assert_eq!(run_str("let s=0; for(let i=0;i<10;i++){ if(i===5) break; s+=i; } s"), "10");
-    assert_eq!(run_str("let s=0; for(let i=0;i<6;i++){ if(i%2===0) continue; s+=i; } s"), "9");
-    assert_eq!(run_str("let n=0; while(true){ n++; if(n>=4) break; } n"), "4");
+    assert_eq!(
+        run_str("let s=0; for(let i=0;i<10;i++){ if(i===5) break; s+=i; } s"),
+        "10"
+    );
+    assert_eq!(
+        run_str("let s=0; for(let i=0;i<6;i++){ if(i%2===0) continue; s+=i; } s"),
+        "9"
+    );
+    assert_eq!(
+        run_str("let n=0; while(true){ n++; if(n>=4) break; } n"),
+        "4"
+    );
 }
 
 // ----------------------------------------------------------------------------
@@ -175,7 +190,10 @@ fn for_let_binding_is_per_iteration() {
 #[test]
 fn var_is_function_scoped() {
     assert_eq!(run_str("function f(){ { var x=5; } return x; } f()"), "5");
-    assert_eq!(run_str("function f(){ for(var i=0;i<3;i++){} return i; } f()"), "3");
+    assert_eq!(
+        run_str("function f(){ for(var i=0;i<3;i++){} return i; } f()"),
+        "3"
+    );
 }
 
 // ----------------------------------------------------------------------------
@@ -215,17 +233,32 @@ fn try_catch_finally_normal_and_catch_paths() {
 
 #[test]
 fn thrown_non_error_values_pass_through() {
-    assert_eq!(run_str("let v; try { throw 'string err'; } catch(e){ v=e; } v"), "string err");
+    assert_eq!(
+        run_str("let v; try { throw 'string err'; } catch(e){ v=e; } v"),
+        "string err"
+    );
     assert_eq!(run_str("let v; try { throw 42; } catch(e){ v=e; } v"), "42");
-    assert_eq!(run_str("let v; try { throw {code: 7}; } catch(e){ v=e.code; } v"), "7");
-    assert_eq!(run_str("let v; try { throw [1,2]; } catch(e){ v=e[1]; } v"), "2");
+    assert_eq!(
+        run_str("let v; try { throw {code: 7}; } catch(e){ v=e.code; } v"),
+        "7"
+    );
+    assert_eq!(
+        run_str("let v; try { throw [1,2]; } catch(e){ v=e[1]; } v"),
+        "2"
+    );
 }
 
 #[test]
 fn caught_runtime_error_is_a_real_error_object() {
     // A runtime error (not an explicit throw) is caught as an Error instance.
-    assert_eq!(run_str("let t; try { null.x; } catch(e){ t = e instanceof Error; } t"), "true");
-    assert_eq!(run_str("let n; try { undefined(); } catch(e){ n = typeof e.message; } n"), "string");
+    assert_eq!(
+        run_str("let t; try { null.x; } catch(e){ t = e instanceof Error; } t"),
+        "true"
+    );
+    assert_eq!(
+        run_str("let n; try { undefined(); } catch(e){ n = typeof e.message; } n"),
+        "string"
+    );
 }
 
 #[test]
@@ -245,7 +278,10 @@ fn try_finally_abrupt_completion_matches_node() {
     // `continue`/`break`.
 
     // (a) finally `return` overrides the try `return`.
-    assert_eq!(run_str("function tf(){ try { return 1; } finally { return 2; } } tf()"), "2");
+    assert_eq!(
+        run_str("function tf(){ try { return 1; } finally { return 2; } } tf()"),
+        "2"
+    );
 
     // (b) finally without catch re-propagates the throw to the outer catch.
     assert_eq!(

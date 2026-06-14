@@ -343,12 +343,20 @@ fn vm_state_to_js(
 ) -> Result<JsValue, JsError> {
     let obj = Object::new();
     // Captured console.error/warn output, separate from stdout.
-    Reflect::set(&obj, &JsValue::from_str("stderr"), &JsValue::from_str(stderr))
-        .map_err(|_| JsError::new("failed to set stderr"))?;
+    Reflect::set(
+        &obj,
+        &JsValue::from_str("stderr"),
+        &JsValue::from_str(stderr),
+    )
+    .map_err(|_| JsError::new("failed to set stderr"))?;
     match state {
         VmState::Complete(value) => {
-            Reflect::set(&obj, &JsValue::from_str("output"), &value_to_js(&value, heap)?)
-                .map_err(|_| JsError::new("failed to set output"))?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("output"),
+                &value_to_js(&value, heap)?,
+            )
+            .map_err(|_| JsError::new("failed to set output"))?;
             Reflect::set(
                 &obj,
                 &JsValue::from_str("stdout"),

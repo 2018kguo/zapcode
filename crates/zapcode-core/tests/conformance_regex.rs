@@ -82,7 +82,10 @@ fn test_with_case_insensitive_flag() {
 #[test]
 fn test_global_regex_advances_then_resets_lastindex() {
     // /g + test() advances lastIndex on each match, resets to 0 on miss.
-    assert_eq!(run_str(r#"const r=/a/g; const x=r.test("aaa"); x + ":" + r.lastIndex"#), "true:1");
+    assert_eq!(
+        run_str(r#"const r=/a/g; const x=r.test("aaa"); x + ":" + r.lastIndex"#),
+        "true:1"
+    );
     assert_eq!(
         run_str(r#"const r=/a/g; r.test("ba"); r.test("ba"); r.lastIndex"#),
         "0"
@@ -136,8 +139,14 @@ fn exec_global_loop_terminates_and_collects() {
 fn exec_result_carries_named_groups() {
     // `exec`'s result carries named captures under `.groups` (like `match()`'s
     // result and like real JS). The positional captures also work.
-    assert_eq!(run_str(r#"const m=/(?<y>\d{4})/.exec("2020"); m.groups.y"#), "2020");
-    assert_eq!(run_str(r#"const m=/(?<y>\d{4})/.exec("2020"); typeof m.groups"#), "object");
+    assert_eq!(
+        run_str(r#"const m=/(?<y>\d{4})/.exec("2020"); m.groups.y"#),
+        "2020"
+    );
+    assert_eq!(
+        run_str(r#"const m=/(?<y>\d{4})/.exec("2020"); typeof m.groups"#),
+        "object"
+    );
     assert_eq!(run_str(r#"/(?<y>\d{4})/.exec("2020")[1]"#), "2020"); // positional capture works
 }
 
@@ -175,7 +184,10 @@ fn match_named_groups() {
 #[test]
 fn match_groups_undefined_when_no_named_captures() {
     // No named groups in the pattern → `.groups` is undefined (matches JS).
-    assert_eq!(run_str(r#"String("a1".match(/(\w)(\d)/).groups)"#), "undefined");
+    assert_eq!(
+        run_str(r#"String("a1".match(/(\w)(\d)/).groups)"#),
+        "undefined"
+    );
 }
 
 // ============================================================================
@@ -305,10 +317,7 @@ fn replace_function_replacer() {
         run_str(r#""hello world".replace(/\b\w/g, c => c.toUpperCase())"#),
         "Hello World"
     );
-    assert_eq!(
-        run_str(r##""a1".replace(/\d/, d => "#")"##),
-        "a#"
-    );
+    assert_eq!(run_str(r##""a1".replace(/\d/, d => "#")"##), "a#");
 }
 
 // ============================================================================
@@ -443,7 +452,10 @@ fn non_word_boundary() {
 
 #[test]
 fn alternation() {
-    assert_eq!(run_str(r#""red or blue".match(/red|blue/g).join(",")"#), "red,blue");
+    assert_eq!(
+        run_str(r#""red or blue".match(/red|blue/g).join(",")"#),
+        "red,blue"
+    );
     assert_eq!(run_str(r#"/^(cat|dog)$/.test("dog")"#), "true");
 }
 
@@ -487,7 +499,10 @@ fn flag_global_match_all() {
 #[test]
 fn flag_ignorecase() {
     assert_eq!(run_str(r#""Hello".match(/hello/i)[0]"#), "Hello");
-    assert_eq!(run_str(r#""HELLO WORLD".replace(/world/i, "there")"#), "HELLO there");
+    assert_eq!(
+        run_str(r#""HELLO WORLD".replace(/world/i, "there")"#),
+        "HELLO there"
+    );
 }
 
 #[test]
@@ -505,7 +520,10 @@ fn flag_dotall() {
 
 #[test]
 fn combined_flags() {
-    assert_eq!(run_str("\"FOO\\nBAR\".match(/^\\w+/gim).join(\",\")"), "FOO,BAR");
+    assert_eq!(
+        run_str("\"FOO\\nBAR\".match(/^\\w+/gim).join(\",\")"),
+        "FOO,BAR"
+    );
 }
 
 // ============================================================================
@@ -517,8 +535,14 @@ fn regexp_constructor_builds_dynamic_patterns() {
     // The RegExp constructor is provided (`typeof RegExp === "function"`), and
     // `new RegExp(pattern, flags)` / `RegExp(pattern, flags)` build a usable regex.
     assert_eq!(run_str(r#"typeof RegExp"#), "function");
-    assert_eq!(run_str(r#"const r = new RegExp("\\d+"); String(r.test("a42"))"#), "true");
-    assert_eq!(run_str(r#"new RegExp("(\\d+)", "g").exec("a42b")[0]"#), "42");
+    assert_eq!(
+        run_str(r#"const r = new RegExp("\\d+"); String(r.test("a42"))"#),
+        "true"
+    );
+    assert_eq!(
+        run_str(r#"new RegExp("(\\d+)", "g").exec("a42b")[0]"#),
+        "42"
+    );
     assert_eq!(run_str(r#"String(RegExp("x").test("xy"))"#), "true");
 }
 
@@ -528,7 +552,10 @@ fn regexp_constructor_flags_source_and_instanceof() {
     assert_eq!(run_str(r#"new RegExp("abc", "gi").flags"#), "gi");
     assert_eq!(run_str(r#"new RegExp("abc", "gi").source"#), "abc");
     assert_eq!(run_str(r#"String(new RegExp("abc", "g").global)"#), "true");
-    assert_eq!(run_str(r#"String(new RegExp("a") instanceof RegExp)"#), "true");
+    assert_eq!(
+        run_str(r#"String(new RegExp("a") instanceof RegExp)"#),
+        "true"
+    );
     assert_eq!(run_str(r#"String(/a/ instanceof RegExp)"#), "true");
     // `new RegExp(existingRegex)` copies its source/flags.
     assert_eq!(
@@ -536,7 +563,10 @@ fn regexp_constructor_flags_source_and_instanceof() {
         "i|foo"
     );
     // A dynamically-built /g pattern drives a replace.
-    assert_eq!(run_str(r##""a1b2".replace(new RegExp("\\d","g"), "#")"##), "a#b#");
+    assert_eq!(
+        run_str(r##""a1b2".replace(new RegExp("\\d","g"), "#")"##),
+        "a#b#"
+    );
 }
 
 // ============================================================================
@@ -565,8 +595,14 @@ fn extract_all_numbers_and_sum() {
 
 #[test]
 fn validate_email_shape() {
-    assert_eq!(run_str(r#"/^[\w.]+@[\w.]+\.\w+$/.test("a.b@example.com")"#), "true");
-    assert_eq!(run_str(r#"/^[\w.]+@[\w.]+\.\w+$/.test("not-an-email")"#), "false");
+    assert_eq!(
+        run_str(r#"/^[\w.]+@[\w.]+\.\w+$/.test("a.b@example.com")"#),
+        "true"
+    );
+    assert_eq!(
+        run_str(r#"/^[\w.]+@[\w.]+\.\w+$/.test("not-an-email")"#),
+        "false"
+    );
 }
 
 #[test]

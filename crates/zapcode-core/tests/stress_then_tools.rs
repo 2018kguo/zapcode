@@ -76,7 +76,10 @@ fn catch_callback_can_call_a_tool_and_suspend() {
     );
 
     let snap = expect_suspend(state, "fallback");
-    let done = snap.resume(Value::String("from-fallback".into())).unwrap().state;
+    let done = snap
+        .resume(Value::String("from-fallback".into()))
+        .unwrap()
+        .state;
     assert_eq!(expect_complete_string(done), "got:from-fallback");
 }
 
@@ -109,7 +112,10 @@ fn then_on_rejected_callback_can_call_a_tool() {
     );
 
     let snap = expect_suspend(state, "rejected:err");
-    let done = snap.resume(Value::String("recovered".into())).unwrap().state;
+    let done = snap
+        .resume(Value::String("recovered".into()))
+        .unwrap()
+        .state;
     assert_eq!(expect_complete_string(done), "recovered");
 }
 

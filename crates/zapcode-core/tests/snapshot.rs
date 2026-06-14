@@ -135,7 +135,10 @@ fn test_snapshot_resume_chain() {
     };
 
     // Resume fetch with a value, should suspend again at db
-    let state2 = snapshot1.resume(Value::String("fetched".into())).unwrap().state;
+    let state2 = snapshot1
+        .resume(Value::String("fetched".into()))
+        .unwrap()
+        .state;
 
     let snapshot2 = match state2 {
         VmState::Suspended {
@@ -152,7 +155,10 @@ fn test_snapshot_resume_chain() {
     };
 
     // Resume db with final value
-    let state3 = snapshot2.resume(Value::String("db result".into())).unwrap().state;
+    let state3 = snapshot2
+        .resume(Value::String("db result".into()))
+        .unwrap()
+        .state;
 
     match state3 {
         VmState::Complete(v) => {
@@ -175,7 +181,10 @@ fn test_snapshot_preserves_locals_and_globals() {
 
     match state {
         VmState::Suspended { snapshot, .. } => {
-            let result = snapshot.resume(Value::String("world".into())).unwrap().state;
+            let result = snapshot
+                .resume(Value::String("world".into()))
+                .unwrap()
+                .state;
             match result {
                 VmState::Complete(v) => {
                     assert_eq!(v, Value::String("hello world".into()));
@@ -263,7 +272,10 @@ fn test_snapshot_dump_load_resume() {
     let loaded = ZapcodeSnapshot::load(&bytes).unwrap();
 
     // Resume execution
-    let result = loaded.resume(Value::String("response".into())).unwrap().state;
+    let result = loaded
+        .resume(Value::String("response".into()))
+        .unwrap()
+        .state;
 
     match result {
         VmState::Complete(v) => {
@@ -332,14 +344,16 @@ fn test_snapshot_multi_await_with_let_and_console() {
 
     // Build the compound return value directly in the snapshot's heap so its
     // handle is valid when resumed.
-    let weather1 = Value::Object(snap1.heap_mut().alloc_object(
-        vec![
-            ("condition".into(), Value::String("Clear".into())),
-            ("temp".into(), Value::Int(26)),
-        ]
-        .into_iter()
-        .collect(),
-    ));
+    let weather1 = Value::Object(
+        snap1.heap_mut().alloc_object(
+            vec![
+                ("condition".into(), Value::String("Clear".into())),
+                ("temp".into(), Value::Int(26)),
+            ]
+            .into_iter()
+            .collect(),
+        ),
+    );
     let state2 = snap1.resume(weather1).unwrap().state;
 
     // Second suspend: getWeather("Paris")
@@ -355,14 +369,16 @@ fn test_snapshot_multi_await_with_let_and_console() {
         _ => panic!("expected second suspension"),
     };
 
-    let weather2 = Value::Object(snap2.heap_mut().alloc_object(
-        vec![
-            ("condition".into(), Value::String("Sunny".into())),
-            ("temp".into(), Value::Int(22)),
-        ]
-        .into_iter()
-        .collect(),
-    ));
+    let weather2 = Value::Object(
+        snap2.heap_mut().alloc_object(
+            vec![
+                ("condition".into(), Value::String("Sunny".into())),
+                ("temp".into(), Value::Int(22)),
+            ]
+            .into_iter()
+            .collect(),
+        ),
+    );
     let state3 = snap2.resume(weather2).unwrap().state;
 
     // Third suspend: searchFlights
@@ -378,14 +394,16 @@ fn test_snapshot_multi_await_with_let_and_console() {
         _ => panic!("expected third suspension"),
     };
 
-    let flight = Value::Object(snap3.heap_mut().alloc_object(
-        vec![
-            ("airline".into(), Value::String("BA".into())),
-            ("price".into(), Value::Int(450)),
-        ]
-        .into_iter()
-        .collect(),
-    ));
+    let flight = Value::Object(
+        snap3.heap_mut().alloc_object(
+            vec![
+                ("airline".into(), Value::String("BA".into())),
+                ("price".into(), Value::Int(450)),
+            ]
+            .into_iter()
+            .collect(),
+        ),
+    );
     let flights = Value::Array(snap3.heap_mut().alloc_array(vec![flight]));
     let final_state = snap3.resume(flights).unwrap();
 
@@ -500,7 +518,11 @@ fn mutated_builtin_object_survives_hop_and_disables_elision() {
         }
     };
     assert_eq!(drive(false), Value::Int(42));
-    assert_eq!(drive(true), Value::Int(42), "hop diverged from in-memory run");
+    assert_eq!(
+        drive(true),
+        Value::Int(42),
+        "hop diverged from in-memory run"
+    );
 }
 
 /// Object-key interning is a pure runtime accelerator: it must not change

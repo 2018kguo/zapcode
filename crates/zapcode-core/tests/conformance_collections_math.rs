@@ -32,44 +32,95 @@ fn run_str(code: &str) -> String {
 
 #[test]
 fn map_basic_crud() {
-    assert_eq!(run_str("const m = new Map(); m.set('a', 1); m.set('b', 2); `${m.get('a')},${m.size}`"), "1,2");
-    assert_eq!(run_str("const m = new Map([['x', 1]]); `${m.has('x')},${m.has('y')}`"), "true,false");
-    assert_eq!(run_str("const m = new Map([['x', 1]]); const d = m.delete('x'); `${d},${m.size}`"), "true,0");
-    assert_eq!(run_str("const m = new Map([['x', 1]]); m.clear(); m.size"), "0");
-    assert_eq!(run_str("const m = new Map(); String(m.get('missing'))"), "undefined");
+    assert_eq!(
+        run_str("const m = new Map(); m.set('a', 1); m.set('b', 2); `${m.get('a')},${m.size}`"),
+        "1,2"
+    );
+    assert_eq!(
+        run_str("const m = new Map([['x', 1]]); `${m.has('x')},${m.has('y')}`"),
+        "true,false"
+    );
+    assert_eq!(
+        run_str("const m = new Map([['x', 1]]); const d = m.delete('x'); `${d},${m.size}`"),
+        "true,0"
+    );
+    assert_eq!(
+        run_str("const m = new Map([['x', 1]]); m.clear(); m.size"),
+        "0"
+    );
+    assert_eq!(
+        run_str("const m = new Map(); String(m.get('missing'))"),
+        "undefined"
+    );
     // update existing key
-    assert_eq!(run_str("const m = new Map([['k', 1]]); m.set('k', 9); m.get('k')"), "9");
+    assert_eq!(
+        run_str("const m = new Map([['k', 1]]); m.set('k', 9); m.get('k')"),
+        "9"
+    );
 }
 
 #[test]
 fn map_set_returns_map_for_chaining() {
-    assert_eq!(run_str("const m = new Map(); m.set(1, 'a').set(2, 'b'); m.size"), "2");
+    assert_eq!(
+        run_str("const m = new Map(); m.set(1, 'a').set(2, 'b'); m.size"),
+        "2"
+    );
 }
 
 #[test]
 fn map_identity_and_special_keys() {
     // Object keys are by identity (reference semantics).
-    assert_eq!(run_str("const k = {}; const m = new Map(); m.set(k, 9); m.get(k)"), "9");
-    assert_eq!(run_str("const m = new Map(); m.set({}, 1); String(m.get({}))"), "undefined"); // distinct objects
-    // NaN is a usable key (SameValueZero).
-    assert_eq!(run_str("const m = new Map(); m.set(NaN, 1); m.get(NaN)"), "1");
+    assert_eq!(
+        run_str("const k = {}; const m = new Map(); m.set(k, 9); m.get(k)"),
+        "9"
+    );
+    assert_eq!(
+        run_str("const m = new Map(); m.set({}, 1); String(m.get({}))"),
+        "undefined"
+    ); // distinct objects
+       // NaN is a usable key (SameValueZero).
+    assert_eq!(
+        run_str("const m = new Map(); m.set(NaN, 1); m.get(NaN)"),
+        "1"
+    );
     // distinct type keys don't collide
-    assert_eq!(run_str("const m = new Map(); m.set(1, 'n'); m.set('1', 's'); `${m.get(1)},${m.get('1')}`"), "n,s");
+    assert_eq!(
+        run_str("const m = new Map(); m.set(1, 'n'); m.set('1', 's'); `${m.get(1)},${m.get('1')}`"),
+        "n,s"
+    );
 }
 
 #[test]
 fn map_iteration_preserves_insertion_order() {
     assert_eq!(run_str("const m = new Map([['a', 1], ['b', 2]]); let s = ''; for (const [k, v] of m) s += k + v; s"), "a1b2");
-    assert_eq!(run_str("JSON.stringify([...new Map([['a', 1], ['b', 2]]).keys()])"), "[\"a\",\"b\"]");
-    assert_eq!(run_str("JSON.stringify([...new Map([['a', 1], ['b', 2]]).values()])"), "[1,2]");
-    assert_eq!(run_str("JSON.stringify([...new Map([['a', 1]]).entries()])"), "[[\"a\",1]]");
-    assert_eq!(run_str("const m = new Map([['a', 1], ['b', 2]]); let s = 0; m.forEach(v => s += v); s"), "3");
-    assert_eq!(run_str("JSON.stringify([...new Map([['a', 1], ['b', 2]])])"), "[[\"a\",1],[\"b\",2]]");
+    assert_eq!(
+        run_str("JSON.stringify([...new Map([['a', 1], ['b', 2]]).keys()])"),
+        "[\"a\",\"b\"]"
+    );
+    assert_eq!(
+        run_str("JSON.stringify([...new Map([['a', 1], ['b', 2]]).values()])"),
+        "[1,2]"
+    );
+    assert_eq!(
+        run_str("JSON.stringify([...new Map([['a', 1]]).entries()])"),
+        "[[\"a\",1]]"
+    );
+    assert_eq!(
+        run_str("const m = new Map([['a', 1], ['b', 2]]); let s = 0; m.forEach(v => s += v); s"),
+        "3"
+    );
+    assert_eq!(
+        run_str("JSON.stringify([...new Map([['a', 1], ['b', 2]])])"),
+        "[[\"a\",1],[\"b\",2]]"
+    );
 }
 
 #[test]
 fn map_copy_constructor() {
-    assert_eq!(run_str("const a = new Map([['x', 1]]); const b = new Map(a); b.get('x')"), "1");
+    assert_eq!(
+        run_str("const a = new Map([['x', 1]]); const b = new Map(a); b.get('x')"),
+        "1"
+    );
 }
 
 // ----------------------------------------------------------------------------
@@ -79,10 +130,22 @@ fn map_copy_constructor() {
 #[test]
 fn set_basic_crud_and_dedup() {
     assert_eq!(run_str("new Set([1, 2, 2, 3]).size"), "3");
-    assert_eq!(run_str("const s = new Set(); s.add(1).add(2).add(1); s.size"), "2"); // add chains + dedups
-    assert_eq!(run_str("const s = new Set([1, 2]); `${s.has(2)},${s.has(9)}`"), "true,false");
-    assert_eq!(run_str("const s = new Set([1, 2]); s.delete(1); s.size"), "1");
-    assert_eq!(run_str("const s = new Set([1, 2, 3]); s.clear(); s.size"), "0");
+    assert_eq!(
+        run_str("const s = new Set(); s.add(1).add(2).add(1); s.size"),
+        "2"
+    ); // add chains + dedups
+    assert_eq!(
+        run_str("const s = new Set([1, 2]); `${s.has(2)},${s.has(9)}`"),
+        "true,false"
+    );
+    assert_eq!(
+        run_str("const s = new Set([1, 2]); s.delete(1); s.size"),
+        "1"
+    );
+    assert_eq!(
+        run_str("const s = new Set([1, 2, 3]); s.clear(); s.size"),
+        "0"
+    );
     // NaN dedups (SameValueZero)
     assert_eq!(run_str("new Set([NaN, NaN]).size"), "1");
     // -0 and 0 are the same Set element
@@ -91,12 +154,27 @@ fn set_basic_crud_and_dedup() {
 
 #[test]
 fn set_iteration_and_spread() {
-    assert_eq!(run_str("JSON.stringify([...new Set('aabbc')])"), "[\"a\",\"b\",\"c\"]");
-    assert_eq!(run_str("let r = []; for (const x of new Set([1, 2, 3])) r.push(x); JSON.stringify(r)"), "[1,2,3]");
-    assert_eq!(run_str("JSON.stringify([...new Set([3, 1, 2, 1])])"), "[3,1,2]"); // insertion order, deduped
-    assert_eq!(run_str("const s = new Set([1, 2, 3]); let sum = 0; s.forEach(x => sum += x); sum"), "6");
+    assert_eq!(
+        run_str("JSON.stringify([...new Set('aabbc')])"),
+        "[\"a\",\"b\",\"c\"]"
+    );
+    assert_eq!(
+        run_str("let r = []; for (const x of new Set([1, 2, 3])) r.push(x); JSON.stringify(r)"),
+        "[1,2,3]"
+    );
+    assert_eq!(
+        run_str("JSON.stringify([...new Set([3, 1, 2, 1])])"),
+        "[3,1,2]"
+    ); // insertion order, deduped
+    assert_eq!(
+        run_str("const s = new Set([1, 2, 3]); let sum = 0; s.forEach(x => sum += x); sum"),
+        "6"
+    );
     // dedup an array via Set round-trip
-    assert_eq!(run_str("JSON.stringify([...new Set([1, 1, 2, 3, 3, 3])])"), "[1,2,3]");
+    assert_eq!(
+        run_str("JSON.stringify([...new Set([1, 1, 2, 3, 3, 3])])"),
+        "[1,2,3]"
+    );
 }
 
 // ----------------------------------------------------------------------------

@@ -125,11 +125,23 @@ fn starts_ends_with() {
 
 #[test]
 fn split_variants() {
-    assert_eq!(run_str("JSON.stringify('a,b,c'.split(','))"), "[\"a\",\"b\",\"c\"]");
-    assert_eq!(run_str("JSON.stringify('a,b,c,d'.split(',', 2))"), "[\"a\",\"b\"]"); // limit
+    assert_eq!(
+        run_str("JSON.stringify('a,b,c'.split(','))"),
+        "[\"a\",\"b\",\"c\"]"
+    );
+    assert_eq!(
+        run_str("JSON.stringify('a,b,c,d'.split(',', 2))"),
+        "[\"a\",\"b\"]"
+    ); // limit
     assert_eq!(run_str("'a,b,c'.split(',', 0).length"), "0");
-    assert_eq!(run_str("JSON.stringify('abc'.split(''))"), "[\"a\",\"b\",\"c\"]"); // char split
-    assert_eq!(run_str("JSON.stringify('no-delim'.split(','))"), "[\"no-delim\"]");
+    assert_eq!(
+        run_str("JSON.stringify('abc'.split(''))"),
+        "[\"a\",\"b\",\"c\"]"
+    ); // char split
+    assert_eq!(
+        run_str("JSON.stringify('no-delim'.split(','))"),
+        "[\"no-delim\"]"
+    );
     // split with a capturing-group regex keeps the captures
     assert_eq!(run_str("'a1b2c'.split(/(\\d)/).join('|')"), "a|1|b|2|c");
 }
@@ -143,7 +155,10 @@ fn replace_with_string_replacement() {
     assert_eq!(run_str("'hello'.replace('l', 'L')"), "heLlo"); // first only
     assert_eq!(run_str("'hello'.replaceAll('l', 'L')"), "heLLo");
     assert_eq!(run_str("'a1b2'.replace(/\\d/g, '#')"), "a#b#"); // global regex
-    assert_eq!(run_str("'2020-01'.replace(/(\\d+)-(\\d+)/, '$2/$1')"), "01/2020"); // numbered groups
+    assert_eq!(
+        run_str("'2020-01'.replace(/(\\d+)-(\\d+)/, '$2/$1')"),
+        "01/2020"
+    ); // numbered groups
     assert_eq!(
         run_str("'2020-01'.replace(/(?<y>\\d+)-(?<m>\\d+)/, '$<m>/$<y>')"),
         "01/2020"
@@ -154,7 +169,10 @@ fn replace_with_string_replacement() {
 #[test]
 fn replace_with_function_replacer() {
     // A FUNCTION replacer is invoked per match; its return value is substituted.
-    assert_eq!(run_str("'a1b2'.replace(/\\d/g, m => '[' + m + ']')"), "a[1]b[2]");
+    assert_eq!(
+        run_str("'a1b2'.replace(/\\d/g, m => '[' + m + ']')"),
+        "a[1]b[2]"
+    );
 }
 
 // ----------------------------------------------------------------------------
@@ -163,9 +181,15 @@ fn replace_with_function_replacer() {
 
 #[test]
 fn match_global_returns_array_of_strings() {
-    assert_eq!(run_str("JSON.stringify('a1b2c3'.match(/\\d/g))"), "[\"1\",\"2\",\"3\"]");
+    assert_eq!(
+        run_str("JSON.stringify('a1b2c3'.match(/\\d/g))"),
+        "[\"1\",\"2\",\"3\"]"
+    );
     assert_eq!(run_str("String('abc'.match(/\\d/))"), "null"); // no match -> null
-    assert_eq!(run_str("JSON.stringify('cat hat bat'.match(/\\w+at/g))"), "[\"cat\",\"hat\",\"bat\"]");
+    assert_eq!(
+        run_str("JSON.stringify('cat hat bat'.match(/\\w+at/g))"),
+        "[\"cat\",\"hat\",\"bat\"]"
+    );
 }
 
 #[test]
@@ -174,8 +198,14 @@ fn match_non_global_exposes_groups() {
     assert_eq!(run_str("'a1'.match(/([a-z])(\\d)/)[0]"), "a1");
     assert_eq!(run_str("'a1'.match(/([a-z])(\\d)/)[1]"), "a");
     assert_eq!(run_str("'a1'.match(/([a-z])(\\d)/)[2]"), "1");
-    assert_eq!(run_str("'2020-01'.match(/(?<y>\\d+)-(?<m>\\d+)/).groups.y"), "2020");
-    assert_eq!(run_str("'2020-01'.match(/(?<y>\\d+)-(?<m>\\d+)/).groups.m"), "01");
+    assert_eq!(
+        run_str("'2020-01'.match(/(?<y>\\d+)-(?<m>\\d+)/).groups.y"),
+        "2020"
+    );
+    assert_eq!(
+        run_str("'2020-01'.match(/(?<y>\\d+)-(?<m>\\d+)/).groups.m"),
+        "01"
+    );
     assert_eq!(run_str("'xy1'.match(/\\d/).index"), "2");
 }
 
@@ -218,7 +248,10 @@ fn regex_global_exec_loop_advances_lastindex() {
 fn regex_flags_case_insensitive_and_multiline() {
     assert_eq!(run_str("/hello/i.test('HELLO')"), "true");
     assert_eq!(run_str("'Hello'.replace(/hello/i, 'hi')"), "hi");
-    assert_eq!(run_str("JSON.stringify('a\\nb\\nc'.match(/^\\w/gm))"), "[\"a\",\"b\",\"c\"]");
+    assert_eq!(
+        run_str("JSON.stringify('a\\nb\\nc'.match(/^\\w/gm))"),
+        "[\"a\",\"b\",\"c\"]"
+    );
 }
 
 // ----------------------------------------------------------------------------
@@ -230,9 +263,15 @@ fn template_literals() {
     assert_eq!(run_str("const n = 5; `n is ${n * 2}`"), "n is 10");
     assert_eq!(run_str("const a = 'x', b = 'y'; `${a}-${b}`"), "x-y");
     assert_eq!(run_str("`sum: ${1 + 2 + 3}`"), "sum: 6");
-    assert_eq!(run_str("const o = {name: 'Ada'}; `Hi ${o.name}!`"), "Hi Ada!");
+    assert_eq!(
+        run_str("const o = {name: 'Ada'}; `Hi ${o.name}!`"),
+        "Hi Ada!"
+    );
     // nested template
-    assert_eq!(run_str("const x = 2; `outer ${`inner ${x}`}`"), "outer inner 2");
+    assert_eq!(
+        run_str("const x = 2; `outer ${`inner ${x}`}`"),
+        "outer inner 2"
+    );
     // cooked escapes
     assert_eq!(run_str("`a\\nb`.length"), "3");
     assert_eq!(run_str("`tab\\there`.includes('\\t')"), "true");

@@ -311,10 +311,7 @@ fn then_chain_survives_snapshot_roundtrip() {
     let snap = expect_suspend(state, "seed");
     let bytes = snap.dump().unwrap();
     let reloaded = ZapcodeSnapshot::load(&bytes).unwrap();
-    let done = reloaded
-        .resume(Value::String("V".into()))
-        .unwrap()
-        .state;
+    let done = reloaded.resume(Value::String("V".into())).unwrap().state;
     assert_eq!(expect_complete_string(done), "reload:V");
 }
 
@@ -374,7 +371,10 @@ fn promise_race_over_mapped_deferred_calls_batches() {
         other => panic!("expected batch suspension, got {other:?}"),
     };
     // race resumes with the single winning value.
-    let done = snapshot.resume_many(vec![Value::String("fast".into())]).unwrap().state;
+    let done = snapshot
+        .resume_many(vec![Value::String("fast".into())])
+        .unwrap()
+        .state;
     assert_eq!(expect_complete_string(done), "won:fast");
 }
 

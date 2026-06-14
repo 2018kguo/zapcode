@@ -88,8 +88,14 @@ fn definite_assignment_assertion() {
 #[test]
 fn array_and_collection_annotations() {
     assert_eq!(run_str("const arr: number[] = [1, 2, 3]; arr.length"), "3");
-    assert_eq!(run_str("const arr: Array<number> = [1, 2]; arr[0] + arr[1]"), "3");
-    assert_eq!(run_str("const tup: readonly number[] = [1, 2, 3]; tup.length"), "3");
+    assert_eq!(
+        run_str("const arr: Array<number> = [1, 2]; arr[0] + arr[1]"),
+        "3"
+    );
+    assert_eq!(
+        run_str("const tup: readonly number[] = [1, 2, 3]; tup.length"),
+        "3"
+    );
 }
 
 // ============================================================================
@@ -107,7 +113,10 @@ fn function_param_and_return_annotations() {
 
 #[test]
 fn arrow_annotations() {
-    assert_eq!(run_str("const g = (n: number): number => n * n; g(4)"), "16");
+    assert_eq!(
+        run_str("const g = (n: number): number => n * n; g(4)"),
+        "16"
+    );
     assert_eq!(
         run_str("const f = (a: number, b: number): number => a + b; f(10, 20)"),
         "30"
@@ -124,14 +133,26 @@ fn named_function_expression_with_annotations() {
 
 #[test]
 fn optional_parameter() {
-    assert_eq!(run_str("function f(x?: number) { return x ?? -1; } String(f())"), "-1");
-    assert_eq!(run_str("function f(x?: number) { return x ?? -1; } f(7)"), "7");
+    assert_eq!(
+        run_str("function f(x?: number) { return x ?? -1; } String(f())"),
+        "-1"
+    );
+    assert_eq!(
+        run_str("function f(x?: number) { return x ?? -1; } f(7)"),
+        "7"
+    );
 }
 
 #[test]
 fn default_parameter_with_annotation() {
-    assert_eq!(run_str("function f(a: number = 10) { return a; } f()"), "10");
-    assert_eq!(run_str("function f(a: number = 10) { return a; } f(3)"), "3");
+    assert_eq!(
+        run_str("function f(a: number = 10) { return a; } f()"),
+        "10"
+    );
+    assert_eq!(
+        run_str("function f(a: number = 10) { return a; } f(3)"),
+        "3"
+    );
 }
 
 #[test]
@@ -145,7 +166,10 @@ fn rest_parameter_with_annotation() {
 #[test]
 fn this_parameter_is_stripped() {
     // A leading `this: T` parameter is a TS type-only construct, not a real arg.
-    assert_eq!(run_str("function f(this: void, x: number) { return x; } f(7)"), "7");
+    assert_eq!(
+        run_str("function f(this: void, x: number) { return x; } f(7)"),
+        "7"
+    );
 }
 
 // ============================================================================
@@ -178,13 +202,22 @@ fn interface_with_method_signature_implemented_by_class() {
 
 #[test]
 fn type_alias_union_and_literal() {
-    assert_eq!(run_str("type ID = string | number; const i: ID = 7; i"), "7");
-    assert_eq!(run_str("type Status = 'on' | 'off'; const st: Status = 'on'; st"), "on");
+    assert_eq!(
+        run_str("type ID = string | number; const i: ID = 7; i"),
+        "7"
+    );
+    assert_eq!(
+        run_str("type Status = 'on' | 'off'; const st: Status = 'on'; st"),
+        "on"
+    );
 }
 
 #[test]
 fn type_alias_tuple() {
-    assert_eq!(run_str("type Pair = [number, string]; const p: Pair = [1, 'a']; p[1]"), "a");
+    assert_eq!(
+        run_str("type Pair = [number, string]; const p: Pair = [1, 'a']; p[1]"),
+        "a"
+    );
 }
 
 #[test]
@@ -213,13 +246,19 @@ fn type_alias_record_utility() {
 
 #[test]
 fn type_alias_generic_conditional_intersection_keyof() {
-    assert_eq!(run_str("type Maybe<T> = T | null; const x: Maybe<number> = 5; x"), "5");
+    assert_eq!(
+        run_str("type Maybe<T> = T | null; const x: Maybe<number> = 5; x"),
+        "5"
+    );
     assert_eq!(
         run_str("type Cond<X> = X extends string ? 1 : 2; const x: Cond<string> = 1; x"),
         "1"
     );
     assert_eq!(run_str("const x: number & {} = 5; x"), "5");
-    assert_eq!(run_str("type K = keyof { a: number; b: number }; const k: K = 'a'; k"), "a");
+    assert_eq!(
+        run_str("type K = keyof { a: number; b: number }; const k: K = 'a'; k"),
+        "a"
+    );
 }
 
 #[test]
@@ -236,7 +275,10 @@ fn type_alias_template_literal_type() {
 
 #[test]
 fn generic_function_definition() {
-    assert_eq!(run_str("function id<T>(x: T): T { return x; } id(42)"), "42");
+    assert_eq!(
+        run_str("function id<T>(x: T): T { return x; } id(42)"),
+        "42"
+    );
     assert_eq!(
         run_str("function wrap<T>(v: T): T[] { return [v]; } wrap(9).length"),
         "1"
@@ -270,7 +312,9 @@ fn new_with_type_arguments() {
         "1"
     );
     assert_eq!(
-        run_str("const m: Map<string, number[]> = new Map(); m.set('a', [1, 2]); m.get('a').length"),
+        run_str(
+            "const m: Map<string, number[]> = new Map(); m.set('a', [1, 2]); m.get('a').length"
+        ),
         "2"
     );
 }
@@ -318,7 +362,9 @@ fn satisfies_is_stripped() {
 #[test]
 fn class_method_with_annotations() {
     assert_eq!(
-        run_str("class C { add(a: number, b: number): number { return a + b; } } new C().add(2, 3)"),
+        run_str(
+            "class C { add(a: number, b: number): number { return a + b; } } new C().add(2, 3)"
+        ),
         "5"
     );
 }
@@ -342,7 +388,10 @@ fn decorator_is_accepted_and_ignored() {
 #[test]
 fn declare_statements_are_erased() {
     assert_eq!(run_str("declare const g: number; 'ok'"), "ok");
-    assert_eq!(run_str("declare function ext(x: number): number; 'skipped'"), "skipped");
+    assert_eq!(
+        run_str("declare function ext(x: number): number; 'skipped'"),
+        "skipped"
+    );
 }
 
 // ============================================================================
@@ -364,7 +413,10 @@ fn annotated_and_unannotated_programs_agree() {
 fn types_do_not_constrain_runtime_values() {
     // Annotations are erased, so a "number"-typed binding can hold any value at
     // runtime — the type is not enforced (transpile-only semantics, like tsc).
-    assert_eq!(run_str("let n: number = 5; n = 'now a string'; typeof n"), "string");
+    assert_eq!(
+        run_str("let n: number = 5; n = 'now a string'; typeof n"),
+        "string"
+    );
 }
 
 // ============================================================================
@@ -398,5 +450,8 @@ fn legacy_angle_bracket_cast_is_a_parse_error() {
     // tsx/JSX grammar and is a parse error; the `expr as T` form is the supported
     // way to assert a type.
     let e = run_err("const x = <number>5; x");
-    assert!(e.to_lowercase().contains("parse") || e.contains("Unexpected"), "got: {e}");
+    assert!(
+        e.to_lowercase().contains("parse") || e.contains("Unexpected"),
+        "got: {e}"
+    );
 }

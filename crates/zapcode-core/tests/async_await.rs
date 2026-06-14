@@ -276,15 +276,13 @@ fn test_promise_reject_caught() {
 
 #[test]
 fn test_promise_all_resolved() {
-    let (result, heap) = run(
-        r#"
+    let (result, heap) = run(r#"
         const p1 = Promise.resolve(1);
         const p2 = Promise.resolve(2);
         const p3 = Promise.resolve(3);
         const all = await Promise.all([p1, p2, p3]);
         all
-    "#,
-    );
+    "#);
     match result {
         Value::Array(h) => {
             let arr = heap.array_vec(h);
@@ -299,12 +297,10 @@ fn test_promise_all_resolved() {
 
 #[test]
 fn test_promise_all_with_plain_values() {
-    let (result, heap) = run(
-        r#"
+    let (result, heap) = run(r#"
         const all = await Promise.all([1, 2, 3]);
         all
-    "#,
-    );
+    "#);
     match result {
         Value::Array(h) => {
             let arr = heap.array_vec(h);
@@ -857,13 +853,11 @@ fn test_array_map_async_empty() {
 #[test]
 fn test_array_map_sync_still_works() {
     // Regression test: sync .map() must still work as before
-    let (result, heap) = run(
-        r#"
+    let (result, heap) = run(r#"
         const nums = [1, 2, 3];
         const doubled = nums.map(x => x * 2);
         doubled
-    "#,
-    );
+    "#);
     match result {
         Value::Array(h) => {
             let arr = heap.array_vec(h);
@@ -1099,16 +1093,14 @@ fn test_for_of_sync_counter() {
 
 #[test]
 fn test_for_of_sync_push() {
-    let (result, heap) = run(
-        r#"
+    let (result, heap) = run(r#"
         const cities = ["a", "b", "c"];
         const results: string[] = [];
         for (const city of cities) {
             results.push(city);
         }
         results
-    "#,
-    );
+    "#);
     match result {
         Value::Array(h) => {
             let arr = heap.array_vec(h);

@@ -45,13 +45,19 @@ fn run_str(code: &str) -> String {
 #[test]
 fn array_values_via_spread_and_for_of() {
     assert_eq!(run_str("[...['a', 'b', 'c'].values()].join('-')"), "a-b-c");
-    assert_eq!(run_str("let s = 0; for (const v of [1, 2, 3].values()) s += v; s"), "6");
+    assert_eq!(
+        run_str("let s = 0; for (const v of [1, 2, 3].values()) s += v; s"),
+        "6"
+    );
 }
 
 #[test]
 fn array_keys_via_spread_and_for_of() {
     assert_eq!(run_str("[...[10, 20, 30].keys()].join(',')"), "0,1,2");
-    assert_eq!(run_str("let r = ''; for (const k of [9, 8, 7].keys()) r += k; r"), "012");
+    assert_eq!(
+        run_str("let r = ''; for (const k of [9, 8, 7].keys()) r += k; r"),
+        "012"
+    );
 }
 
 #[test]
@@ -82,8 +88,14 @@ fn array_entries_from_split_string() {
 
 #[test]
 fn map_keys_values_entries() {
-    assert_eq!(run_str("[...new Map([['a', 1], ['b', 2]]).keys()].join(',')"), "a,b");
-    assert_eq!(run_str("[...new Map([['a', 1], ['b', 2]]).values()].join(',')"), "1,2");
+    assert_eq!(
+        run_str("[...new Map([['a', 1], ['b', 2]]).keys()].join(',')"),
+        "a,b"
+    );
+    assert_eq!(
+        run_str("[...new Map([['a', 1], ['b', 2]]).values()].join(',')"),
+        "1,2"
+    );
     assert_eq!(
         run_str("[...new Map([['a', 1], ['b', 2]]).entries()].map(e => e[0] + e[1]).join(',')"),
         "a1,b2"
@@ -117,15 +129,24 @@ fn map_entries_destructured_in_for_of() {
 
 #[test]
 fn set_values_and_keys() {
-    assert_eq!(run_str("[...new Set([1, 2, 3]).values()].join(',')"), "1,2,3");
+    assert_eq!(
+        run_str("[...new Set([1, 2, 3]).values()].join(',')"),
+        "1,2,3"
+    );
     assert_eq!(run_str("[...new Set([1, 2, 3]).keys()].join(',')"), "1,2,3");
-    assert_eq!(run_str("let s = 0; for (const v of new Set([4, 5, 6]).values()) s += v; s"), "15");
+    assert_eq!(
+        run_str("let s = 0; for (const v of new Set([4, 5, 6]).values()) s += v; s"),
+        "15"
+    );
 }
 
 #[test]
 fn set_direct_spread_and_for_of() {
     assert_eq!(run_str("[...new Set([3, 1, 2, 1])].join(',')"), "3,1,2");
-    assert_eq!(run_str("let s = ''; for (const v of new Set(['x', 'y'])) s += v; s"), "xy");
+    assert_eq!(
+        run_str("let s = ''; for (const v of new Set(['x', 'y'])) s += v; s"),
+        "xy"
+    );
 }
 
 #[test]
@@ -150,7 +171,10 @@ fn set_entries_yields_value_value_pairs() {
 fn string_iteration_forms() {
     assert_eq!(run_str("[...'abc'].join('-')"), "a-b-c");
     assert_eq!(run_str("Array.from('abc').join('-')"), "a-b-c");
-    assert_eq!(run_str("let s = ''; for (const c of 'xyz') s += c.toUpperCase(); s"), "XYZ");
+    assert_eq!(
+        run_str("let s = ''; for (const c of 'xyz') s += c.toUpperCase(); s"),
+        "XYZ"
+    );
 }
 
 // ============================================================================
@@ -160,7 +184,10 @@ fn string_iteration_forms() {
 #[test]
 fn array_from_over_collections() {
     assert_eq!(run_str("Array.from(new Set([1, 1, 2])).join(',')"), "1,2");
-    assert_eq!(run_str("Array.from(new Set([5, 6]).values()).join(',')"), "5,6");
+    assert_eq!(
+        run_str("Array.from(new Set([5, 6]).values()).join(',')"),
+        "5,6"
+    );
     assert_eq!(
         run_str("Array.from(new Map([['a', 1]])).map(e => e.join(':')).join(',')"),
         "a:1"
@@ -173,8 +200,14 @@ fn array_from_with_map_fn() {
         run_str("Array.from(new Map([['a', 1], ['b', 2]]), e => e[1]).join(',')"),
         "1,2"
     );
-    assert_eq!(run_str("Array.from({ length: 3 }, (_, i) => i * 2).join(',')"), "0,2,4");
-    assert_eq!(run_str("Array.from('abc', c => c.toUpperCase()).join('')"), "ABC");
+    assert_eq!(
+        run_str("Array.from({ length: 3 }, (_, i) => i * 2).join(',')"),
+        "0,2,4"
+    );
+    assert_eq!(
+        run_str("Array.from('abc', c => c.toUpperCase()).join('')"),
+        "ABC"
+    );
 }
 
 // ============================================================================
@@ -200,7 +233,9 @@ fn generator_manual_step_protocol() {
 #[test]
 fn generator_consumed_by_for_of_and_spread() {
     assert_eq!(
-        run_str("function* g() { yield 1; yield 2; yield 3 } let s = 0; for (const v of g()) s += v; s"),
+        run_str(
+            "function* g() { yield 1; yield 2; yield 3 } let s = 0; for (const v of g()) s += v; s"
+        ),
         "6"
     );
 }
@@ -242,9 +277,18 @@ fn from_entries_from_array_of_pairs() {
 fn from_entries_consumes_any_iterable() {
     // Object.fromEntries consumes ANY iterable of [k, v] pairs — Map, Set, and
     // collection iterators — not just an array-of-pairs.
-    assert_eq!(run_str("JSON.stringify(Object.fromEntries(new Map([['a', 1], ['b', 2]])))"), "{\"a\":1,\"b\":2}");
-    assert_eq!(run_str("JSON.stringify(Object.fromEntries(new Set([['a', 1]])))"), "{\"a\":1}");
-    assert_eq!(run_str("JSON.stringify(Object.fromEntries(new Map([['x', 9]]).entries()))"), "{\"x\":9}");
+    assert_eq!(
+        run_str("JSON.stringify(Object.fromEntries(new Map([['a', 1], ['b', 2]])))"),
+        "{\"a\":1,\"b\":2}"
+    );
+    assert_eq!(
+        run_str("JSON.stringify(Object.fromEntries(new Set([['a', 1]])))"),
+        "{\"a\":1}"
+    );
+    assert_eq!(
+        run_str("JSON.stringify(Object.fromEntries(new Map([['x', 9]]).entries()))"),
+        "{\"x\":9}"
+    );
     // The classic transform pipeline: entries -> filter -> fromEntries.
     assert_eq!(
         run_str("JSON.stringify(Object.fromEntries(Object.entries({a:1,b:2,c:3}).filter(([k,v]) => v > 1)))"),
@@ -303,8 +347,14 @@ fn map_set_iterators_have_next_and_are_iterable() {
         "[5,6,true]"
     );
     // Still iterable via spread / for-of.
-    assert_eq!(run_str("JSON.stringify([...new Map([['a',1],['b',2]]).keys()])"), "[\"a\",\"b\"]");
-    assert_eq!(run_str("let r=0; for (const v of new Map([['a',1],['b',2]]).values()) r+=v; r"), "3");
+    assert_eq!(
+        run_str("JSON.stringify([...new Map([['a',1],['b',2]]).keys()])"),
+        "[\"a\",\"b\"]"
+    );
+    assert_eq!(
+        run_str("let r=0; for (const v of new Map([['a',1],['b',2]]).values()) r+=v; r"),
+        "3"
+    );
     // A partially-consumed iterator resumes from its cursor.
     assert_eq!(
         run_str("let it=new Map([['a',1],['b',2]]).keys(); it.next(); [...it].join(',')"),
@@ -314,9 +364,21 @@ fn map_set_iterators_have_next_and_are_iterable() {
 
 #[test]
 fn iterators_feed_array_from_and_collection_ctors() {
-    assert_eq!(run_str("Array.from(new Set([5,6]).values()).join(',')"), "5,6");
-    assert_eq!(run_str("Array.from(new Map([['a',1]]).keys()).join(',')"), "a");
+    assert_eq!(
+        run_str("Array.from(new Set([5,6]).values()).join(',')"),
+        "5,6"
+    );
+    assert_eq!(
+        run_str("Array.from(new Map([['a',1]]).keys()).join(',')"),
+        "a"
+    );
     // Map/Set built from another collection's iterator.
-    assert_eq!(run_str("let m=new Map([['a',1]]); new Map(m.entries()).get('a')"), "1");
-    assert_eq!(run_str("let s=new Set([1,2,2,3]); new Set(s.values()).size"), "3");
+    assert_eq!(
+        run_str("let m=new Map([['a',1]]); new Map(m.entries()).get('a')"),
+        "1"
+    );
+    assert_eq!(
+        run_str("let s=new Set([1,2,2,3]); new Set(s.values()).size"),
+        "3"
+    );
 }

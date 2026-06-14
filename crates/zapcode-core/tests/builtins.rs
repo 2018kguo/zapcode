@@ -612,12 +612,10 @@ fn test_array_flat_map_non_array() {
 
 #[test]
 fn test_array_map_with_closure() {
-    let (result, heap) = run(
-        r#"
+    let (result, heap) = run(r#"
         const multiplier = 10;
         [1, 2, 3].map((x) => x * multiplier)
-        "#,
-    );
+        "#);
     match result {
         Value::Array(h) => {
             let arr = heap.array_vec(h);
