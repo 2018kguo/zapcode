@@ -4,6 +4,8 @@ use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict, PyFloat, PyInt, PyList, PyString};
 
+type PyObject = Py<PyAny>;
+
 use zapcode_core::heap::Heap;
 use zapcode_core::{
     ExecutionTrace, ResourceLimits, RunResult, TraceSpan as CoreTraceSpan, TraceStatus, Value,
@@ -20,24 +22,24 @@ use zapcode_core::{
 fn py_to_value(obj: &Bound<'_, PyAny>, heap: &mut Heap) -> PyResult<Value> {
     if obj.is_none() {
         Ok(Value::Null)
-    } else if let Ok(b) = obj.downcast::<PyBool>() {
+    } else if let Ok(b) = obj.cast::<PyBool>() {
         Ok(Value::Bool(b.is_true()))
-    } else if let Ok(i) = obj.downcast::<PyInt>() {
+    } else if let Ok(i) = obj.cast::<PyInt>() {
         let val: i64 = i.extract()?;
         Ok(Value::Int(val))
-    } else if let Ok(f) = obj.downcast::<PyFloat>() {
+    } else if let Ok(f) = obj.cast::<PyFloat>() {
         let val: f64 = f.extract()?;
         Ok(Value::Float(val))
-    } else if let Ok(s) = obj.downcast::<PyString>() {
+    } else if let Ok(s) = obj.cast::<PyString>() {
         let val: String = s.extract()?;
         Ok(Value::String(zapcode_core::JsString::from(val.as_str())))
-    } else if let Ok(list) = obj.downcast::<PyList>() {
+    } else if let Ok(list) = obj.cast::<PyList>() {
         let mut items = Vec::with_capacity(list.len());
         for item in list.iter() {
             items.push(py_to_value(&item, heap)?);
         }
         Ok(Value::Array(heap.alloc_array(items)))
-    } else if let Ok(dict) = obj.downcast::<PyDict>() {
+    } else if let Ok(dict) = obj.cast::<PyDict>() {
         let mut map = indexmap::IndexMap::new();
         for (k, v) in dict.iter() {
             let key: String = k.extract()?;
