@@ -142,7 +142,8 @@ const denied   = forkSnapshot(state.snapshot).resume({ approved: false, reason: 
 
 ### Catch bad code before it runs
 
-`typecheck()` checks the model's code against your tool signatures (using `tsgo` when installed).
+`typecheck()` checks the model's code against your tool signatures with whichever checker is installed:
+[tsrs](https://github.com/oxc-project/tsrs) (the new Rust port of `tsc`), `tsgo`, or `typescript`.
 `dryRun()` also executes it against side-effect-free stubs and reports what it *would* have called.
 
 <img src="assets/demos/preflight.gif" alt="Type errors and argument validation caught before any tool runs" width="760">

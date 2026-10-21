@@ -29,7 +29,7 @@
     "@2018kguo/zapcode": "^1.0.0"
   },
   "peerDependencies": {
-    "ai": ">=7.0.0-beta.0",
+    "ai": ">=7.0.0",
     "typescript": ">=5.0.0"
   },
   "peerDependenciesMeta": {
@@ -41,10 +41,11 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^26.6.5",
     "@typescript/native-preview": "^7.0.0-dev.20260611.2",
-    "ai": "7.0.0-beta.111",
-    "typescript": "^5.7.0"
+    "ai": "^7.0.148",
+    "typescript": "^6.0.3",
+    "tsrs": "^0.18.0-ts7.1.0-dev.20260929"
   },
   "files": [
     "dist"

@@ -102,12 +102,11 @@ const typedTools = {
   ping: { description: "Ping.", parameters: {}, execute: async () => "pong" },
 };
 
-for (const engine of ["typescript", "tsgo"]) {
+const enginePackage = { tsrs: "tsrs", tsgo: "@typescript/native-preview", typescript: "typescript" };
+for (const engine of ["typescript", "tsgo", "tsrs"]) {
   let available = true;
-  if (engine === "tsgo") {
-    try { await import("@typescript/native-preview/package.json", { with: { type: "json" } }); }
-    catch { available = false; }
-  }
+  try { await import(`${enginePackage[engine]}/package.json`, { with: { type: "json" } }); }
+  catch { available = false; }
   if (!available) { console.log(`  - skipping ${engine} (not installed)`); continue; }
 
   await test(`[${engine}] structured diagnostics with agent-relative positions`, async () => {

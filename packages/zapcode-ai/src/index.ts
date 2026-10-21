@@ -656,19 +656,25 @@ export interface TypecheckResult {
   /** True when no error-severity diagnostics were produced. */
   ok: boolean;
   diagnostics: TypeDiagnostic[];
-  /** Which engine ran: tsgo (native preview) or the in-process tsc API. */
-  engine: "tsgo" | "typescript";
+  /**
+   * Which engine ran: `tsrs` (Rust port), `tsgo` (native preview),
+   * `typescript` (TypeScript 7's native `tsc`, or the in-process API on <= 6).
+   */
+  engine: TypecheckEngine;
   /** The ambient declarations the agent code was checked against. */
   toolDeclarations: string;
 }
 
+export type TypecheckEngine = "tsrs" | "tsgo" | "typescript";
+
 export interface TypecheckOptions {
   /**
-   * Engine selection. "auto" (default) prefers `@typescript/native-preview`
-   * (tsgo, the native TypeScript compiler — ~10x faster) when it is
-   * installed, falling back to the in-process `typescript` API.
+   * Engine selection. "auto" (default) uses the first one installed:
+   * `tsrs` (the Rust port of tsc), `@typescript/native-preview` (tsgo),
+   * then `typescript` (TypeScript 7's native `tsc`, or the in-process
+   * compiler API on TypeScript <= 6).
    */
-  engine?: "auto" | "tsgo" | "typescript";
+  engine?: "auto" | TypecheckEngine;
   /**
    * Strict checking (default true). Maps to `strict: true` with
    * `noImplicitAny: false` — agent code rarely annotates callback
@@ -717,31 +723,26 @@ export async function typecheck(
   const toolDeclarations = buildToolDeclarations(toolDefs);
   const main = wrapAgentCode(code);
 
-  if (engine === "tsgo" || engine === "auto") {
-    const tsgo = await resolveTsgo();
-    if (tsgo) {
-      const diagnostics = await runTsgo(tsgo, toolDeclarations, main, strict);
-      return {
-        ok: !diagnostics.some((d) => d.severity === "error"),
-        diagnostics,
-        engine: "tsgo",
-        toolDeclarations,
-      };
-    }
-    if (engine === "tsgo") {
-      throw new Error(
-        "engine 'tsgo' requested but '@typescript/native-preview' is not installed (npm i -D @typescript/native-preview)"
-      );
-    }
-  }
-
-  const diagnostics = await runTscApi(toolDeclarations, main, strict);
-  return {
+  const result = (engine: TypecheckEngine, diagnostics: TypeDiagnostic[]): TypecheckResult => ({
     ok: !diagnostics.some((d) => d.severity === "error"),
     diagnostics,
-    engine: "typescript",
+    engine,
     toolDeclarations,
-  };
+  });
+
+  for (const candidate of ["tsrs", "tsgo", "typescript"] as const) {
+    if (engine !== "auto" && engine !== candidate) continue;
+    const cli = await resolveCheckerCli(candidate);
+    if (cli) return result(candidate, await runCliChecker(cli, toolDeclarations, main, strict));
+    if (candidate === "typescript") {
+      // TypeScript <= 6 has no native CLI worth spawning; use its JS API.
+      return result("typescript", await runTscApi(toolDeclarations, main, strict));
+    }
+    if (engine === candidate) {
+      throw new Error(`engine '${candidate}' requested but '${CHECKER_PACKAGES[candidate].pkg}' is not installed`);
+    }
+  }
+  throw new Error(`unknown typecheck engine '${engine}'`);
 }
 
 /**
@@ -768,24 +769,36 @@ export function formatDiagnosticsForModel(result: TypecheckResult, code: string)
 }
 
 /** Locate the tsgo launcher from `@typescript/native-preview`, if installed. */
-async function resolveTsgo(): Promise<string | null> {
+/** npm package and bin of each CLI type-checker. */
+const CHECKER_PACKAGES = {
+  tsrs: { pkg: "tsrs", bin: "tsrs" },
+  tsgo: { pkg: "@typescript/native-preview", bin: "tsgo" },
+  typescript: { pkg: "typescript", bin: "tsc" },
+} as const;
+
+/**
+ * Path to an installed checker's CLI script, or null. `typescript` only
+ * counts from 7.0 on (the native compiler); earlier versions use the API.
+ */
+async function resolveCheckerCli(engine: TypecheckEngine): Promise<string | null> {
   try {
     const { createRequire } = await import("node:module");
     const path = await import("node:path");
     const fs = await import("node:fs/promises");
-    const req = createRequire(import.meta.url);
-    const pkgPath = req.resolve("@typescript/native-preview/package.json");
+    const { pkg: name, bin: binName } = CHECKER_PACKAGES[engine];
+    const pkgPath = createRequire(import.meta.url).resolve(`${name}/package.json`);
     const pkg = JSON.parse(await fs.readFile(pkgPath, "utf8"));
-    const bin = typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.tsgo;
+    if (engine === "typescript" && Number.parseInt(pkg.version, 10) < 7) return null;
+    const bin = typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.[binName];
     return bin ? path.join(path.dirname(pkgPath), bin) : null;
   } catch {
     return null;
   }
 }
 
-/** Run tsgo over a temp project and parse its tsc-style diagnostics. */
-async function runTsgo(
-  tsgoBin: string,
+/** Run a tsc-compatible CLI over a temp project and parse its diagnostics. */
+async function runCliChecker(
+  checkerBin: string,
   toolDecls: string,
   main: string,
   strict: boolean
@@ -817,7 +830,7 @@ async function runTsgo(
     const output = await new Promise<string>((resolve) => {
       execFile(
         process.execPath,
-        [tsgoBin, "--project", dir, "--pretty", "false"],
+        [checkerBin, "--project", dir, "--pretty", "false"],
         { cwd: dir, timeout: 30_000 },
         (_err, stdout, stderr) => resolve(`${stdout}\n${stderr}`)
       );
@@ -868,8 +881,8 @@ async function runTscApi(
     ts = mod.default ?? mod;
   } catch {
     throw new Error(
-      "Type-checking requires '@typescript/native-preview' (preferred) or the 'typescript' dependency. " +
-        "Install one (npm i -D @typescript/native-preview) or disable the typeCheck option."
+      "Type-checking needs one of: 'tsrs', '@typescript/native-preview' (tsgo) or 'typescript'. " +
+        "Install one (e.g. npm i -D tsrs) or disable the typeCheck option."
     );
   }
 
