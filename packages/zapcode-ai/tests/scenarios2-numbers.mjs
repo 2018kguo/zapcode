@@ -101,7 +101,7 @@ await check("Math — round/floor/ceil/trunc/sign/abs [BUG: Math.round neg halve
   `);
   // Documenting actual (buggy) behavior; correct would be [4, -3, 3, -3, -7, -1, 0, 42]
   assert.equal(output[0], 4);
-  assert.equal(output[1], -4);   // BUG: should be -3
+  assert.equal(output[1], -4); // BUG: should be -3
   assert.deepEqual(output.slice(2), [3, -3, -7, -1, 0, 42]);
 });
 
@@ -285,7 +285,7 @@ await check("Infinity — internal use works, output serialization BUG", async (
 
   // BUG: Infinity as a final expression result returns null
   const { output: inf } = await ex(`Infinity`);
-  assert.equal(inf, null);   // BUG: should be Infinity (or the string "Infinity")
+  assert.equal(inf, null); // BUG: should be Infinity (or the string "Infinity")
 
   // isFinite / Number.isFinite still work (they return booleans)
   const { output: fin } = await ex(`[isFinite(Infinity), isFinite(42), Number.isFinite(42)]`);
@@ -295,14 +295,14 @@ await check("Infinity — internal use works, output serialization BUG", async (
 await check("NaN serializes as null [BUG]", async () => {
   // NaN propagates and is detectable, but serializes as null when last expression
   const { output: isnan } = await ex(`Number.isNaN(0/0)`);
-  assert.equal(isnan, true);   // ✓ works
+  assert.equal(isnan, true); // ✓ works
 
   // BUG: NaN as output value becomes null
   const { output: nan } = await ex(`NaN`);
-  assert.equal(nan, null);   // BUG: should be NaN (or null is acceptable? but confuses with null)
+  assert.equal(nan, null); // BUG: should be NaN (or null is acceptable? but confuses with null)
 
   const { output: nan2 } = await ex(`0/0`);
-  assert.equal(nan2, null);   // BUG: same — 0/0 = NaN comes back as null
+  assert.equal(nan2, null); // BUG: same — 0/0 = NaN comes back as null
 });
 
 // ---------------------------------------------------------------------------
@@ -361,7 +361,7 @@ await check("parseInt/parseFloat edge cases [BUG: 0x prefix in string]", async (
   `);
   assert.equal(output[0], 42);
   assert.equal(output[1], 3);
-  assert.equal(output[2], 0);    // BUG: should be 255
+  assert.equal(output[2], 0); // BUG: should be 255
   assert.equal(output[3], 255);
   assert.equal(output[4], 7);
   assert.equal(output[5], 3.14);
@@ -408,24 +408,24 @@ await check("bitwise — AND/OR/XOR/NOT/shifts (positive operands)", async () =>
 await check("bitwise >>> with negative operands [BUG]", async () => {
   // BUG: -1 >>> 0 returns 0, should be 4294967295
   const { output: r1 } = await ex(`-1 >>> 0`);
-  assert.equal(r1, 0);         // BUG: should be 4294967295
+  assert.equal(r1, 0); // BUG: should be 4294967295
 
   const { output: r2 } = await ex(`-8 >>> 1`);
-  assert.equal(r2, 0);         // BUG: should be 2147483644
+  assert.equal(r2, 0); // BUG: should be 2147483644
 
   // Positive operands work
   const { output: r3 } = await ex(`0xFFFFFFFF >>> 0`);
   assert.equal(r3, 4294967295); // ✓
 
   const { output: r4 } = await ex(`-1 >> 0`);
-  assert.equal(r4, -1);         // ✓ signed >> works
+  assert.equal(r4, -1); // ✓ signed >> works
 });
 
 await check("bitwise & with large positive operand [BUG]", async () => {
   // BUG: -1 & 0xFFFFFFFF = 2147483647 instead of -1
   // (all 32 bits of -1 AND all 32 bits of 0xFFFFFFFF = 0xFFFFFFFF = -1 as int32)
   const { output } = await ex(`-1 & 0xFFFFFFFF`);
-  assert.equal(output, 2147483647);   // BUG: should be -1
+  assert.equal(output, 2147483647); // BUG: should be -1
 });
 
 // ---------------------------------------------------------------------------
@@ -463,7 +463,7 @@ await check("number formatting — default param BUG vs workaround", async () =>
     formatNumberBuggy(999)
   `);
   // decimals is null (bug), toFixed(null) → toFixed(0) → "999"
-  assert.equal(buggy, "999");   // BUG: should be "999.00"
+  assert.equal(buggy, "999"); // BUG: should be "999.00"
 
   // Workaround: manual default check — then formatNumber works correctly
   const { output } = await ex(`
@@ -527,9 +527,9 @@ await check("toPrecision always uses exponential [BUG]", async () => {
     ]
   `);
   // Documenting actual (buggy) output — all exponential
-  assert.equal(output[0], "1.00e0");   // BUG: should be "1.00"
+  assert.equal(output[0], "1.00e0"); // BUG: should be "1.00"
   assert.equal(output[1], "1.2346e2"); // BUG: should be "123.46"
-  assert.equal(output[2], "1.2e-4");   // BUG: should be "0.00012"
+  assert.equal(output[2], "1.2e-4"); // BUG: should be "0.00012"
   // Note: output[3] has no agreed canonical form ("1.2e3" vs "1.2e+3") so skip
 });
 
@@ -561,13 +561,13 @@ await check("Number coercions [BUG: NaN output serializes as null]", async () =>
   assert.equal(d, 1);
   assert.equal(e, 0);
   assert.equal(f, 0);
-  assert.equal(g, null);  // BUG: should be NaN; Number.isNaN(Number(undefined)) = true but output = null
+  assert.equal(g, null); // BUG: should be NaN; Number.isNaN(Number(undefined)) = true but output = null
   assert.equal(h, 1000);
   assert.equal(i, 0.0015);
 
   // Verify the value IS NaN internally (the bug is only in output serialization)
   const { output: check } = await ex(`Number.isNaN(Number(undefined))`);
-  assert.equal(check, true);  // internal NaN is correct ✓
+  assert.equal(check, true); // internal NaN is correct ✓
 });
 
 // ---------------------------------------------------------------------------
@@ -604,10 +604,7 @@ await check("invoice — full calculation with discount + tax + summary", async 
   // discounted = 2484.50 - 124.23 = 2360.27
   // tax = 2360.27 * 0.10 = 236.027 → 236.03
   // total = 2360.27 + 236.03 = 2596.30
-  assert.equal(
-    output,
-    "Subtotal: $2484.50 | Discount: $124.23 | Tax: $236.03 | Total: $2596.30"
-  );
+  assert.equal(output, "Subtotal: $2484.50 | Discount: $124.23 | Tax: $236.03 | Total: $2596.30");
 });
 
 // ---------------------------------------------------------------------------
@@ -685,16 +682,16 @@ await check("default function parameters [BUG]", async () => {
     const h = (x = true) => x;
     [f(), g(), h(), f(99)]
   `);
-  assert.equal(output[0], null);   // BUG: should be 42
-  assert.equal(output[1], null);   // BUG: should be "hello"
-  assert.equal(output[2], null);   // BUG: should be true
-  assert.equal(output[3], 99);     // ✓ explicit arg works fine
+  assert.equal(output[0], null); // BUG: should be 42
+  assert.equal(output[1], null); // BUG: should be "hello"
+  assert.equal(output[2], null); // BUG: should be true
+  assert.equal(output[3], 99); // ✓ explicit arg works fine
 });
 
 // ---------------------------------------------------------------------------
 // Final summary
 // ---------------------------------------------------------------------------
-const failed = results.filter(r => !r[1]);
+const failed = results.filter((r) => !r[1]);
 console.log(`\n${results.length - failed.length}/${results.length} passed`);
 if (failed.length) {
   console.log("\nFailed tests:");

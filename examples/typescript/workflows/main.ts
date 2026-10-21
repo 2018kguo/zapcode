@@ -30,10 +30,15 @@ const tool = (
 async function fanOut() {
   console.log("\n=== 1. Parallel fan-out (map-reduce over tools) ===");
   const docs: Record<string, { severity: string }> = {
-    d1: { severity: "high" }, d2: { severity: "low" }, d3: { severity: "high" }, d4: { severity: "low" },
+    d1: { severity: "high" },
+    d2: { severity: "low" },
+    d3: { severity: "high" },
+    d4: { severity: "low" },
   };
   const tools = {
-    searchDocs: tool("Find doc ids for a query.", { query: { type: "string" } }, async () => Object.keys(docs)),
+    searchDocs: tool("Find doc ids for a query.", { query: { type: "string" } }, async () =>
+      Object.keys(docs),
+    ),
     fetchDoc: tool("Fetch a doc by id.", { id: { type: "string" } }, async ({ id }) => docs[id]),
   };
 
@@ -64,7 +69,11 @@ async function retryFallback() {
       attempts++;
       throw new Error("503 unavailable (attempt " + attempts + ")");
     }),
-    fallbackModel: tool("Reliable fallback.", { prompt: { type: "string" } }, async () => "fallback summary"),
+    fallbackModel: tool(
+      "Reliable fallback.",
+      { prompt: { type: "string" } },
+      async () => "fallback summary",
+    ),
   };
 
   const r = await execute(
@@ -102,7 +111,10 @@ async function saga() {
       return true;
     });
   const tools = {
-    createOrder: tool("Create order.", { items: { type: "array" } }, async () => { events.push("createOrder"); return { id: "A1" }; }),
+    createOrder: tool("Create order.", { items: { type: "array" } }, async () => {
+      events.push("createOrder");
+      return { id: "A1" };
+    }),
     reserveStock: step("reserveStock"),
     chargeCard: step("chargeCard", /* fail */ true),
     releaseStock: step("releaseStock"),
@@ -142,7 +154,10 @@ async function durableSession() {
   const db = new Map<string, { id: string; owner: string }>([["42", { id: "42", owner: "ada" }]]);
   const tools = {
     fetchRow: tool("Load a row.", { id: { type: "string" } }, async ({ id }) => db.get(id) ?? null),
-    enrich: tool("Enrich a row.", { row: { type: "object" } }, async ({ row }) => ({ ...row, enriched: true })),
+    enrich: tool("Enrich a row.", { row: { type: "object" } }, async ({ row }) => ({
+      ...row,
+      enriched: true,
+    })),
   };
 
   const session = createSession({ tools, scriptName: "etl-job" });
@@ -169,18 +184,33 @@ async function durableSession() {
 async function preflight() {
   console.log("\n=== 5. dryRun pre-flight ===");
   const tools = {
-    getUser: { description: "Fetch a user.", parameters: { id: { type: "number" as const } }, returns: "{ name: string }", execute: async () => ({ name: "Ada" }) },
+    getUser: {
+      description: "Fetch a user.",
+      parameters: { id: { type: "number" as const } },
+      returns: "{ name: string }",
+      execute: async () => ({ name: "Ada" }),
+    },
   };
 
   // Reaches completion under stubs: calls the tool, doesn't assume its shape.
   const good = await dryRun(`const u = await getUser({ id: 1 }); u ? "fetched" : "none"`, tools);
-  console.log("  good code → reachedCompletion:", good.reachedCompletion, "| would call:", good.toolCalls.map(c => c.name));
+  console.log(
+    "  good code → reachedCompletion:",
+    good.reachedCompletion,
+    "| would call:",
+    good.toolCalls.map((c) => c.name),
+  );
   assert.equal(good.reachedCompletion, true);
 
   // Crashes instantly: dereferences `u.profile.name`, but `u.profile` is
   // undefined under the stub — exactly the kind of latent bug to catch pre-run.
   const bad = await dryRun(`const u = await getUser({ id: 1 }); u.profile.name`, tools);
-  console.log("  bad code  → reachedCompletion:", bad.reachedCompletion, "| error:", bad.error?.message?.split("\n")[0]);
+  console.log(
+    "  bad code  → reachedCompletion:",
+    bad.reachedCompletion,
+    "| error:",
+    bad.error?.message?.split("\n")[0],
+  );
   assert.equal(bad.reachedCompletion, false);
 }
 

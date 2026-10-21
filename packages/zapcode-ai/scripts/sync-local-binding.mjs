@@ -19,15 +19,13 @@ const jsCrate = join(repoRoot, "crates", "zapcode-js");
 const dest = join(aiPkg, "node_modules", "@2018kguo", "zapcode");
 
 if (!existsSync(dest)) {
-  throw new Error(
-    `Cannot find ${dest}. Run \`npm install\` in packages/zapcode-ai first.`
-  );
+  throw new Error(`Cannot find ${dest}. Run \`npm install\` in packages/zapcode-ai first.`);
 }
 
 console.log("[sync] building napi addon (release)…");
 execSync("npm run build", { cwd: jsCrate, stdio: "inherit" });
 
-const nodeBinaries = readdirSync(jsCrate).filter(f => f.endsWith(".node"));
+const nodeBinaries = readdirSync(jsCrate).filter((f) => f.endsWith(".node"));
 if (nodeBinaries.length === 0) {
   throw new Error(`No .node artifact produced in ${jsCrate}`);
 }

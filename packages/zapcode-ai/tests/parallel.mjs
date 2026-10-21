@@ -31,7 +31,7 @@ await test("Promise.all of tool calls runs them concurrently and preserves order
       execute: async ({ key }) => {
         inFlight++;
         maxInFlight = Math.max(maxInFlight, inFlight);
-        await new Promise(r => setTimeout(r, 20));
+        await new Promise((r) => setTimeout(r, 20));
         inFlight--;
         return `v:${key}`;
       },
@@ -43,7 +43,7 @@ await test("Promise.all of tool calls runs them concurrently and preserves order
     const out = await Promise.all([fetchOne("a"), fetchOne("b"), fetchOne("c")]);
     out.join(",")
   `,
-    tools
+    tools,
   );
 
   assert.equal(result.output, "v:a,v:b,v:c");
@@ -77,7 +77,7 @@ await test("a failing call in Promise.all is catchable in guest code", async () 
     }
     out
   `,
-    tools
+    tools,
   );
   assert.equal(result.output, "caught:boom:true");
 });
@@ -85,7 +85,7 @@ await test("a failing call in Promise.all is catchable in guest code", async () 
 await test("session batch survives dump/load and resumeMany", () => {
   const session = ZapcodeSessionHandle.create({ externalFunctions: ["fetchOne"] });
   const suspended = session.runChunk(
-    `const out = await Promise.all([fetchOne("a"), fetchOne("b")]); out.join("/")`
+    `const out = await Promise.all([fetchOne("a"), fetchOne("b")]); out.join("/")`,
   );
   assert.equal(suspended.completed, false);
   assert.equal(suspended.kind, "suspended_many");
@@ -108,7 +108,7 @@ await test("Promise.race resolves with the value of the first tool to settle", a
       description: "Resolve `label` after `ms` milliseconds.",
       parameters: { label: { type: "string" }, ms: { type: "number" } },
       execute: async ({ label, ms }) => {
-        await new Promise(r => setTimeout(r, ms));
+        await new Promise((r) => setTimeout(r, ms));
         return label;
       },
     },
@@ -116,7 +116,7 @@ await test("Promise.race resolves with the value of the first tool to settle", a
 
   const result = await execute(
     `await Promise.race([delay({ label: "slow", ms: 60 }), delay({ label: "fast", ms: 5 })])`,
-    tools
+    tools,
   );
   assert.equal(result.output, "fast");
 });
@@ -127,7 +127,7 @@ await test("Promise.race rejection of the first-to-settle is catchable", async (
       description: "Resolve or reject `label` after `ms` ms.",
       parameters: { label: { type: "string" }, ms: { type: "number" }, fail: { type: "boolean" } },
       execute: async ({ label, ms, fail }) => {
-        await new Promise(r => setTimeout(r, ms));
+        await new Promise((r) => setTimeout(r, ms));
         if (fail) throw new Error("rejected:" + label);
         return label;
       },
@@ -147,7 +147,7 @@ await test("Promise.race rejection of the first-to-settle is catchable", async (
       "caught:" + e.message
     }
   `,
-    tools
+    tools,
   );
   assert.equal(result.output, "caught:rejected:boom");
 });
@@ -160,7 +160,7 @@ await test("Promise.any skips a rejected call and returns the first fulfilled", 
       description: "Resolve or reject `label` after `ms` ms.",
       parameters: { label: { type: "string" }, ms: { type: "number" }, fail: { type: "boolean" } },
       execute: async ({ label, ms, fail }) => {
-        await new Promise(r => setTimeout(r, ms));
+        await new Promise((r) => setTimeout(r, ms));
         if (fail) throw new Error("rejected:" + label);
         return label;
       },
@@ -173,7 +173,7 @@ await test("Promise.any skips a rejected call and returns the first fulfilled", 
       delay({ label: "boom", ms: 5, fail: true }),
       delay({ label: "ok", ms: 30, fail: false }),
     ])`,
-    tools
+    tools,
   );
   assert.equal(result.output, "ok");
 });
@@ -199,7 +199,7 @@ await test("Promise.any rejects (catchable) when every call rejects", async () =
       String(e).includes("a") && String(e).includes("b") ? "caught-all" : "caught:" + e
     }
   `,
-    tools
+    tools,
   );
   assert.equal(result.output, "caught-all");
 });
@@ -227,7 +227,7 @@ await test("Promise.allSettled reports fulfilled/rejected per element", async ()
       (r[0].value || "?") + "|" +
       (r[1].reason instanceof Error) + ":" + r[1].reason.message
   `,
-    tools
+    tools,
   );
   assert.equal(result.output, "fulfilled,rejected,fulfilled|ok:a|true:failed:bad");
 });
@@ -248,7 +248,7 @@ await test("batch rejections preserve the host error's name (allSettled + any)",
   const settled = await execute(
     `const r = await Promise.allSettled([boom("type"), boom("range")]);
      r.map(x => x.reason.name).join(",")`,
-    tools
+    tools,
   );
   assert.equal(settled.output, "TypeError,RangeError");
 
@@ -256,7 +256,7 @@ await test("batch rejections preserve the host error's name (allSettled + any)",
   const anyAllReject = await execute(
     `try { await Promise.any([boom("type"), boom("range")]); "no"; }
      catch (e) { e.name + ":" + (e instanceof Error); }`,
-    tools
+    tools,
   );
   assert.equal(anyAllReject.output, "AggregateError:true");
 });

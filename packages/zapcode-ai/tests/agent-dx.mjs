@@ -52,10 +52,7 @@ await test("run report summarizes a successful run", async () => {
 });
 
 await test("tool-call trace records name, validated input, result, timing", async () => {
-  const r = await execute(
-    "await getUser({ id: 7 }); await audit({ event: 'seen' }); 1",
-    tools
-  );
+  const r = await execute("await getUser({ id: 7 }); await audit({ event: 'seen' }); 1", tools);
   assert.equal(r.toolCalls.length, 2);
   assert.equal(r.toolCalls[0].name, "getUser");
   assert.deepEqual(r.toolCalls[0].input, { id: 7 });
@@ -89,11 +86,14 @@ await test("scriptName labels the failure across autoFix, throw, and report.erro
   // throw path: the thrown Error's message is prefixed with the label.
   await assert.rejects(
     () => execute(BAD, {}, { scriptName: "planner" }),
-    (e) => e.message.startsWith("[planner] ")
+    (e) => e.message.startsWith("[planner] "),
   );
 
   // opt-in: with no scriptName the message is unchanged (no bracket prefix).
-  await assert.rejects(() => execute(BAD, {}), (e) => !e.message.startsWith("["));
+  await assert.rejects(
+    () => execute(BAD, {}),
+    (e) => !e.message.startsWith("["),
+  );
 });
 
 await test("a session names the erring chunk by index in the thrown error", async () => {
@@ -102,7 +102,7 @@ await test("a session names the erring chunk by index in the thrown error", asyn
   // chunk #2 throws; the label carries both the session name and chunk index.
   await assert.rejects(
     () => session.runChunk("const b = nope.field; b"),
-    (e) => e.message.startsWith("[agent-7 #2] ")
+    (e) => e.message.startsWith("[agent-7 #2] "),
   );
 });
 
@@ -119,7 +119,7 @@ await test("console output survives across tool-call suspensions", async () => {
     console.log("end");
     "done";
     `,
-    { tick: t(async () => 1) }
+    { tick: t(async () => 1) },
   );
   assert.equal(r.output, "done");
   assert.equal(r.stdout, "start\nmiddle\nend\n");
@@ -131,14 +131,14 @@ await test("console output survives across tool-call suspensions", async () => {
 await test("dryRun passes valid code and records the tool-call sequence", async () => {
   const d = await dryRun(
     "const u = await getUser({ id: 1 }); await audit({ event: 'x' }); u",
-    tools
+    tools,
   );
   assert.equal(d.ok, true);
   assert.equal(d.typeErrors.length, 0);
   assert.equal(d.reachedCompletion, true);
   assert.deepEqual(
     d.toolCalls.map((c) => c.name),
-    ["getUser", "audit"]
+    ["getUser", "audit"],
   );
 });
 
@@ -175,7 +175,7 @@ await test("dryRun surfaces an instant runtime error with a location", async () 
 await test("console.assert writes to stderr on failure without aborting", async () => {
   const r = await execute(
     "console.assert(1 > 2, 'x must exceed y'); console.log('still running'); 'done'",
-    tools
+    tools,
   );
   assert.equal(r.output, "done");
   assert.equal(r.stdout, "still running\n");

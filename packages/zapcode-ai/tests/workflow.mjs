@@ -128,7 +128,7 @@ await test("multi-step triage workflow across serialized session chunks", async 
 
   // The host observed both escalations, with the workflow's computed queue/priority.
   assert.equal(state.escalations.length, 2);
-  const byId = Object.fromEntries(state.escalations.map(e => [e.ticketId, e]));
+  const byId = Object.fromEntries(state.escalations.map((e) => [e.ticketId, e]));
   assert.equal(byId.t1.queue, "priority");
   assert.equal(byId.t3.queue, "urgent");
   assert.equal(byId.t3.priority, 5);

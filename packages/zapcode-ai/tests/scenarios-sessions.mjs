@@ -73,8 +73,7 @@ await check("S2: running total survives multiple dump/load hops", async () => {
     getAmount: {
       description: "Return an amount for an invoice.",
       parameters: { invoiceId: { type: "string" } },
-      execute: async ({ invoiceId }) =>
-        ({ inv_1: 100, inv_2: 250, inv_3: 75 })[invoiceId] ?? 0,
+      execute: async ({ invoiceId }) => ({ inv_1: 100, inv_2: 250, inv_3: 75 })[invoiceId] ?? 0,
     },
   };
   let s = createSession({ tools });
@@ -125,8 +124,7 @@ await check("S3: class instance scalar fields survive dump/load method calls", a
       description: "Return current price for a SKU.",
       parameters: { sku: { type: "string" } },
       // Integer prices — avoids BUG-5 (number primitive methods unavailable).
-      execute: async ({ sku }) =>
-        ({ apple: 2, banana: 1, cherry: 3 })[sku] ?? 0,
+      execute: async ({ sku }) => ({ apple: 2, banana: 1, cherry: 3 })[sku] ?? 0,
     },
   };
   let s = createSession({ tools });
@@ -214,11 +212,7 @@ await check("S4: Promise.all fan-out results stay ordered across dump/load", asy
 // variable name for the page result (known limitation: redeclaring a top-level
 // const/let is rejected). Uses top-level array (not nested), which works.
 await check("S5: paginated accumulation across chunks with dump/load", async () => {
-  const pages = [
-    ["item_1", "item_2"],
-    ["item_3", "item_4"],
-    ["item_5"],
-  ];
+  const pages = [["item_1", "item_2"], ["item_3", "item_4"], ["item_5"]];
   const tools = {
     fetchPage: {
       description: "Fetch a page of items.",
@@ -379,7 +373,10 @@ await check("S8 (raw): suspended_many → dump → load → resumeMany ordering"
   `);
   assert.strictEqual(suspended.kind, "suspended_many");
   assert.strictEqual(suspended.calls.length, 3);
-  assert.deepStrictEqual(suspended.calls.map(c => c.args[0]), ["x", "y", "z"]);
+  assert.deepStrictEqual(
+    suspended.calls.map((c) => c.args[0]),
+    ["x", "y", "z"],
+  );
 
   // Dump the suspended session, reload in a "new process", resume with results
   const bytes = suspended.session;
@@ -424,10 +421,13 @@ await check("S10: per-chunk inputs are visible; stdout is step-local", async () 
   assert.strictEqual(r1.stdout, "chunk1\n");
 
   // Chunk 2 receives per-chunk inputs
-  const r2 = await s.runChunk(`
+  const r2 = await s.runChunk(
+    `
     console.log("chunk2", userId);
     userId + "_processed"
-  `, { userId: "user_42" });
+  `,
+    { userId: "user_42" },
+  );
   assert.strictEqual(r2.stdout, "chunk2 user_42\n");
   assert.strictEqual(r2.output, "user_42_processed");
 
@@ -436,10 +436,13 @@ await check("S10: per-chunk inputs are visible; stdout is step-local", async () 
 
   // Persist and reload; inject different inputs on the next chunk
   s = hop(s, tools);
-  const r3 = await s.runChunk(`
+  const r3 = await s.runChunk(
+    `
     console.log("chunk3", userId);
     greeting + " " + userId
-  `, { userId: "user_99" });
+  `,
+    { userId: "user_99" },
+  );
   assert.strictEqual(r3.stdout, "chunk3 user_99\n");
   assert.strictEqual(r3.output, "hello user_99");
 });
@@ -677,8 +680,11 @@ await check("S17: Math.random() scalar sequence is deterministic across dump/loa
   `);
 
   // Both sequences must be identical (deterministic RNG state carried in dump)
-  assert.deepStrictEqual(rA.output, rB.output,
-    "Math.random() sequence diverged after dump/load — RNG state not serialized");
+  assert.deepStrictEqual(
+    rA.output,
+    rB.output,
+    "Math.random() sequence diverged after dump/load — RNG state not serialized",
+  );
 });
 
 // ─── SCENARIO 18 ─────────────────────────────────────────────────────────────
@@ -695,7 +701,9 @@ await check("S18: session is still usable after catching a Promise.all error", a
       description: "Always fails.",
       parameters: {},
       // No params → call as failTool() not failTool({})
-      execute: async () => { throw new Error("intentional failure"); },
+      execute: async () => {
+        throw new Error("intentional failure");
+      },
     },
   };
   let s = createSession({ tools });
@@ -745,8 +753,11 @@ await check("BUG-1: nested array push corrupts parent object (confirmed bug)", a
   `);
   // In real JS, obj.count is still 3. In the sandbox, it becomes null due to
   // the mutation corrupting the parent object binding.
-  assert.notStrictEqual(r.output, 3,
-    "BUG-1 regression: nested array push no longer corrupts parent object");
+  assert.notStrictEqual(
+    r.output,
+    3,
+    "BUG-1 regression: nested array push no longer corrupts parent object",
+  );
 });
 
 // BUG-2: Calling any Array method when a Math.X() call appears as a direct
@@ -754,33 +765,38 @@ await check("BUG-1: nested array push corrupts parent object (confirmed bug)", a
 // Math.X() works fine as a standalone expression.
 // Minimal repro: `[].push(Math.random())` — same-chunk, no tool calls needed.
 // Workaround: store Math result in a variable first, then pass the variable.
-await check("BUG-2: array.push(Math.random()) fails with method-not-found (confirmed bug)", async () => {
-  const s = createSession({ tools: {} });
+await check(
+  "BUG-2: array.push(Math.random()) fails with method-not-found (confirmed bug)",
+  async () => {
+    const s = createSession({ tools: {} });
 
-  // Confirm the workaround works (proves Math itself is fine):
-  const rOk = await s.runChunk(`
+    // Confirm the workaround works (proves Math itself is fine):
+    const rOk = await s.runChunk(`
     const v = Math.random();
     const arr = [];
     arr.push(v);
     arr.length
   `);
-  assert.strictEqual(rOk.output, 1);
+    assert.strictEqual(rOk.output, 1);
 
-  // Direct call as arg fails:
-  let caught = null;
-  try {
-    await s.runChunk(`
+    // Direct call as arg fails:
+    let caught = null;
+    try {
+      await s.runChunk(`
       const arr2 = [];
       arr2.push(Math.random());
       arr2.length
     `);
-  } catch (e) {
-    caught = e.message;
-  }
-  assert.ok(caught !== null,
-    "BUG-2 regression: arr.push(Math.random()) now works — remove this check");
-  assert.match(caught, /__array__.*push.*function|push.*not.*function/i);
-});
+    } catch (e) {
+      caught = e.message;
+    }
+    assert.ok(
+      caught !== null,
+      "BUG-2 regression: arr.push(Math.random()) now works — remove this check",
+    );
+    assert.match(caught, /__array__.*push.*function|push.*not.*function/i);
+  },
+);
 
 // BUG-3: Map.size always returns null regardless of how many entries were added.
 // Map.get() and Map.has() work correctly. Map is not iterable (for...of fails).
@@ -804,8 +820,11 @@ await check("BUG-3: Map.size returns null instead of entry count (confirmed bug)
   assert.strictEqual(r.output.getB, 2);
 
   // Map.size is null (bug):
-  assert.strictEqual(r.output.size, null,
-    "BUG-3 regression: Map.size now returns correct count — remove this check");
+  assert.strictEqual(
+    r.output.size,
+    null,
+    "BUG-3 regression: Map.size now returns correct count — remove this check",
+  );
 });
 
 // BUG-4: Set is completely unavailable — typeof Set === "undefined" and
@@ -814,8 +833,11 @@ await check("BUG-4: Set constructor is unavailable (typeof Set === undefined)", 
   const s = createSession({ tools: {} });
 
   const r = await s.runChunk(`typeof Set`);
-  assert.strictEqual(r.output, "undefined",
-    "BUG-4 regression: Set is now available — update S11 to use Set");
+  assert.strictEqual(
+    r.output,
+    "undefined",
+    "BUG-4 regression: Set is now available — update S11 to use Set",
+  );
 
   let threw = false;
   try {
@@ -847,17 +869,23 @@ await check("BUG-5: number primitive methods (toFixed, toString) are unavailable
   `);
 
   // Methods are absent (bug):
-  assert.strictEqual(r.output.toFixed_type, "undefined",
-    "BUG-5 regression: n.toFixed is now available — remove this check");
-  assert.strictEqual(r.output.toString_type, "undefined",
-    "BUG-5 regression: n.toString is now available — remove this check");
+  assert.strictEqual(
+    r.output.toFixed_type,
+    "undefined",
+    "BUG-5 regression: n.toFixed is now available — remove this check",
+  );
+  assert.strictEqual(
+    r.output.toString_type,
+    "undefined",
+    "BUG-5 regression: n.toString is now available — remove this check",
+  );
 
   // Workaround works:
   assert.strictEqual(r.output.via_concat, "9.6");
 });
 
 // ─── results ──────────────────────────────────────────────────────────────────
-const failed = results.filter(r => !r[1]);
+const failed = results.filter((r) => !r[1]);
 console.log(`\n${results.length - failed.length}/${results.length} passed`);
 if (failed.length) {
   console.log("\nFailed:");

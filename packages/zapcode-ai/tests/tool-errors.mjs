@@ -48,7 +48,7 @@ await test("agent code can try/catch a failing tool and retry", async () => {
     }
     out
   `,
-    flakyTools()
+    flakyTools(),
   );
   assert.equal(result.output, "a-ok");
   // Both attempts are recorded; the first carries an error.
@@ -79,7 +79,7 @@ await test("a caught tool failure is a real Error (message/name/instanceof) in t
           throw new RangeError("out of range");
         },
       },
-    }
+    },
   );
   assert.equal(result.output, "true|RangeError|out of range");
 });
@@ -96,7 +96,7 @@ await test("an uncaught tool failure aborts execution", async () => {
           },
         },
       }),
-    /permanent failure/
+    /permanent failure/,
   );
 });
 
@@ -116,7 +116,7 @@ await test(".catch callback can call a tool (fallback pattern)", async () => {
         parameters: { key: { type: "string" } },
         execute: async ({ key }) => `${key}-ok`,
       },
-    }
+    },
   );
   assert.equal(result.output, "fallback-ok");
   assert.equal(result.toolCalls.length, 1);
@@ -136,7 +136,7 @@ await test(".then callback can call a tool threading the resolved value", async 
         parameters: { key: { type: "string" } },
         execute: async ({ key }) => `${key}-ok`,
       },
-    }
+    },
   );
   assert.equal(result.output, "ctx-ok");
 });
@@ -158,7 +158,7 @@ await test(".finally callback runs a tool but passes the value through", async (
           return 999; // discarded by finally
         },
       },
-    }
+    },
   );
   assert.equal(result.output, 7);
   assert.equal(cleaned, 1);
@@ -176,7 +176,7 @@ await test("autoFix surfaces an uncaught tool failure as a structured error", as
         },
       },
     },
-    { autoFix: true }
+    { autoFix: true },
   );
   assert.equal(result.output, null);
   assert.match(String(result.error), /permanent failure/);

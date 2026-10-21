@@ -89,7 +89,7 @@ await test("side effects fire in source order, interleaved with computation", as
   const { world, tools } = makeWorld();
   await execute(
     "await emit('a'); const n = 1 + 1; await emit('b' + n); if (n === 2) await emit('c'); 'done'",
-    tools
+    tools,
   );
   assert.deepEqual(world.log, ["emit:a", "emit:b2", "emit:c"]);
 });
@@ -100,7 +100,7 @@ await test("a loop drives one side effect per iteration, in order", async () => 
   const { world, tools } = makeWorld();
   await execute(
     "for (const id of [10, 20, 30]) { await insert({ id, value: 'v' + id }); } 'ok'",
-    tools
+    tools,
   );
   assert.equal(world.db.size, 3);
   assert.equal(world.db.get(20), "v20");
@@ -113,7 +113,7 @@ await test("a side effect in a not-taken branch never fires", async () => {
   const { world, tools } = makeWorld();
   await execute(
     "const flag = false; if (flag) { await emit('should-not-happen'); } else { await emit('taken'); } 'ok'",
-    tools
+    tools,
   );
   assert.deepEqual(world.log, ["emit:taken"]);
 });
@@ -125,7 +125,7 @@ await test("a tool result feeds the next tool call (read-modify-write)", async (
   world.db.set(1, "5"); // seed
   const r = await execute(
     "const cur = await get({ id: 1 }); const next = String(Number(cur) * 2); await insert({ id: 1, value: next }); next",
-    tools
+    tools,
   );
   assert.equal(r.output, "10");
   assert.equal(world.db.get(1), "10");
@@ -150,7 +150,7 @@ await test("effects before a thrown tool persist; catch continues effects", asyn
     "await emit('before'); let caught = ''; \
      try { await boom(); await emit('unreached'); } catch (e) { caught = e.message; } \
      await emit('after'); caught",
-    tools
+    tools,
   );
   assert.equal(r.output, "kaboom");
   // The effect before the throw and the boom attempt landed; the post-throw
@@ -164,7 +164,7 @@ await test("Promise.all over tools performs every side effect", async () => {
   const { world, tools } = makeWorld();
   const r = await execute(
     "const results = await Promise.all([bump(), bump(), bump()]); results.join(',')",
-    tools
+    tools,
   );
   assert.equal(world.counter, 3);
   // Three bump effects recorded (order is the batch's settle order).
@@ -181,7 +181,7 @@ await test("side effects persist across a dump/load/resume boundary", () => {
   // The agent does an effect, suspends, (ship state elsewhere), resumes, does
   // more — the host performs each effect as it resolves the suspension.
   const s1 = session.runChunk(
-    "const a = await step('one'); const b = await step('two'); a + '+' + b"
+    "const a = await step('one'); const b = await step('two'); a + '+' + b",
   );
   assert.equal(s1.completed, false);
   assert.deepEqual(s1.args, ["one"]);
@@ -228,7 +228,7 @@ await test("an agent orchestrates a real CRUD workflow; host DB ends correct", a
     }
     ids.join(',')
   `,
-    tools
+    tools,
   );
 
   // Assert the FINAL host-DB state, not just the returned value.
@@ -238,15 +238,10 @@ await test("an agent orchestrates a real CRUD workflow; host DB ends correct", a
   assert.equal(world.db.get(3), "gamma");
   assert.equal(r.output, "1:ALPHA,3:gamma");
   // The tool-call trace is the audit log of what actually executed.
-  assert.deepEqual(r.toolCalls.map((c) => c.name), [
-    "insert",
-    "get",
-    "insert",
-    "remove",
-    "get",
-    "get",
-    "get",
-  ]);
+  assert.deepEqual(
+    r.toolCalls.map((c) => c.name),
+    ["insert", "get", "insert", "remove", "get", "get", "get"],
+  );
 });
 
 // ── tool-error fidelity: a thrown tool is a real Error in the guest ────────
@@ -264,7 +259,7 @@ await test("a thrown tool is caught as a real Error (instanceof, name, message)"
   const r = await execute(
     "let info = ''; try { await fail(); } catch (e) { \
        info = [e instanceof Error, e.name, e.message].join('|'); } info",
-    tools
+    tools,
   );
   // The host's TypeError subclass name is preserved.
   assert.equal(r.output, "true|TypeError|nope");
@@ -285,7 +280,7 @@ await test("a caught tool error can be rethrown and re-caught with fidelity", as
      let out = ''; \
      try { try { await fail(); } catch (e) { throw wrap(e); } } \
      catch (e2) { out = e2.message + '|' + (e2 instanceof Error); } out",
-    tools
+    tools,
   );
   assert.equal(r.output, "wrapped: original|true");
 });
@@ -326,7 +321,7 @@ await test("saga: a failed step triggers a compensating side effect", async () =
      try { await charge({ amount: 250 }); status = 'charged'; } \
      catch (e) { await remove({ id: 1 }); status = 'rolled-back:' + e.message; } \
      status",
-    tools
+    tools,
   );
   assert.equal(r.output, "rolled-back:declined");
   // The insert happened, then was compensated; the DB is empty again.
@@ -343,7 +338,7 @@ await test("tool calls inside a helper function still drive host effects", async
      const ids = []; \
      for (const id of [1, 2, 3]) ids.push(await store(id)); \
      ids.join(',')",
-    tools
+    tools,
   );
   assert.equal(r.output, "1,2,3");
   assert.equal(world.db.size, 3);
@@ -381,7 +376,7 @@ await test("a structured tool result drives a derived side effect", async () => 
     "const order = await fetchOrder({ id: 7 }); \
      const total = order.items.reduce((s, it) => s + it.qty, 0); \
      await record({ total }); total",
-    tools
+    tools,
   );
   assert.equal(r.output, 7);
   assert.equal(world.db.get("total"), 7);
@@ -408,7 +403,7 @@ await test("Promise.allSettled over tools keeps successful effects when one fail
   const r = await execute(
     "const rs = await Promise.allSettled([maybe({ id: 2 }), maybe({ id: 3 }), maybe({ id: 4 })]); \
      rs.map(x => x.status === 'fulfilled' ? 'f' + x.value : 'r:' + (x.reason instanceof Error) + ':' + x.reason.message).join(',')",
-    tools
+    tools,
   );
   // The two even calls performed their effect; the odd one rejected with a real Error.
   assert.equal(r.output, "f2,r:true:odd:3,f4");

@@ -38,7 +38,11 @@ console.log("scenarios3 analytics e2e");
 const EVENT_RECORDS = [
   {
     eventId: "ev_001",
-    account: { accountId: "acct_full", plan: "enterprise", owner: { ownerId: "owner_ava", contact: { email: "ava@x.io" } } },
+    account: {
+      accountId: "acct_full",
+      plan: "enterprise",
+      owner: { ownerId: "owner_ava", contact: { email: "ava@x.io" } },
+    },
     geo: [{ region: "us-east", city: "nyc" }, { region: "us-west" }],
     metrics: { events: 120, sessions: 14, errors: { count: 2 } },
     feature: { flags: { beta: true } },
@@ -67,7 +71,10 @@ const EVENT_RECORDS = [
     // missing account key altogether; only metrics
     eventId: "ev_005",
     metrics: { events: 9, sessions: 1 },
-    geo: [{ region: "eu-central", city: "berlin" }, { region: "eu-west", city: "dublin" }],
+    geo: [
+      { region: "eu-central", city: "berlin" },
+      { region: "eu-west", city: "dublin" },
+    ],
   },
 ];
 
@@ -101,7 +108,7 @@ function createAnalyticsTools(state = {}) {
         betaFlag: { type: "boolean" },
         metadata: { type: "object", optional: true },
       },
-      execute: async input => {
+      execute: async (input) => {
         saved.push(input);
         return { ok: true, accountId: input.accountId };
       },
@@ -115,7 +122,7 @@ function createAnalyticsTools(state = {}) {
         regions: { type: "array" },
         summary: { type: "string" },
       },
-      execute: async input => {
+      execute: async (input) => {
         reports.push(input);
         return { published: true, title: input.title };
       },
@@ -132,7 +139,7 @@ await test("system prompt exposes named-object analytics tool signatures", async
   assert.match(system, /declare function fetchEvents\(window\?: string\): Promise<unknown>;/);
   assert.match(
     system,
-    /declare function saveRollup\(input: \{ eventId: string; accountId: string; plan: string; ownerId: string; ownerEmail: string; primaryRegion: string; events: number; sessions: number; errorCount: number; betaFlag: boolean; metadata\?: object \}\): Promise<unknown>;/
+    /declare function saveRollup\(input: \{ eventId: string; accountId: string; plan: string; ownerId: string; ownerEmail: string; primaryRegion: string; events: number; sessions: number; errorCount: number; betaFlag: boolean; metadata\?: object \}\): Promise<unknown>;/,
   );
   assert.match(system, /Call shape: await publishReport\(\{ title: string, totals: object/);
 });
@@ -162,7 +169,7 @@ await test("deep optional chains + ?? as direct tool args resolve the PRESENT br
     });
     "done"
     `,
-    harness.tools
+    harness.tools,
   );
 
   assert.equal(result.output, "done");
@@ -212,7 +219,7 @@ await test("deep optional chains + ?? as direct tool args resolve the NULL branc
     });
     "done"
     `,
-    harness.tools
+    harness.tools,
   );
 
   assert.equal(result.output, "done");
@@ -268,7 +275,7 @@ await test("mixed optional links, spread defaults, and ternaries gated on option
     await saveRollup(resolved);
     resolved
     `,
-    harness.tools
+    harness.tools,
   );
 
   const expected = {
@@ -314,7 +321,7 @@ await test("optional chains inside template literals used as a string tool arg",
     });
     summaryStr
     `,
-    harness.tools
+    harness.tools,
   );
 
   assert.equal(result.output, "acct_nocontact/owner_ben/no-email/no-region");
@@ -355,7 +362,7 @@ await test("computed-key optional index access a?.[k] as direct tool args", asyn
     });
     "ok"
     `,
-    harness.tools
+    harness.tools,
   );
 
   const expected = {
@@ -402,20 +409,75 @@ await test("STRESS: per-record rollup over heterogeneous array — exact shape f
     }
     rows
     `,
-    harness.tools
+    harness.tools,
   );
 
   const expectedRows = [
-    { eventId: "ev_001", accountId: "acct_full", plan: "enterprise", ownerId: "owner_ava", ownerEmail: "ava@x.io", primaryRegion: "us-east", events: 120, sessions: 14, errorCount: 2, betaFlag: true },
-    { eventId: "ev_002", accountId: "acct_noowner", plan: "growth", ownerId: "unowned", ownerEmail: "no-email", primaryRegion: "unknown", events: 30, sessions: 0, errorCount: 0, betaFlag: false },
-    { eventId: "ev_003", accountId: "none", plan: "free", ownerId: "unowned", ownerEmail: "no-email", primaryRegion: "unknown", events: 0, sessions: 0, errorCount: 0, betaFlag: false },
-    { eventId: "ev_004", accountId: "acct_nocontact", plan: "enterprise", ownerId: "owner_ben", ownerEmail: "no-email", primaryRegion: "unknown", events: 0, sessions: 5, errorCount: 0, betaFlag: false },
-    { eventId: "ev_005", accountId: "none", plan: "free", ownerId: "unowned", ownerEmail: "no-email", primaryRegion: "eu-central", events: 9, sessions: 1, errorCount: 0, betaFlag: false },
+    {
+      eventId: "ev_001",
+      accountId: "acct_full",
+      plan: "enterprise",
+      ownerId: "owner_ava",
+      ownerEmail: "ava@x.io",
+      primaryRegion: "us-east",
+      events: 120,
+      sessions: 14,
+      errorCount: 2,
+      betaFlag: true,
+    },
+    {
+      eventId: "ev_002",
+      accountId: "acct_noowner",
+      plan: "growth",
+      ownerId: "unowned",
+      ownerEmail: "no-email",
+      primaryRegion: "unknown",
+      events: 30,
+      sessions: 0,
+      errorCount: 0,
+      betaFlag: false,
+    },
+    {
+      eventId: "ev_003",
+      accountId: "none",
+      plan: "free",
+      ownerId: "unowned",
+      ownerEmail: "no-email",
+      primaryRegion: "unknown",
+      events: 0,
+      sessions: 0,
+      errorCount: 0,
+      betaFlag: false,
+    },
+    {
+      eventId: "ev_004",
+      accountId: "acct_nocontact",
+      plan: "enterprise",
+      ownerId: "owner_ben",
+      ownerEmail: "no-email",
+      primaryRegion: "unknown",
+      events: 0,
+      sessions: 5,
+      errorCount: 0,
+      betaFlag: false,
+    },
+    {
+      eventId: "ev_005",
+      accountId: "none",
+      plan: "free",
+      ownerId: "unowned",
+      ownerEmail: "no-email",
+      primaryRegion: "eu-central",
+      events: 9,
+      sessions: 1,
+      errorCount: 0,
+      betaFlag: false,
+    },
   ];
   assert.deepEqual(result.output, expectedRows);
   assert.equal(harness.saved.length, 5);
   assert.deepEqual(harness.saved, expectedRows);
-  const rollupCalls = result.toolCalls.filter(c => c.name === "saveRollup");
+  const rollupCalls = result.toolCalls.filter((c) => c.name === "saveRollup");
   assert.equal(rollupCalls.length, 5);
   for (let i = 0; i < expectedRows.length; i++) {
     assert.deepEqual(rollupCalls[i].input, expectedRows[i]);
@@ -452,7 +514,7 @@ await test("STRESS: aggregate report via map/filter/reduce with optional chains 
     await publishReport({ title: "Usage 30d", totals, byPlan, regions, summary });
     ({ totals, byPlan, regions, summary })
     `,
-    harness.tools
+    harness.tools,
   );
 
   const expectedTotals = { events: 159, sessions: 20, errors: 2, ownedAccounts: 2, records: 5 };
@@ -512,7 +574,7 @@ await test("logical &&/|| mixed with optional chains as direct tool args", async
     });
     "ok"
     `,
-    harness.tools
+    harness.tools,
   );
 
   assert.equal(harness.saved.length, 2);
@@ -549,9 +611,9 @@ await test("invalid arg: optional chain producing wrong type is rejected before 
           betaFlag: rec?.feature?.flags?.beta ?? false,
         })
         `,
-        harness.tools
+        harness.tools,
       ),
-    /Invalid arguments for tool 'saveRollup': parameter 'accountId' expected string, got number/
+    /Invalid arguments for tool 'saveRollup': parameter 'accountId' expected string, got number/,
   );
   assert.deepEqual(harness.saved, []);
 });
@@ -577,9 +639,9 @@ await test("invalid arg: missing required param (null branch left unguarded) rej
           betaFlag: rec?.feature?.flags?.beta ?? false,
         })
         `,
-        harness.tools
+        harness.tools,
       ),
-    /Invalid arguments for tool 'saveRollup': missing required parameter 'ownerId'/
+    /Invalid arguments for tool 'saveRollup': missing required parameter 'ownerId'/,
   );
   assert.deepEqual(harness.saved, []);
 });
@@ -605,10 +667,28 @@ await test("determinism: repeated identical run yields identical rollups and rep
   assert.deepEqual(a.output, b.output);
   assert.deepEqual(a.output, {
     rows: [
-      { eventId: "ev_001", accountId: "acct_full", ownerId: "owner_ava", region: "us-west", events: 120 },
-      { eventId: "ev_002", accountId: "acct_noowner", ownerId: "unowned", region: "unknown", events: 30 },
+      {
+        eventId: "ev_001",
+        accountId: "acct_full",
+        ownerId: "owner_ava",
+        region: "us-west",
+        events: 120,
+      },
+      {
+        eventId: "ev_002",
+        accountId: "acct_noowner",
+        ownerId: "unowned",
+        region: "unknown",
+        events: 30,
+      },
       { eventId: "ev_003", accountId: "none", ownerId: "unowned", region: "unknown", events: 0 },
-      { eventId: "ev_004", accountId: "acct_nocontact", ownerId: "owner_ben", region: "unknown", events: 0 },
+      {
+        eventId: "ev_004",
+        accountId: "acct_nocontact",
+        ownerId: "owner_ben",
+        region: "unknown",
+        events: 0,
+      },
       { eventId: "ev_005", accountId: "none", ownerId: "unowned", region: "eu-west", events: 9 },
     ],
     total: 159,

@@ -64,9 +64,7 @@ async function main() {
     system,
     tools,
     maxSteps: 5,
-    messages: [
-      { role: "user", content: "What's the weather in Tokyo?" },
-    ],
+    messages: [{ role: "user", content: "What's the weather in Tokyo?" }],
   });
   console.log("Answer:", result.text);
 

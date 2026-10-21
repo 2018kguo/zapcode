@@ -33,11 +33,7 @@ async function getWeather(city: string): Promise<object> {
   return mockData[city] ?? { condition: "Unknown", temp: 0, humidity: 0 };
 }
 
-async function searchFlights(
-  from: string,
-  to: string,
-  date: string
-): Promise<object[]> {
+async function searchFlights(from: string, to: string, date: string): Promise<object[]> {
   // In production, call a flight search API
   return [
     { airline: "BA", flight: "BA123", price: 450, departure: "08:00" },
@@ -49,8 +45,7 @@ async function searchFlights(
 
 const tools: Record<string, (...args: any[]) => Promise<any>> = {
   getWeather: (city: string) => getWeather(city),
-  searchFlights: (from: string, to: string, date: string) =>
-    searchFlights(from, to, date),
+  searchFlights: (from: string, to: string, date: string) => searchFlights(from, to, date),
 };
 
 // --- The AI agent loop ---
@@ -76,8 +71,7 @@ Return ONLY the TypeScript code, no markdown fences. The last expression is the 
     messages: [{ role: "user", content: userQuery }],
   });
 
-  const code =
-    response.content[0].type === "text" ? response.content[0].text : "";
+  const code = response.content[0].type === "text" ? response.content[0].text : "";
   console.log("Claude wrote:\n", code, "\n");
 
   // Execute the AI-generated code in Zapcode's sandbox
@@ -120,7 +114,7 @@ async function main() {
 
   console.log("\n=== Example 2: Multi-tool query ===\n");
   await runAgent(
-    "Compare the weather in London and New York, and find me cheap flights from London to New York for 2026-04-01."
+    "Compare the weather in London and New York, and find me cheap flights from London to New York for 2026-04-01.",
   );
 }
 

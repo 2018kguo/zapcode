@@ -71,7 +71,7 @@ await check("within-7-days: target 4 days out returns true", async () => {
     const diff = targetMs - nowMs;
     diff >= 0 && diff <= sevenDays
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output, true);
 });
@@ -85,7 +85,7 @@ await check("within-7-days: target exactly 7 days away returns true", async () =
     const diff = targetMs - nowMs;
     diff >= 0 && diff <= sevenDays
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output, true);
 });
@@ -99,7 +99,7 @@ await check("within-7-days: target 8 days away returns false", async () => {
     const diff = targetMs - nowMs;
     diff >= 0 && diff <= sevenDays
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output, false);
 });
@@ -113,7 +113,7 @@ await check("within-7-days: past date returns false", async () => {
     const diff = targetMs - nowMs;
     diff >= 0 && diff <= sevenDays
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output, false);
 });
@@ -128,7 +128,7 @@ await check("deadline: now + 3 days in ms", async () => {
     const threeDays = 3 * 24 * 60 * 60 * 1000;
     nowMs + threeDays
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output, NOW_MS + 3 * 24 * 60 * 60 * 1000);
 });
@@ -140,7 +140,7 @@ await check("deadline: now + 6 hours in ms", async () => {
     const sixHours = 6 * 60 * 60 * 1000;
     nowMs + sixHours
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output, NOW_MS + 6 * 60 * 60 * 1000);
 });
@@ -152,7 +152,7 @@ await check("compare timestamps: earlier < later", async () => {
     const t2 = await parseDateMs({ iso: "2026-06-01" });
     t1 < t2
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output, true);
 });
@@ -172,7 +172,7 @@ await check("sort events by timestamp ascending", async () => {
     const sorted = events.slice().sort((a, b) => a.ms - b.ms);
     sorted.map(e => e.name)
     `,
-    makeTools()
+    makeTools(),
   );
   assert.deepEqual(output, ["A", "B", "C"]);
 });
@@ -183,9 +183,11 @@ await check("sort events by timestamp ascending", async () => {
 //    from for-of loop (see BUG below). Use separate array variables, not an
 //    object-of-arrays (see BUG below on object property mutation).
 // ===========================================================================
-await check("bucket items overdue/due-soon/future (separate array vars + bracket access)", async () => {
-  const { output } = await execute(
-    `
+await check(
+  "bucket items overdue/due-soon/future (separate array vars + bracket access)",
+  async () => {
+    const { output } = await execute(
+      `
     const nowMs = await getNowMs();
     const DAY = 24 * 60 * 60 * 1000;
     const SOON = 3 * DAY;
@@ -208,12 +210,13 @@ await check("bucket items overdue/due-soon/future (separate array vars + bracket
     }
     ({ overdue, dueSoon, future })
     `,
-    makeTools()
-  );
-  assert.deepEqual(output.overdue, [1, 4]);
-  assert.deepEqual(output.dueSoon, [2, 5]);
-  assert.deepEqual(output.future, [3]);
-});
+      makeTools(),
+    );
+    assert.deepEqual(output.overdue, [1, 4]);
+    assert.deepEqual(output.dueSoon, [2, 5]);
+    assert.deepEqual(output.future, [3]);
+  },
+);
 
 // ===========================================================================
 // 5. BUG A: push(item.prop) via dot notation silently discards the value
@@ -228,11 +231,14 @@ await check("BUG: push(item.prop) dot notation in for-of silently discards value
     for (const item of items) { out.push(item.v); }
     out
     `,
-    makeTools()
+    makeTools(),
   );
   // BUG: actual output is [] instead of [1, 2]
-  assert.deepEqual(output, [1, 2],
-    "BUG: push(item.v) silently no-ops; use bracket notation push(item['v']) or local var");
+  assert.deepEqual(
+    output,
+    [1, 2],
+    "BUG: push(item.v) silently no-ops; use bracket notation push(item['v']) or local var",
+  );
 });
 
 // ===========================================================================
@@ -240,44 +246,57 @@ await check("BUG: push(item.prop) dot notation in for-of silently discards value
 //    e.g. const arr = obj.x; arr.push(v) — arr is updated but obj.x stays empty.
 //    Separately: obj.x.push(v) crashes with 'Cannot read properties of undefined'.
 // ===========================================================================
-await check("BUG: obj.prop.push() in for-of replaces obj with the array on first iteration", async () => {
-  // When iterating over 2+ items: b.arr.push(x) on the 1st iteration replaces
-  // the variable b with the array (b becomes ['x'], not {arr:['x']}). On the 2nd
-  // iteration, b.arr is undefined → crash "Cannot read properties of undefined (reading 'push')".
-  let threw = false;
-  try {
-    await execute(
-      `
+await check(
+  "BUG: obj.prop.push() in for-of replaces obj with the array on first iteration",
+  async () => {
+    // When iterating over 2+ items: b.arr.push(x) on the 1st iteration replaces
+    // the variable b with the array (b becomes ['x'], not {arr:['x']}). On the 2nd
+    // iteration, b.arr is undefined → crash "Cannot read properties of undefined (reading 'push')".
+    let threw = false;
+    try {
+      await execute(
+        `
       const b = { arr: [] };
       for (const x of ["a", "b"]) { b.arr.push(x); }
       b
       `,
-      makeTools()
+        makeTools(),
+      );
+    } catch (e) {
+      threw = true;
+      assert.ok(
+        e.message.includes("Cannot read properties"),
+        "BUG: expected 'Cannot read properties' crash on 2nd iteration, got: " + e.message,
+      );
+    }
+    assert.ok(
+      threw,
+      "BUG: obj.arr.push() in multi-iteration for-of should crash (obj gets replaced by array on 1st push)",
     );
-  } catch (e) {
-    threw = true;
-    assert.ok(e.message.includes("Cannot read properties"),
-      "BUG: expected 'Cannot read properties' crash on 2nd iteration, got: " + e.message);
-  }
-  assert.ok(threw,
-    "BUG: obj.arr.push() in multi-iteration for-of should crash (obj gets replaced by array on 1st push)");
-});
+  },
+);
 
-await check("BUG: obj property array ref — arr=map.x then arr.push(v) does not update map.x", async () => {
-  const { output } = await execute(
-    `
+await check(
+  "BUG: obj property array ref — arr=map.x then arr.push(v) does not update map.x",
+  async () => {
+    const { output } = await execute(
+      `
     const map = { x: [] };
     const arr = map.x;
     for (const key of ["a", "b"]) { arr.push(key); }
     map.x
     `,
-    makeTools()
-  );
-  // BUG: arr.push(v) works (arr becomes ['a','b']) but map.x stays [].
-  // Objects use copy-on-assign semantics for property arrays rather than shared references.
-  assert.deepEqual(output, ["a", "b"],
-    "BUG: const arr=map.x; arr.push(v) does not update map.x (copy-on-assign, not shared reference)");
-});
+      makeTools(),
+    );
+    // BUG: arr.push(v) works (arr becomes ['a','b']) but map.x stays [].
+    // Objects use copy-on-assign semantics for property arrays rather than shared references.
+    assert.deepEqual(
+      output,
+      ["a", "b"],
+      "BUG: const arr=map.x; arr.push(v) does not update map.x (copy-on-assign, not shared reference)",
+    );
+  },
+);
 
 // ===========================================================================
 // 7. Count business days (Mon–Fri) — uses ms-based day-of-week formula
@@ -300,7 +319,7 @@ await check("count business days via ms-based day-of-week formula", async () => 
     }
     count
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output, 5);
 });
@@ -321,7 +340,7 @@ await check("format duration: 7500000ms → '2h 5m'", async () => {
     }
     formatDuration(7500000)
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output, "2h 5m");
 });
@@ -339,7 +358,7 @@ await check("format duration: 3600000ms → '1h'", async () => {
     }
     formatDuration(3600000)
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output, "1h");
 });
@@ -357,7 +376,7 @@ await check("format duration: 1800000ms → '30m'", async () => {
     }
     formatDuration(1800000)
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output, "30m");
 });
@@ -373,7 +392,7 @@ await check("day-of-week via ms math: 2026-05-31 is Sunday (0)", async () => {
     const EPOCH_DOW = 4; // 1970-01-01 = Thursday
     (Math.floor(ms / DAY_MS) + EPOCH_DOW) % 7
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output, 0, `expected 0 (Sun) but got ${output}`);
 });
@@ -386,7 +405,7 @@ await check("day-of-week via ms math: 2026-06-01 is Monday (1)", async () => {
     const EPOCH_DOW = 4;
     (Math.floor(ms / DAY_MS) + EPOCH_DOW) % 7
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output, 1);
 });
@@ -405,37 +424,48 @@ await check("MISSING: Date.getDay throws even though typeof is 'function'", asyn
     await execute(`new Date(${NOW_MS}).getDay()`, makeTools());
   } catch (e) {
     threw = true;
-    assert.ok(e.message.includes("not a function"),
-      "MISSING: Date.getDay() throws: " + e.message);
+    assert.ok(e.message.includes("not a function"), "MISSING: Date.getDay() throws: " + e.message);
   }
   assert.ok(threw, "MISSING: Date.getDay() should throw but did not");
 });
 
 await check("MISSING: Date.getUTCFullYear throws", async () => {
   let threw = false;
-  try { await execute(`new Date(${NOW_MS}).getUTCFullYear()`, makeTools()); }
-  catch (e) { threw = true; }
+  try {
+    await execute(`new Date(${NOW_MS}).getUTCFullYear()`, makeTools());
+  } catch (e) {
+    threw = true;
+  }
   assert.ok(threw, "MISSING: Date.getUTCFullYear should throw");
 });
 
 await check("MISSING: Date.getUTCMonth throws", async () => {
   let threw = false;
-  try { await execute(`new Date(${NOW_MS}).getUTCMonth()`, makeTools()); }
-  catch (e) { threw = true; }
+  try {
+    await execute(`new Date(${NOW_MS}).getUTCMonth()`, makeTools());
+  } catch (e) {
+    threw = true;
+  }
   assert.ok(threw, "MISSING: Date.getUTCMonth should throw");
 });
 
 await check("MISSING: Date.getUTCDate throws", async () => {
   let threw = false;
-  try { await execute(`new Date(${NOW_MS}).getUTCDate()`, makeTools()); }
-  catch (e) { threw = true; }
+  try {
+    await execute(`new Date(${NOW_MS}).getUTCDate()`, makeTools());
+  } catch (e) {
+    threw = true;
+  }
   assert.ok(threw, "MISSING: Date.getUTCDate should throw");
 });
 
 await check("MISSING: Date.getUTCHours throws", async () => {
   let threw = false;
-  try { await execute(`new Date(${NOW_MS}).getUTCHours()`, makeTools()); }
-  catch (e) { threw = true; }
+  try {
+    await execute(`new Date(${NOW_MS}).getUTCHours()`, makeTools());
+  } catch (e) {
+    threw = true;
+  }
   assert.ok(threw, "MISSING: Date.getUTCHours should throw");
 });
 
@@ -464,11 +494,11 @@ await check("schedule 4 reminders at day offsets before deadline", async () => {
     const offsets = [7, 3, 1, 0]; // days before deadline
     offsets.map(d => deadlineMs - d * DAY)
     `,
-    makeTools()
+    makeTools(),
   );
   const DAY = 24 * 60 * 60 * 1000;
   const deadline = NOW_MS + 30 * DAY;
-  const expected = [7, 3, 1, 0].map(d => deadline - d * DAY);
+  const expected = [7, 3, 1, 0].map((d) => deadline - d * DAY);
   assert.deepEqual(output, expected);
 });
 
@@ -483,7 +513,7 @@ await check("money rounding: Math.round(n*100)/100", async () => {
     function roundMoney(n) { return Math.round(n * 100) / 100; }
     [roundMoney(2.345), roundMoney(9.994), roundMoney(9.999)]
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output[0], 2.35);
   assert.equal(output[1], 9.99);
@@ -496,8 +526,11 @@ await check("money rounding: Math.round(n*100)/100", async () => {
 await check("MISSING: toFixed is not a function", async () => {
   // typeof shows "undefined" (property doesn't exist), call throws
   const typeRes = await execute(`typeof (3.14).toFixed`, makeTools());
-  assert.equal(typeRes.output, "undefined",
-    "MISSING: toFixed property should not exist, got typeof=" + typeRes.output);
+  assert.equal(
+    typeRes.output,
+    "undefined",
+    "MISSING: toFixed property should not exist, got typeof=" + typeRes.output,
+  );
 });
 
 // ===========================================================================
@@ -519,11 +552,14 @@ await check("BUG: Math.min(...array) returns null instead of minimum", async () 
     const values = [5, 2, 9, 1, 7, 3];
     Math.min(...values)
     `,
-    makeTools()
+    makeTools(),
   );
   // BUG: returns null instead of 1
-  assert.equal(output, 1,
-    "BUG: Math.min/max with spread (...array) returns null; use array.reduce((a,b) => a<b?a:b) instead");
+  assert.equal(
+    output,
+    1,
+    "BUG: Math.min/max with spread (...array) returns null; use array.reduce((a,b) => a<b?a:b) instead",
+  );
 });
 
 await check("BUG: Math.max(...array) returns null instead of maximum", async () => {
@@ -532,11 +568,10 @@ await check("BUG: Math.max(...array) returns null instead of maximum", async () 
     const values = [5, 2, 9, 1, 7, 3];
     Math.max(...values)
     `,
-    makeTools()
+    makeTools(),
   );
   // BUG: returns null instead of 9
-  assert.equal(output, 9,
-    "BUG: Math.max with spread (...array) returns null");
+  assert.equal(output, 9, "BUG: Math.max with spread (...array) returns null");
 });
 
 await check("Math.min/max workaround: array.reduce", async () => {
@@ -547,7 +582,7 @@ await check("Math.min/max workaround: array.reduce", async () => {
     const mx = values.reduce((a, b) => a > b ? a : b);
     ({ min: mn, max: mx })
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output.min, 1);
   assert.equal(output.max, 9);
@@ -560,7 +595,7 @@ await check("average via reduce", async () => {
     const sum = values.reduce((acc, v) => acc + v, 0);
     sum / values.length
     `,
-    makeTools()
+    makeTools(),
   );
   assert.equal(output, 30);
 });
@@ -574,7 +609,7 @@ await check("clamp: Math.max(lo, Math.min(hi, v))", async () => {
     function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
     [clamp(5, 0, 10), clamp(-3, 0, 10), clamp(15, 0, 10)]
     `,
-    makeTools()
+    makeTools(),
   );
   assert.deepEqual(output, [5, 0, 10]);
 });
@@ -592,8 +627,7 @@ await check("BUG: Number('') returns null instead of 0", async () => {
   const { output } = await execute(`Number('')`, makeTools());
   // In real JS: Number('') === 0. In sandbox: returns null.
   // Note: NaN serializes to null in JSON (expected). But '' → 0 should NOT be null.
-  assert.equal(output, 0,
-    "BUG: Number('') returns null in sandbox; real JS spec says it equals 0");
+  assert.equal(output, 0, "BUG: Number('') returns null in sandbox; real JS spec says it equals 0");
 });
 
 await check("BUG: Number.isInteger typeof='function' but throws on call", async () => {
@@ -601,11 +635,16 @@ await check("BUG: Number.isInteger typeof='function' but throws on call", async 
   const typeRes = await execute(`typeof Number.isInteger`, makeTools());
   assert.equal(typeRes.output, "function"); // claims to exist...
   let threw = false;
-  try { await execute(`Number.isInteger(5)`, makeTools()); }
-  catch { threw = true; }
+  try {
+    await execute(`Number.isInteger(5)`, makeTools());
+  } catch {
+    threw = true;
+  }
   // BUG: should NOT throw if typeof correctly reports 'function'
-  assert.ok(!threw,
-    "BUG: Number.isInteger typeof='function' but throws 'Number.isInteger is not a function' on call");
+  assert.ok(
+    !threw,
+    "BUG: Number.isInteger typeof='function' but throws 'Number.isInteger is not a function' on call",
+  );
 });
 
 await check("Number.MAX_SAFE_INTEGER is 9007199254740991", async () => {
@@ -684,12 +723,12 @@ await check("multi-ISO parse + sort + bucket pipeline (workarounds applied)", as
     }
     ({ overdue, soon, future })
     `,
-    makeTools()
+    makeTools(),
   );
   // NOW = 2026-05-31; SOON = +5 days
   assert.deepEqual(output.overdue, ["2026-05-20", "2026-05-30"]);
-  assert.deepEqual(output.soon,    ["2026-06-02", "2026-06-04"]);
-  assert.deepEqual(output.future,  ["2026-06-10"]);
+  assert.deepEqual(output.soon, ["2026-06-02", "2026-06-04"]);
+  assert.deepEqual(output.future, ["2026-06-10"]);
 });
 
 // ===========================================================================
@@ -701,8 +740,10 @@ await check("Date.now() is unavailable or returns non-realtime value", async () 
     if (error) return; // blocked — expected
     const hostNow = Date.now();
     const drift = Math.abs(output - hostNow);
-    assert.ok(drift > 60_000,
-      `Date.now() appears to return real host time (drift=${drift}ms) — sandbox clock leak!`);
+    assert.ok(
+      drift > 60_000,
+      `Date.now() appears to return real host time (drift=${drift}ms) — sandbox clock leak!`,
+    );
   } catch {
     // throws = blocked = fine
   }
@@ -724,7 +765,7 @@ await check("Math.abs/ceil/floor/pow/sqrt/trunc/sign", async () => {
       Math.sign(-5)
     ]
     `,
-    makeTools()
+    makeTools(),
   );
   assert.deepEqual(output, [7, 2, 1, 1024, 12, 3, -1]);
 });
@@ -732,7 +773,7 @@ await check("Math.abs/ceil/floor/pow/sqrt/trunc/sign", async () => {
 // ===========================================================================
 // Summary
 // ===========================================================================
-const failed = results.filter(r => !r[1]);
+const failed = results.filter((r) => !r[1]);
 console.log(`\n${results.length - failed.length}/${results.length} passed`);
 if (failed.length) {
   console.log("\nFailed:");

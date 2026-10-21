@@ -70,8 +70,8 @@ function createSupportTools(events) {
         summary: { type: "string" },
         metadata: { type: "object", optional: true },
       },
-      execute: async input => {
-        const id = `case-${events.filter(e => e.type === "openCase").length + 1}`;
+      execute: async (input) => {
+        const id = `case-${events.filter((e) => e.type === "openCase").length + 1}`;
         events.push({ type: "openCase", id, input });
         return { id, created: true };
       },
@@ -83,7 +83,7 @@ function createSupportTools(events) {
         caseId: { type: "string" },
         message: { type: "string" },
       },
-      execute: async input => {
+      execute: async (input) => {
         events.push({ type: "notifyOwner", input });
         return { delivered: true };
       },
@@ -144,8 +144,8 @@ await test("stateful support triage survives reloads across definition, calls, a
     scoreLevel: "high",
   });
   assert.deepEqual(
-    enterprise.toolCalls.map(call => call.name),
-    ["lookupCustomer", "searchKb", "riskScore", "openCase", "notifyOwner"]
+    enterprise.toolCalls.map((call) => call.name),
+    ["lookupCustomer", "searchKb", "riskScore", "openCase", "notifyOwner"],
   );
   assert.deepEqual(enterprise.toolCalls[1].input, { query: "SSO outage", limit: 2 });
   assert.deepEqual(enterprise.toolCalls[3].input.metadata, { scoreLevel: "high", docCount: 2 });
@@ -167,7 +167,7 @@ await test("stateful support triage survives reloads across definition, calls, a
     workflowState.processed.map(item => item.customerId + ":" + item.caseId + ":" + item.severity).join("|")
   `);
   assert.equal(summary.output, "cust-ent:case-1:urgent|cust-free:case-2:normal");
-  assert.equal(events.filter(e => e.type === "openCase").length, 2);
+  assert.equal(events.filter((e) => e.type === "openCase").length, 2);
 });
 
 await test("host tool errors resume into agent try/catch after a dump/load boundary", async () => {
@@ -238,16 +238,16 @@ await test("invalid durable tool arguments fail crisply and leave the last check
   const checkpoint = session.dump();
   await assert.rejects(
     () => session.runChunk(`await badCaseMissingSeverity()`),
-    /Invalid arguments for tool 'openCase': missing required parameter 'severity'/
+    /Invalid arguments for tool 'openCase': missing required parameter 'severity'/,
   );
-  assert.equal(events.filter(e => e.type === "openCase").length, 0);
+  assert.equal(events.filter((e) => e.type === "openCase").length, 0);
 
   session = loadSession(checkpoint, { tools });
   await assert.rejects(
     () => session.runChunk(`await badCaseExtraField()`),
-    /Invalid arguments for tool 'openCase': unexpected parameter 'severty'/
+    /Invalid arguments for tool 'openCase': unexpected parameter 'severty'/,
   );
-  assert.equal(events.filter(e => e.type === "openCase").length, 0);
+  assert.equal(events.filter((e) => e.type === "openCase").length, 0);
 
   session = loadSession(checkpoint, { tools });
   const recovered = await session.runChunk(`await goodCase()`);

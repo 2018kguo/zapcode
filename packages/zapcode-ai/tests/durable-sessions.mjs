@@ -90,7 +90,7 @@ test("uncaught resumeError propagates to the host", () => {
   const suspended = session.runChunk(`const v = await callTool("x"); v`);
   assert.throws(
     () => ZapcodeSessionHandle.load(suspended.session).resumeError("upstream 500"),
-    /upstream 500/
+    /upstream 500/,
   );
 });
 

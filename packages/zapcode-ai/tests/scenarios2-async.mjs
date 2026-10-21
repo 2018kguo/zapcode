@@ -44,7 +44,7 @@ await check("Promise.all fan-out: 3 direct tool calls, order preserved", async (
         parameters: { key: { type: "string" } },
         execute: async ({ key }) => `val-${key}`,
       },
-    }
+    },
   );
   assert.equal(result.output, "val-x,val-y,val-z");
   assert.equal(result.toolCalls.length, 3);
@@ -57,47 +57,53 @@ await check("Promise.all fan-out: 3 direct tool calls, order preserved", async (
 //    The inner batch leaks a pending internal promise object.
 //    Workaround: await inner first, then include result in outer.
 // ---------------------------------------------------------------------------
-await check("BUG-NEST: nested Promise.all with tool calls — inner results are undefined", async () => {
-  // Demonstrate the bug
-  const bugResult = await execute(
-    `
+await check(
+  "BUG-NEST: nested Promise.all with tool calls — inner results are undefined",
+  async () => {
+    // Demonstrate the bug
+    const bugResult = await execute(
+      `
     const [groupA, groupB] = await Promise.all([
       Promise.all([fetch({ id: "a1" }), fetch({ id: "a2" })]),
       Promise.all([fetch({ id: "b1" }), fetch({ id: "b2" })]),
     ]);
     typeof groupA + "|" + typeof groupB
     `,
-    {
-      fetch: {
-        description: "Fetch by id.",
-        parameters: { id: { type: "string" } },
-        execute: async ({ id }) => `r-${id}`,
+      {
+        fetch: {
+          description: "Fetch by id.",
+          parameters: { id: { type: "string" } },
+          execute: async ({ id }) => `r-${id}`,
+        },
       },
-    },
-    { autoFix: true }
-  );
-  // BUG: groupA and groupB are undefined because inner Promise.all doesn't resolve
-  assert.equal(bugResult.output, "undefined|undefined",
-    `BUG confirmed: nested Promise.all inner results should be arrays, got: "${bugResult.output}"`);
+      { autoFix: true },
+    );
+    // BUG: groupA and groupB are undefined because inner Promise.all doesn't resolve
+    assert.equal(
+      bugResult.output,
+      "undefined|undefined",
+      `BUG confirmed: nested Promise.all inner results should be arrays, got: "${bugResult.output}"`,
+    );
 
-  // Workaround: await each inner group separately first
-  const fixResult = await execute(
-    `
+    // Workaround: await each inner group separately first
+    const fixResult = await execute(
+      `
     const groupA = await Promise.all([fetch({ id: "a1" }), fetch({ id: "a2" })]);
     const groupB = await Promise.all([fetch({ id: "b1" }), fetch({ id: "b2" })]);
     groupA.join("+") + "|" + groupB.join("+")
     `,
-    {
-      fetch: {
-        description: "Fetch by id.",
-        parameters: { id: { type: "string" } },
-        execute: async ({ id }) => `r-${id}`,
+      {
+        fetch: {
+          description: "Fetch by id.",
+          parameters: { id: { type: "string" } },
+          execute: async ({ id }) => `r-${id}`,
+        },
       },
-    }
-  );
-  assert.equal(fixResult.output, "r-a1+r-a2|r-b1+r-b2");
-  assert.equal(fixResult.toolCalls.length, 4);
-});
+    );
+    assert.equal(fixResult.output, "r-a1+r-a2|r-b1+r-b2");
+    assert.equal(fixResult.toolCalls.length, 4);
+  },
+);
 
 // ---------------------------------------------------------------------------
 // 3. Sequential awaits in for-of loop
@@ -119,7 +125,7 @@ await check("for-of sequential awaits: each iteration calls tool and accumulates
         parameters: { key: { type: "string" } },
         execute: async ({ key }) => `item-${key}`,
       },
-    }
+    },
   );
   assert.equal(result.output, "item-p,item-q,item-r,item-s");
   assert.equal(result.toolCalls.length, 4);
@@ -145,14 +151,14 @@ await check("mixed sequential + parallel in same script", async () => {
       checkPhase: {
         description: "Check a phase status.",
         parameters: { phase: { type: "string" } },
-        execute: async ({ phase }) => phase === "run" ? "running" : "ok",
+        execute: async ({ phase }) => (phase === "run" ? "running" : "ok"),
       },
       fetch: {
         description: "Fetch by id.",
         parameters: { id: { type: "string" } },
         execute: async ({ id }) => `r-${id}`,
       },
-    }
+    },
   );
   assert.equal(result.output, "init=ok|run=running|done=ok|parallel=r-u+r-v");
   assert.equal(result.toolCalls.length, 5);
@@ -177,7 +183,7 @@ await check("Promise.all mixes plain values + Promise.resolve + tool call", asyn
         parameters: { id: { type: "string" } },
         execute: async ({ id }) => `r-${id}`,
       },
-    }
+    },
   );
   assert.equal(result.output, "42,resolved,r-tool");
 });
@@ -193,7 +199,7 @@ await check("await Promise.resolve returns the resolved value", async () => {
     const c = await Promise.resolve(null);
     a + "|" + b + "|" + String(c)
     `,
-    {}
+    {},
   );
   assert.equal(result.output, "99|hello|null");
 });
@@ -209,7 +215,7 @@ await check("awaiting a plain number/string/object returns it unchanged", async 
     const o = await { x: 7 };
     n + "|" + s + "|" + o.x
     `,
-    {}
+    {},
   );
   assert.equal(result.output, "123|plain|7");
 });
@@ -244,7 +250,7 @@ await check("retry-with-backoff: tool succeeds on 3rd attempt (simulated delay)"
           return `ok-${id}`;
         },
       },
-    }
+    },
   );
   // Note: attempts_global won't be defined in guest; just check value
   // We test the value portion
@@ -286,7 +292,7 @@ await check("retry: guest counts attempts with its own variable", async () => {
           return `done-${id}`;
         },
       },
-    }
+    },
   );
   assert.equal(result.output, "done-x|attempts:3");
 });
@@ -314,14 +320,18 @@ await check("fallback chain: all fail → default", async () => {
       primary: {
         description: "Always fails.",
         parameters: {},
-        execute: async () => { throw new Error("primary-down"); },
+        execute: async () => {
+          throw new Error("primary-down");
+        },
       },
       secondary: {
         description: "Always fails.",
         parameters: {},
-        execute: async () => { throw new Error("secondary-down"); },
+        execute: async () => {
+          throw new Error("secondary-down");
+        },
       },
-    }
+    },
   );
   assert.equal(result.output, "hardcoded-default");
   assert.equal(result.toolCalls.length, 2);
@@ -344,14 +354,16 @@ await check("fallback chain: primary fails, secondary succeeds", async () => {
       primary: {
         description: "Always fails.",
         parameters: {},
-        execute: async () => { throw new Error("primary-down"); },
+        execute: async () => {
+          throw new Error("primary-down");
+        },
       },
       secondary: {
         description: "Returns backup.",
         parameters: {},
         execute: async () => "backup-ok",
       },
-    }
+    },
   );
   assert.equal(result.output, "backup-ok");
 });
@@ -384,7 +396,7 @@ await check("partial accumulation: successes and failures collected from loop", 
           return `res-${id}`;
         },
       },
-    }
+    },
   );
   assert.equal(result.output, "res-ok1,res-ok2,res-ok3|fail1:proc-error,fail2:proc-error");
   assert.equal(result.toolCalls.length, 5);
@@ -417,7 +429,7 @@ await check("async helper function: defined, called, result used by subsequent c
         parameters: { id: { type: "string" } },
         execute: async ({ id }) => ({ score: id.length * 10 }),
       },
-    }
+    },
   );
   assert.equal(result.output, "Alice:50|Bob:30");
   assert.equal(result.toolCalls.length, 4);
@@ -449,7 +461,7 @@ await check("async helper return value flows into chained computation", async ()
           return { userId, points: 15 };
         },
       },
-    }
+    },
   );
   assert.equal(result.output, 30);
 });
@@ -482,7 +494,7 @@ await check("throw new Error in guest: e.message accessible across await", async
         parameters: {},
         execute: async () => ({ valid: false, reason: "missing-field", value: null }),
       },
-    }
+    },
   );
   assert.equal(result.output, "data-invalid:missing-field");
 });
@@ -500,7 +512,7 @@ await check("e instanceof Error is true when guest throws new Error()", async ()
     }
     isErr + "|" + msg
     `,
-    {}
+    {},
   );
   assert.equal(result.output, "true|guest-error");
 });
@@ -530,16 +542,21 @@ await check("BUG-TOOL-ERR: tool Error in catch is plain string (e.message undefi
       throwingTool: {
         description: "Always throws.",
         parameters: {},
-        execute: async () => { throw new Error("tool-thrown-error"); },
+        execute: async () => {
+          throw new Error("tool-thrown-error");
+        },
       },
-    }
+    },
   );
   // Confirmed behavior: e is a plain string ("tool-thrown-error"), so e.message === undefined
   // hasMsg is false
   // BUG: should be hasMsg:true (e should be an Error with .message)
   const output = String(result.output);
-  assert.equal(output, "tool-thrown-error|hasMsg:false",
-    `BUG confirmed: tool Error arrives as plain string (no .message). Got: "${output}"`);
+  assert.equal(
+    output,
+    "tool-thrown-error|hasMsg:false",
+    `BUG confirmed: tool Error arrives as plain string (no .message). Got: "${output}"`,
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -553,10 +570,13 @@ await check("Promise.allSettled returns per-element settled objects", async () =
     typeof Promise.allSettled + "|" +
       r[0].status + ":" + r[0].value + "|" + r[1].status + ":" + r[1].reason
     `,
-    {}
+    {},
   );
-  assert.equal(result.output, "function|fulfilled:a|rejected:e",
-    `Promise.allSettled should report per-element statuses. Got: "${result.output}"`);
+  assert.equal(
+    result.output,
+    "function|fulfilled:a|rejected:e",
+    `Promise.allSettled should report per-element statuses. Got: "${result.output}"`,
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -568,10 +588,13 @@ await check("Promise.race resolves with the first settled value", async () => {
     const r = await Promise.race([Promise.resolve("first"), Promise.resolve("second")]);
     typeof Promise.race + "|" + r
     `,
-    {}
+    {},
   );
-  assert.equal(result.output, "function|first",
-    `Promise.race should resolve with the first settled value. Got: "${result.output}"`);
+  assert.equal(
+    result.output,
+    "function|first",
+    `Promise.race should resolve with the first settled value. Got: "${result.output}"`,
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -584,10 +607,13 @@ await check("Promise.any skips rejection and returns first fulfilled", async () 
     const r = await Promise.any([Promise.reject("bad"), Promise.resolve("good")]);
     typeof Promise.any + "|" + r
     `,
-    {}
+    {},
   );
-  assert.equal(result.output, "function|good",
-    `Promise.any should skip the rejection and return "good". Got: "${result.output}"`);
+  assert.equal(
+    result.output,
+    "function|good",
+    `Promise.any should skip the rejection and return "good". Got: "${result.output}"`,
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -599,7 +625,7 @@ await check(".then() chaining on Promise.resolve", async () => {
     const val = await Promise.resolve(5).then(x => x * 2).then(x => x + 1);
     val
     `,
-    {}
+    {},
   );
   assert.equal(result.output, 11);
 });
@@ -613,7 +639,7 @@ await check(".catch() on Promise.reject recovers the value", async () => {
     const val = await Promise.reject("err-value").catch(e => "caught:" + e);
     val
     `,
-    {}
+    {},
   );
   assert.equal(result.output, "caught:err-value");
 });
@@ -629,7 +655,7 @@ await check(".then().catch(): success path, catch not invoked", async () => {
       .catch(e => "caught:" + e);
     val
     `,
-    {}
+    {},
   );
   assert.equal(result.output, "OK");
 });
@@ -640,47 +666,52 @@ await check(".then().catch(): success path, catch not invoked", async () => {
 //     So fetchNum({n:4}).then(fn) fails because 4 (number) has no .then method.
 //     Workaround: await fetchNum({n:4}) first, or use Promise.resolve(toolCall).then().
 // ---------------------------------------------------------------------------
-await check("BUG-THEN: toolCall().then() fails — tool call is eager, returns value not Promise", async () => {
-  // Confirm: unawaited tool call returns the resolved value, not a Promise
-  const r1 = await execute(
-    `typeof fetchNum({ n: 4 })`,
-    {
+await check(
+  "BUG-THEN: toolCall().then() fails — tool call is eager, returns value not Promise",
+  async () => {
+    // Confirm: unawaited tool call returns the resolved value, not a Promise
+    const r1 = await execute(`typeof fetchNum({ n: 4 })`, {
       fetchNum: {
         description: "Return a number.",
         parameters: { n: { type: "number" } },
         execute: async ({ n }) => n,
       },
-    }
-  );
-  assert.equal(r1.output, "number",
-    `BUG: unawaited toolCall() should return a Promise (typeof "object") but returns the value directly (typeof "${r1.output}")`);
+    });
+    assert.equal(
+      r1.output,
+      "number",
+      `BUG: unawaited toolCall() should return a Promise (typeof "object") but returns the value directly (typeof "${r1.output}")`,
+    );
 
-  // Workaround works: Promise.resolve(toolCall).then()
-  const r2 = await execute(
-    `
+    // Workaround works: Promise.resolve(toolCall).then()
+    const r2 = await execute(
+      `
     const val = await Promise.resolve(fetchNum({ n: 4 })).then(x => x * 10);
     val
     `,
-    {
-      fetchNum: {
-        description: "Return a number.",
-        parameters: { n: { type: "number" } },
-        execute: async ({ n }) => n,
+      {
+        fetchNum: {
+          description: "Return a number.",
+          parameters: { n: { type: "number" } },
+          execute: async ({ n }) => n,
+        },
       },
-    }
-  );
-  assert.equal(r2.output, 40);
-});
+    );
+    assert.equal(r2.output, 40);
+  },
+);
 
 // ---------------------------------------------------------------------------
 // 22. Realistic enrich + filter + sort + escalate workflow
 //     NOTE: Array.sort() has a bug (doesn't mutate in-place — see BUG-SORT below).
 //     Workaround: use the RETURN VALUE of sort(), not the original array.
 // ---------------------------------------------------------------------------
-await check("enrich-filter-sort-escalate workflow (uses sort return value workaround)", async () => {
-  const escalated = [];
-  const result = await execute(
-    `
+await check(
+  "enrich-filter-sort-escalate workflow (uses sort return value workaround)",
+  async () => {
+    const escalated = [];
+    const result = await execute(
+      `
     const userIds = ["u1", "u2", "u3", "u4", "u5"];
 
     // Step 1: enrich all records sequentially
@@ -703,33 +734,34 @@ await check("enrich-filter-sort-escalate workflow (uses sort return value workar
 
     sorted.map(u => u.id + "=" + u.score).join(",")
     `,
-    {
-      getUser: {
-        description: "Get user with score.",
-        parameters: { userId: { type: "string" } },
-        execute: async ({ userId }) => {
-          const scores = { u1: 80, u2: 30, u3: 15, u4: 95, u5: 45 };
-          return { id: userId, score: scores[userId] ?? 50 };
+      {
+        getUser: {
+          description: "Get user with score.",
+          parameters: { userId: { type: "string" } },
+          execute: async ({ userId }) => {
+            const scores = { u1: 80, u2: 30, u3: 15, u4: 95, u5: 45 };
+            return { id: userId, score: scores[userId] ?? 50 };
+          },
+        },
+        escalate: {
+          description: "Escalate a user.",
+          parameters: { userId: { type: "string" }, score: { type: "number" } },
+          execute: async (args) => {
+            escalated.push(args);
+            return { ok: true };
+          },
         },
       },
-      escalate: {
-        description: "Escalate a user.",
-        parameters: { userId: { type: "string" }, score: { type: "number" } },
-        execute: async (args) => {
-          escalated.push(args);
-          return { ok: true };
-        },
-      },
-    }
-  );
-  assert.equal(result.output, "u3=15,u2=30,u5=45");
-  assert.equal(escalated.length, 3);
-  assert.equal(escalated[0].userId, "u3");
-  assert.equal(escalated[1].userId, "u2");
-  assert.equal(escalated[2].userId, "u5");
-  // 5 getUser + 3 escalate = 8 tool calls
-  assert.equal(result.toolCalls.length, 8);
-});
+    );
+    assert.equal(result.output, "u3=15,u2=30,u5=45");
+    assert.equal(escalated.length, 3);
+    assert.equal(escalated[0].userId, "u3");
+    assert.equal(escalated[1].userId, "u2");
+    assert.equal(escalated[2].userId, "u5");
+    // 5 getUser + 3 escalate = 8 tool calls
+    assert.equal(result.toolCalls.length, 8);
+  },
+);
 
 // ---------------------------------------------------------------------------
 // 23. Promise.all with one rejection caught via .catch() on the whole batch
@@ -737,10 +769,12 @@ await check("enrich-filter-sort-escalate workflow (uses sort return value workar
 //     Tool rejections escape Promise.all and bypass .catch() handlers.
 //     Pure Promise.reject() IS caught by .catch() — only tool failures escape.
 // ---------------------------------------------------------------------------
-await check("BUG-CATCH-CHAIN: Promise.all([failingTool()]).catch() does NOT catch tool rejection", async () => {
-  // Confirm the bug: .catch() is NOT called when a tool rejects inside Promise.all
-  const result = await execute(
-    `
+await check(
+  "BUG-CATCH-CHAIN: Promise.all([failingTool()]).catch() does NOT catch tool rejection",
+  async () => {
+    // Confirm the bug: .catch() is NOT called when a tool rejects inside Promise.all
+    const result = await execute(
+      `
     let out = "none";
     try {
       out = await Promise.all([
@@ -751,36 +785,40 @@ await check("BUG-CATCH-CHAIN: Promise.all([failingTool()]).catch() does NOT catc
     }
     out
     `,
-    {
-      fetchItem: {
-        description: "Fetch item; bad throws.",
-        parameters: { id: { type: "string" } },
-        execute: async ({ id }) => {
-          if (id === "bad") throw new Error("fetch-error");
-          return `r-${id}`;
+      {
+        fetchItem: {
+          description: "Fetch item; bad throws.",
+          parameters: { id: { type: "string" } },
+          execute: async ({ id }) => {
+            if (id === "bad") throw new Error("fetch-error");
+            return `r-${id}`;
+          },
         },
       },
-    },
-    { autoFix: true }
-  );
-  // BUG: .catch() is bypassed; error escapes to outer try/catch (or autoFix error)
-  const output = String(result.output ?? result.error ?? "");
-  assert.ok(
-    output.includes("outer-catch") || output.includes("fetch-error"),
-    `BUG confirmed: .catch() bypassed for tool rejection. Got: "${output}"`
-  );
-  // Ensure it did NOT say "caught:" (which would mean .catch() worked)
-  assert.ok(!output.startsWith("caught:"), `BUG: .catch() should NOT intercept tool rejection, got: "${output}"`);
+      { autoFix: true },
+    );
+    // BUG: .catch() is bypassed; error escapes to outer try/catch (or autoFix error)
+    const output = String(result.output ?? result.error ?? "");
+    assert.ok(
+      output.includes("outer-catch") || output.includes("fetch-error"),
+      `BUG confirmed: .catch() bypassed for tool rejection. Got: "${output}"`,
+    );
+    // Ensure it did NOT say "caught:" (which would mean .catch() worked)
+    assert.ok(
+      !output.startsWith("caught:"),
+      `BUG: .catch() should NOT intercept tool rejection, got: "${output}"`,
+    );
 
-  // Contrast: pure Promise.reject IS caught by .catch()
-  const r2 = await execute(
-    `
+    // Contrast: pure Promise.reject IS caught by .catch()
+    const r2 = await execute(
+      `
     await Promise.all([Promise.reject("rej")]).catch(e => "pure-caught:" + e)
     `,
-    {}
-  );
-  assert.equal(r2.output, "pure-caught:rej");
-});
+      {},
+    );
+    assert.equal(r2.output, "pure-caught:rej");
+  },
+);
 
 // ---------------------------------------------------------------------------
 // 24. Multi-layer async nesting: async fn calls async fn calls tool
@@ -807,7 +845,7 @@ await check("multi-layer async nesting: 3 levels deep", async () => {
         parameters: { value: { type: "number" } },
         execute: async ({ value }) => value + 1,
       },
-    }
+    },
   );
   // compute(5) => 6, *2 => 12, +1 => 13
   assert.equal(result.output, 13);
@@ -837,9 +875,11 @@ await check("toolCalls metadata: name, args/input, result, error populated corre
       failing: {
         description: "Always fails.",
         parameters: {},
-        execute: async () => { throw new Error("fail-msg"); },
+        execute: async () => {
+          throw new Error("fail-msg");
+        },
       },
-    }
+    },
   );
   assert.equal(result.output, "echo:hello|caught");
   assert.equal(result.toolCalls.length, 2);
@@ -852,7 +892,10 @@ await check("toolCalls metadata: name, args/input, result, error populated corre
   const tc1 = result.toolCalls[1];
   assert.equal(tc1.name, "failing");
   assert.match(String(tc1.error), /fail-msg/);
-  assert.ok(tc1.result === undefined || tc1.result === null, "failing call should not have .result");
+  assert.ok(
+    tc1.result === undefined || tc1.result === null,
+    "failing call should not have .result",
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -878,7 +921,7 @@ await check("Promise.all: no double-execution — each slot called exactly once"
           return id;
         },
       },
-    }
+    },
   );
   assert.equal(result.output, "done");
   assert.equal(callCount.a, 2);
@@ -908,14 +951,20 @@ await check("await inside if/else branches executes only the matching branch", a
       pathA: {
         description: "Path A.",
         parameters: {},
-        execute: async () => { callLog.push("A"); return "took-A"; },
+        execute: async () => {
+          callLog.push("A");
+          return "took-A";
+        },
       },
       pathB: {
         description: "Path B.",
         parameters: {},
-        execute: async () => { callLog.push("B"); return "took-B"; },
+        execute: async () => {
+          callLog.push("B");
+          return "took-B";
+        },
       },
-    }
+    },
   );
   assert.equal(result.output, "took-A|took-B");
   assert.deepEqual(callLog, ["A", "B"]);
@@ -926,26 +975,29 @@ await check("await inside if/else branches executes only the matching branch", a
 // ---------------------------------------------------------------------------
 await check("re-throw new Error from catch propagates to host", async () => {
   await assert.rejects(
-    () => execute(
-      `
+    () =>
+      execute(
+        `
       try {
         await alwaysFails();
       } catch (e) {
         throw new Error("wrapped: " + String(e));
       }
       `,
-      {
-        alwaysFails: {
-          description: "Always throws.",
-          parameters: {},
-          execute: async () => { throw new Error("inner-error"); },
+        {
+          alwaysFails: {
+            description: "Always throws.",
+            parameters: {},
+            execute: async () => {
+              throw new Error("inner-error");
+            },
+          },
         },
-      }
-    ),
+      ),
     (err) => {
       assert.match(String(err.message), /wrapped/);
       return true;
-    }
+    },
   );
 });
 
@@ -970,7 +1022,7 @@ await check("try/finally without catch: finally runs on success", async () => {
         parameters: {},
         execute: async () => 77,
       },
-    }
+    },
   );
   assert.equal(result.output, "77|true");
 });
@@ -984,7 +1036,7 @@ await check("Promise.all([]) returns empty array", async () => {
     const r = await Promise.all([]);
     Array.isArray(r) + "|" + r.length
     `,
-    {}
+    {},
   );
   assert.equal(result.output, "true|0");
 });
@@ -1005,7 +1057,7 @@ await check("Promise.resolve(toolCallResult) wraps a resolved value correctly", 
         parameters: { key: { type: "string" } },
         execute: async ({ key }) => `fetched-${key}`,
       },
-    }
+    },
   );
   assert.equal(result.output, "fetched-k");
 });
@@ -1023,12 +1075,15 @@ await check("BUG-SORT: Array.sort() returns sorted copy but doesn't mutate origi
     "arr:" + arr.join(",") + "|ret:" + ret.join(",") + "|same-ref:" + (arr === ret)
     `,
     {},
-    { autoFix: true }
+    { autoFix: true },
   );
   // Expected (JS spec): arr:1,1,2,3,4,5|ret:1,1,2,3,4,5|same-ref:true
   // Actual (bug): arr:3,1,4,1,5,2|ret:1,1,2,3,4,5|same-ref:false
-  assert.equal(result.output, "arr:3,1,4,1,5,2|ret:1,1,2,3,4,5|same-ref:false",
-    `BUG confirmed: sort should mutate arr in place (same-ref:true, arr sorted), got: "${result.output}"`);
+  assert.equal(
+    result.output,
+    "arr:3,1,4,1,5,2|ret:1,1,2,3,4,5|same-ref:false",
+    `BUG confirmed: sort should mutate arr in place (same-ref:true, arr sorted), got: "${result.output}"`,
+  );
 
   // Also confirm: sort() with no comparator doesn't sort original either
   const r2 = await execute(
@@ -1037,21 +1092,26 @@ await check("BUG-SORT: Array.sort() returns sorted copy but doesn't mutate origi
     arr.sort();
     arr.join(",")
     `,
-    {}
+    {},
   );
   // Expected: "apple,banana,cherry"
   // Actual (bug): "banana,apple,cherry" (original order, no mutation)
-  assert.equal(r2.output, "banana,apple,cherry",
-    `BUG confirmed: arr.sort() with no comparator also doesn't mutate. Got: "${r2.output}"`);
+  assert.equal(
+    r2.output,
+    "banana,apple,cherry",
+    `BUG confirmed: arr.sort() with no comparator also doesn't mutate. Got: "${r2.output}"`,
+  );
 });
 
 // ---------------------------------------------------------------------------
 // 33. Concurrent batch then filter + sort (realistic data pipeline)
 //     Uses workaround: const sorted = active.sort(cmp) instead of active.sort(cmp)
 // ---------------------------------------------------------------------------
-await check("batch fetch then filter+sort: pipeline with sort return-value workaround", async () => {
-  const result = await execute(
-    `
+await check(
+  "batch fetch then filter+sort: pipeline with sort return-value workaround",
+  async () => {
+    const result = await execute(
+      `
     const ids = ["i5", "i2", "i8", "i1", "i3"];
     const records = [];
     for (const id of ids) {
@@ -1063,25 +1123,26 @@ await check("batch fetch then filter+sort: pipeline with sort return-value worka
     const sorted = active.sort((a, b) => a.priority - b.priority);
     sorted.map(r => r.id + ":" + r.priority).join(",")
     `,
-    {
-      fetchRecord: {
-        description: "Fetch a record.",
-        parameters: { id: { type: "string" } },
-        execute: async ({ id }) => {
-          const db = {
-            i1: { id: "i1", active: true, priority: 1 },
-            i2: { id: "i2", active: false, priority: 2 },
-            i3: { id: "i3", active: true, priority: 3 },
-            i5: { id: "i5", active: true, priority: 5 },
-            i8: { id: "i8", active: false, priority: 8 },
-          };
-          return db[id];
+      {
+        fetchRecord: {
+          description: "Fetch a record.",
+          parameters: { id: { type: "string" } },
+          execute: async ({ id }) => {
+            const db = {
+              i1: { id: "i1", active: true, priority: 1 },
+              i2: { id: "i2", active: false, priority: 2 },
+              i3: { id: "i3", active: true, priority: 3 },
+              i5: { id: "i5", active: true, priority: 5 },
+              i8: { id: "i8", active: false, priority: 8 },
+            };
+            return db[id];
+          },
         },
       },
-    }
-  );
-  assert.equal(result.output, "i1:1,i3:3,i5:5");
-});
+    );
+    assert.equal(result.output, "i1:1,i3:3,i5:5");
+  },
+);
 
 // ---------------------------------------------------------------------------
 // 34. BUG-NULLISH-IN-CALL: fn(a ?? b) crashes — ?? inside function call args is mis-parsed
@@ -1090,10 +1151,12 @@ await check("batch fetch then filter+sort: pipeline with sort return-value worka
 //     Works fine: const v = a ?? b; fn(v)  — just can't inline ?? in the arg position.
 //     Also affects builtins: String(x??y), Number(x??y), Math.abs(x??y), etc.
 // ---------------------------------------------------------------------------
-await check("BUG-NULLISH-IN-CALL: fn(a ?? b) crashes — ?? inside function arg is mis-parsed", async () => {
-  // Confirm the bug exists
-  const bugResult = await execute(
-    `
+await check(
+  "BUG-NULLISH-IN-CALL: fn(a ?? b) crashes — ?? inside function arg is mis-parsed",
+  async () => {
+    // Confirm the bug exists
+    const bugResult = await execute(
+      `
     function id(x) { return x; }
     let out = "none";
     try {
@@ -1103,42 +1166,44 @@ await check("BUG-NULLISH-IN-CALL: fn(a ?? b) crashes — ?? inside function arg 
     }
     out
     `,
-    {},
-    { autoFix: true }
-  );
-  // BUG: should be "fallback"; actual: "threw:null is not a function"
-  const output = String(bugResult.output ?? bugResult.error ?? "");
-  assert.ok(
-    output.includes("threw:") || (bugResult.error && String(bugResult.error).includes("not a function")),
-    `BUG confirmed: fn(null ?? 'fallback') should return "fallback" but crashes. Got: "${output}"`
-  );
+      {},
+      { autoFix: true },
+    );
+    // BUG: should be "fallback"; actual: "threw:null is not a function"
+    const output = String(bugResult.output ?? bugResult.error ?? "");
+    assert.ok(
+      output.includes("threw:") ||
+        (bugResult.error && String(bugResult.error).includes("not a function")),
+      `BUG confirmed: fn(null ?? 'fallback') should return "fallback" but crashes. Got: "${output}"`,
+    );
 
-  // Confirm workaround: assign to variable first
-  const fixResult = await execute(
-    `
+    // Confirm workaround: assign to variable first
+    const fixResult = await execute(
+      `
     function id(x) { return x; }
     const arg = null ?? "fallback";
     id(arg)
     `,
-    {}
-  );
-  assert.equal(fixResult.output, "fallback");
+      {},
+    );
+    assert.equal(fixResult.output, "fallback");
 
-  // Confirm that || inside function args works fine (not a bug)
-  const orResult = await execute(
-    `
+    // Confirm that || inside function args works fine (not a bug)
+    const orResult = await execute(
+      `
     function id(x) { return x; }
     id(null || "fallback-or")
     `,
-    {}
-  );
-  assert.equal(orResult.output, "fallback-or");
-});
+      {},
+    );
+    assert.equal(orResult.output, "fallback-or");
+  },
+);
 
 // ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
-const failed = results.filter(r => !r[1]);
+const failed = results.filter((r) => !r[1]);
 console.log(`\n${results.length - failed.length}/${results.length} passed`);
 if (failed.length) {
   console.log("\nFailed:");

@@ -56,7 +56,7 @@ await check("retry: flaky tool succeeds on 3rd attempt", async () => {
           return `data-${key}`;
         },
       },
-    }
+    },
   );
   assert.equal(result.output, "data-key");
   assert.equal(result.toolCalls.length, 3);
@@ -87,9 +87,11 @@ await check("finally: runs even when tool throws and error is caught", async () 
       doWork: {
         description: "Always throws.",
         parameters: { x: { type: "string" } },
-        execute: async () => { throw new Error("oops"); },
+        execute: async () => {
+          throw new Error("oops");
+        },
       },
-    }
+    },
   );
   assert.equal(result.output, "try,catch:oops,finally|none");
 });
@@ -112,7 +114,7 @@ await check("finally: runs on success path and output is preserved", async () =>
         parameters: {},
         execute: async () => 42,
       },
-    }
+    },
   );
   assert.equal(result.output, "42|true");
 });
@@ -135,7 +137,7 @@ await check("try...finally without catch — valid JS, should work", async () =>
         parameters: {},
         execute: async () => "done",
       },
-    }
+    },
   );
   assert.equal(result.output, "done|true");
 });
@@ -162,14 +164,18 @@ await check("fallback chain: primary fails, secondary fails, returns default", a
       primary: {
         description: "Always fails.",
         parameters: {},
-        execute: async () => { throw new Error("primary-down"); },
+        execute: async () => {
+          throw new Error("primary-down");
+        },
       },
       secondary: {
         description: "Also always fails.",
         parameters: {},
-        execute: async () => { throw new Error("secondary-down"); },
+        execute: async () => {
+          throw new Error("secondary-down");
+        },
       },
-    }
+    },
   );
   assert.equal(result.output, "default-value");
   assert.equal(result.toolCalls.length, 2);
@@ -192,14 +198,16 @@ await check("fallback chain: primary fails, secondary succeeds", async () => {
       primary: {
         description: "Always fails.",
         parameters: {},
-        execute: async () => { throw new Error("primary-down"); },
+        execute: async () => {
+          throw new Error("primary-down");
+        },
       },
       secondary: {
         description: "Returns backup.",
         parameters: {},
         execute: async () => "backup-ok",
       },
-    }
+    },
   );
   assert.equal(result.output, "backup-ok");
 });
@@ -228,11 +236,11 @@ await check("Promise.all: one rejection caught, toolCalls records .error", async
           return `v-${key}`;
         },
       },
-    }
+    },
   );
   assert.equal(result.output, "caught:bad-key-error");
   // The failing tool call should be recorded with an error
-  const failing = result.toolCalls.find(tc => tc.error);
+  const failing = result.toolCalls.find((tc) => tc.error);
   assert.ok(failing, "expected a toolCall with .error");
   assert.match(String(failing.error), /bad-key-error/);
 });
@@ -267,7 +275,7 @@ await check("guard clauses: early-exit + nested conditionals (separate var patte
           return { status: "active", value: 99 };
         },
       },
-    }
+    },
   );
   assert.equal(result.output, "not-found,deleted,invalid,ok:99");
 });
@@ -308,7 +316,7 @@ await check("switch: works inside a function/IIFE", async () => {
           return map[cmd];
         },
       },
-    }
+    },
   );
   assert.equal(result.output, "created:foo|deleted:foo|updated:foo|unknown:noop");
 });
@@ -331,9 +339,9 @@ await check("ternary + logical operators: basic evaluation", async () => {
       getVal: {
         description: "Get a value.",
         parameters: { key: { type: "string" } },
-        execute: async ({ key }) => key === "null" ? null : 10,
+        execute: async ({ key }) => (key === "null" ? null : 10),
       },
-    }
+    },
   );
   assert.equal(result.output, "big,yes-and,fallback-or,nullish-fallback");
 });
@@ -359,7 +367,7 @@ await check("optional chaining: a?.b?.c on null/undefined chains", async () => {
           return { meta: { count: 42 } };
         },
       },
-    }
+    },
   );
   assert.equal(result.output, "42,undefined,undefined");
 });
@@ -367,9 +375,11 @@ await check("optional chaining: a?.b?.c on null/undefined chains", async () => {
 // ---------------------------------------------------------------------------
 // 8. Thrown-value fidelity — throw object, catch shape
 // ---------------------------------------------------------------------------
-await check("thrown-value fidelity: throw {code, msg} object, catch sees original shape", async () => {
-  const result = await execute(
-    `
+await check(
+  "thrown-value fidelity: throw {code, msg} object, catch sees original shape",
+  async () => {
+    const result = await execute(
+      `
     let codeVal, msgVal, isObj;
     try {
       throw { code: "RATE_LIMIT", msg: "too many requests" };
@@ -380,10 +390,11 @@ await check("thrown-value fidelity: throw {code, msg} object, catch sees origina
     }
     codeVal + "|" + msgVal + "|" + isObj
     `,
-    {}
-  );
-  assert.equal(result.output, "RATE_LIMIT|too many requests|true");
-});
+      {},
+    );
+    assert.equal(result.output, "RATE_LIMIT|too many requests|true");
+  },
+);
 
 await check("thrown-value fidelity: throw string, catch sees it as string", async () => {
   const result = await execute(
@@ -396,7 +407,7 @@ await check("thrown-value fidelity: throw string, catch sees it as string", asyn
     }
     caught
     `,
-    {}
+    {},
   );
   assert.equal(result.output, "string:simple-string-error");
 });
@@ -412,7 +423,7 @@ await check("thrown-value fidelity: throw number, catch sees number", async () =
     }
     caught
     `,
-    {}
+    {},
   );
   assert.equal(result.output, "number:42");
 });
@@ -445,7 +456,7 @@ await check("partial accumulation: collect successes and errors across loop", as
           return `val-${id}`;
         },
       },
-    }
+    },
   );
   assert.equal(result.output, "val-a,val-b,val-c|bad1:fetch-failed,bad2:fetch-failed");
   assert.equal(result.toolCalls.length, 5);
@@ -458,23 +469,26 @@ await check("partial accumulation: collect successes and errors across loop", as
 // ---------------------------------------------------------------------------
 await check("re-throw: wrapped string propagates to host as rejection", async () => {
   await assert.rejects(
-    () => execute(
-      `
+    () =>
+      execute(
+        `
       try {
         await doOp();
       } catch (e) {
         throw "wrapped: " + e;
       }
       `,
-      {
-        doOp: {
-          description: "Always fails.",
-          parameters: {},
-          execute: async () => { throw new Error("inner-error"); },
+        {
+          doOp: {
+            description: "Always fails.",
+            parameters: {},
+            execute: async () => {
+              throw new Error("inner-error");
+            },
+          },
         },
-      }
-    ),
-    /wrapped: inner-error/
+      ),
+    /wrapped: inner-error/,
   );
 });
 
@@ -491,10 +505,12 @@ await check("autoFix: runtime error returns {output:null, error} not throw", asy
       alwaysFails: {
         description: "Always throws.",
         parameters: {},
-        execute: async () => { throw new Error("permanent-failure"); },
+        execute: async () => {
+          throw new Error("permanent-failure");
+        },
       },
     },
-    { autoFix: true }
+    { autoFix: true },
   );
   assert.equal(result.output, null);
   assert.match(String(result.error), /permanent-failure/);
@@ -515,10 +531,12 @@ await check("autoFix: caught error doesn't surface as autoFix error", async () =
       alwaysFails: {
         description: "Always throws.",
         parameters: {},
-        execute: async () => { throw new Error("inner"); },
+        execute: async () => {
+          throw new Error("inner");
+        },
       },
     },
-    { autoFix: true }
+    { autoFix: true },
   );
   assert.equal(result.output, "recovered");
   assert.ok(!result.error, "should not have an error when exception was caught");
@@ -542,9 +560,9 @@ await check("break: loop exits early on sentinel value", async () => {
       getVal: {
         description: "Returns val or STOP at i=3.",
         parameters: { i: { type: "number" } },
-        execute: async ({ i }) => i === 3 ? "STOP" : `item-${i}`,
+        execute: async ({ i }) => (i === 3 ? "STOP" : `item-${i}`),
       },
-    }
+    },
   );
   assert.equal(result.output, "item-0,item-1,item-2");
 });
@@ -566,7 +584,7 @@ await check("continue: skips odd indices in loop", async () => {
         parameters: { i: { type: "number" } },
         execute: async ({ i }) => `item-${i}`,
       },
-    }
+    },
   );
   assert.equal(result.output, "item-0,item-2,item-4");
 });
@@ -588,7 +606,7 @@ await check("do-while: executes body at least once, tool called in condition che
         parameters: { count: { type: "number" } },
         execute: async ({ count }) => count >= 4,
       },
-    }
+    },
   );
   assert.equal(result.output, 4);
 });
@@ -619,7 +637,7 @@ await check("while loop: sequential tool calls until condition met (pagination)"
           return { items: ["e"], hasMore: false };
         },
       },
-    }
+    },
   );
   assert.equal(result.output, "a,b,c,d,e");
 });
@@ -652,7 +670,7 @@ await check("validate-then-act: branch on error shape in catch", async () => {
         parameters: { name: { type: "string" }, amount: { type: "number" } },
         execute: async ({ name, amount }) => `order-ok:${name}:${amount}`,
       },
-    }
+    },
   );
   assert.equal(result.output, "missing:name|invalid:amount|order-ok:Alice:100");
 });
@@ -676,7 +694,7 @@ await check("nullish coalescing ??: null vs false vs 0 vs empty-string", async (
         parameters: {},
         execute: async () => ({ nullVal: null, falseVal: false, zeroVal: 0, emptyStr: "" }),
       },
-    }
+    },
   );
   // ?? only nullish-coalesces null/undefined, not false/0/""
   assert.equal(result.output, "null-default|false|0|");
@@ -703,7 +721,7 @@ await check("nested property access from tool return value", async () => {
           permissions: { role: "admin" },
         }),
       },
-    }
+    },
   );
   assert.equal(result.output, "Alice:admin");
 });
@@ -743,10 +761,14 @@ await check("multi-step orchestration: 4 sequential tool calls building context"
       },
       notifyUser: {
         description: "Notify a user.",
-        parameters: { userId: { type: "string" }, ticketId: { type: "string" }, assignee: { type: "string" } },
+        parameters: {
+          userId: { type: "string" },
+          ticketId: { type: "string" },
+          assignee: { type: "string" },
+        },
         execute: async (args) => ({ ok: true, ...args }),
       },
-    }
+    },
   );
   assert.equal(result.output, "t-001|bob|bob|true");
   assert.equal(result.toolCalls.length, 4);
@@ -775,11 +797,14 @@ await check("BUG 1: inline push(await fn_with_tool()) crashes — confirmed bug"
         execute: async () => ({ value: 1 }),
       },
     },
-    { autoFix: true }
+    { autoFix: true },
   );
   // This should succeed but currently fails
-  assert.equal(bugResult.output, "ok:a",
-    "BUG: push(await fn_with_tool()) should work but fails with '__array__.push is not a function'");
+  assert.equal(
+    bugResult.output,
+    "ok:a",
+    "BUG: push(await fn_with_tool()) should work but fails with '__array__.push is not a function'",
+  );
 });
 
 await check("BUG 1 workaround: separate variable before push works fine", async () => {
@@ -799,9 +824,9 @@ await check("BUG 1 workaround: separate variable before push works fine", async 
       getItem: {
         description: "Get item.",
         parameters: { id: { type: "string" } },
-        execute: async ({ id }) => id === "missing" ? null : { value: 1 },
+        execute: async ({ id }) => (id === "missing" ? null : { value: 1 }),
       },
-    }
+    },
   );
   assert.equal(result.output, "nf,ok:good");
 });
@@ -821,10 +846,13 @@ await check("BUG 2: top-level switch crashes with allocation limit exceeded", as
     "done"
     `,
     {},
-    { autoFix: true, timeLimitMs: 3000 }
+    { autoFix: true, timeLimitMs: 3000 },
   );
-  assert.equal(result.output, "done",
-    "BUG: top-level switch causes 'allocation limit exceeded'; only works inside function/IIFE");
+  assert.equal(
+    result.output,
+    "done",
+    "BUG: top-level switch causes 'allocation limit exceeded'; only works inside function/IIFE",
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -843,11 +871,14 @@ await check("BUG 3: labeled break — outer loop should exit, but continues", as
     }
     found.join(",")
     `,
-    {}
+    {},
   );
   // Should be "0:0,0:1,0:2,1:0" but actually produces "0:0,0:1,0:2,1:0,2:0,2:1,2:2"
-  assert.equal(result.output, "0:0,0:1,0:2,1:0",
-    "BUG: labeled break outer only breaks inner loop, outer loop continues (label ignored)");
+  assert.equal(
+    result.output,
+    "0:0,0:1,0:2,1:0",
+    "BUG: labeled break outer only breaks inner loop, outer loop continues (label ignored)",
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -857,8 +888,11 @@ await check("BUG 3: labeled break — outer loop should exit, but continues", as
 // ---------------------------------------------------------------------------
 await check("BUG 4: Error constructor unavailable — typeof Error === 'undefined'", async () => {
   const result = await execute(`typeof Error`, {}, { autoFix: true });
-  assert.equal(result.output, "function",
-    "BUG: typeof Error should be 'function' but is 'undefined'; new Error() is unsupported");
+  assert.equal(
+    result.output,
+    "function",
+    "BUG: typeof Error should be 'function' but is 'undefined'; new Error() is unsupported",
+  );
 });
 
 await check("BUG 4 workaround: throw string, catch as string (no Error needed)", async () => {
@@ -872,7 +906,7 @@ await check("BUG 4 workaround: throw string, catch as string (no Error needed)",
     }
     caught
     `,
-    {}
+    {},
   );
   assert.equal(result.output, "custom-error: something went wrong");
 });
@@ -898,14 +932,19 @@ await check("BUG 5: tool Error in catch has no .message (e is string, not Error)
       alwaysThrows: {
         description: "Throws an Error object with message 'tool-err-msg'.",
         parameters: {},
-        execute: async () => { throw new Error("tool-err-msg"); },
+        execute: async () => {
+          throw new Error("tool-err-msg");
+        },
       },
-    }
+    },
   );
   // e.message should be "tool-err-msg", e should be an Error
   // BUG: e is actually the string "tool-err-msg", so e.message is undefined
-  assert.equal(result.output, "tool-err-msg|tool-err-msg",
-    "BUG: caught tool Error should have .message='tool-err-msg' but .message is undefined; e is a string not an Error object");
+  assert.equal(
+    result.output,
+    "tool-err-msg|tool-err-msg",
+    "BUG: caught tool Error should have .message='tool-err-msg' but .message is undefined; e is a string not an Error object",
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -925,10 +964,13 @@ await check("BUG 6: instanceof Error always false, new Error() unsupported", asy
     isErr + "|" + msg
     `,
     {},
-    { autoFix: true }
+    { autoFix: true },
   );
-  assert.equal(result.output, "true|test-error",
-    "BUG: new Error() is unsupported (Error constructor is undefined); instanceof always false");
+  assert.equal(
+    result.output,
+    "true|test-error",
+    "BUG: new Error() is unsupported (Error constructor is undefined); instanceof always false",
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -951,9 +993,12 @@ await check("&&-short-circuit skips tool when LHS is false", async () => {
       expensive: {
         description: "Should not be called.",
         parameters: {},
-        execute: async () => { toolCalled = true; return "expensive-result"; },
+        execute: async () => {
+          toolCalled = true;
+          return "expensive-result";
+        },
       },
-    }
+    },
   );
   assert.equal(result.output, "false");
   assert.equal(toolCalled, false, "expensive tool should not be called when flag is false");
@@ -962,7 +1007,7 @@ await check("&&-short-circuit skips tool when LHS is false", async () => {
 // ---------------------------------------------------------------------------
 // Report
 // ---------------------------------------------------------------------------
-const failed = results.filter(r => !r[1]);
+const failed = results.filter((r) => !r[1]);
 console.log(`\n${results.length - failed.length}/${results.length} passed`);
 if (failed.length) {
   console.log("\nFailed:");

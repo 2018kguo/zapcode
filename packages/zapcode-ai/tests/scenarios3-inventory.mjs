@@ -42,14 +42,34 @@ async function test(name, fn) {
 console.log("scenarios3 inventory/allocation e2e");
 
 const WAREHOUSES = [
-  { warehouseId: "wh_near", lines: [{ sku: "SKU-A", qty: 5 }, { sku: "SKU-B", qty: 2 }] },
-  { warehouseId: "wh_mid", lines: [{ sku: "SKU-A", qty: 4 }, { sku: "SKU-C", qty: 10 }] },
+  {
+    warehouseId: "wh_near",
+    lines: [
+      { sku: "SKU-A", qty: 5 },
+      { sku: "SKU-B", qty: 2 },
+    ],
+  },
+  {
+    warehouseId: "wh_mid",
+    lines: [
+      { sku: "SKU-A", qty: 4 },
+      { sku: "SKU-C", qty: 10 },
+    ],
+  },
   { warehouseId: "wh_far", lines: [{ sku: "SKU-B", qty: 1 }] },
 ];
 
 const ORDERS = [
   { orderId: "ord_2", priority: 3, seq: 2, items: [{ sku: "SKU-A", qty: 3 }] },
-  { orderId: "ord_1", priority: 1, seq: 0, items: [{ sku: "SKU-A", qty: 7 }, { sku: "SKU-B", qty: 4 }] },
+  {
+    orderId: "ord_1",
+    priority: 1,
+    seq: 0,
+    items: [
+      { sku: "SKU-A", qty: 7 },
+      { sku: "SKU-B", qty: 4 },
+    ],
+  },
   { orderId: "ord_3", priority: 1, seq: 1, items: [{ sku: "SKU-C", qty: 2 }] },
 ];
 
@@ -86,7 +106,7 @@ function createInventoryTools(state, { warehouses = WAREHOUSES, orders = ORDERS 
         backorders: { type: "array", description: "Unfulfillable shortfalls." },
         dryRun: { type: "boolean", optional: true },
       },
-      execute: async input => {
+      execute: async (input) => {
         state.commits.push(input);
         return { committed: input.allocations.length, backordered: input.backorders.length };
       },
@@ -164,10 +184,13 @@ await test("system prompt exposes named-object inventory tool signatures", async
   const { system } = zapcode({ tools: createInventoryTools(state) });
   assert.match(
     system,
-    /declare function commitAllocations\(input: \{ allocations: array; backorders: array; dryRun\?: boolean \}\): Promise<unknown>;/
+    /declare function commitAllocations\(input: \{ allocations: array; backorders: array; dryRun\?: boolean \}\): Promise<unknown>;/,
   );
   assert.match(system, /declare function getOpenOrders\(region: string\): Promise<unknown>;/);
-  assert.match(system, /Call shape: await commitAllocations\(\{ allocations: array, backorders: array, dryRun\?: boolean \}\)/);
+  assert.match(
+    system,
+    /Call shape: await commitAllocations\(\{ allocations: array, backorders: array, dryRun\?: boolean \}\)/,
+  );
 });
 
 await test("STRESS: priority-first orders allocated nearest-first across warehouses with break/continue + Map ledger", async () => {
@@ -206,11 +229,10 @@ await test("toolCalls introspection: ordered host calls and the committed payloa
   const state = { stockFetches: [], orderFetches: [], commits: [] };
   const result = await execute(ALLOCATION_PROGRAM, createInventoryTools(state));
 
-  assert.deepEqual(result.toolCalls.map(call => call.name), [
-    "getWarehouseStock",
-    "getOpenOrders",
-    "commitAllocations",
-  ]);
+  assert.deepEqual(
+    result.toolCalls.map((call) => call.name),
+    ["getWarehouseStock", "getOpenOrders", "commitAllocations"],
+  );
   const commitCall = result.toolCalls.at(-1);
   assert.deepEqual(commitCall.input, state.commits[0]);
   assert.deepEqual(commitCall.input.allocations, result.output.allocations);
@@ -248,7 +270,7 @@ await test("switch with intentional fallthrough classifies SKU handling and rout
     }
     lanes
     `,
-    createInventoryTools(state)
+    createInventoryTools(state),
   );
 
   assert.deepEqual(result.output, [
@@ -296,7 +318,7 @@ await test("while/do-while replenishment draws down a Map ledger until reorder p
       reorders,
     })
     `,
-    createInventoryTools(state)
+    createInventoryTools(state),
   );
 
   // pulls 4 (->8), 5 (->3), then 6 wanted but only 3 -> give 3 (->0); loop stops.
@@ -337,7 +359,7 @@ await test("Set tracks reserved vs backordered SKUs with has/delete/size during 
     backorderedList.sort();
     ({ reservedList, backorderedList, reservedSize: reserved.size, backorderedSize: backordered.size })
     `,
-    createInventoryTools(state)
+    createInventoryTools(state),
   );
 
   assert.deepEqual(result.output, {
@@ -354,9 +376,9 @@ await test("rejects missing required allocation argument before any host commit"
     () =>
       execute(
         `await commitAllocations({ allocations: [{ orderId: "ord_1", sku: "SKU-A", warehouseId: "wh_near", qty: 1 }] })`,
-        createInventoryTools(state)
+        createInventoryTools(state),
       ),
-    /Invalid arguments for tool 'commitAllocations': missing required parameter 'backorders'/
+    /Invalid arguments for tool 'commitAllocations': missing required parameter 'backorders'/,
   );
   assert.deepEqual(state.commits, []);
 });
@@ -364,8 +386,12 @@ await test("rejects missing required allocation argument before any host commit"
 await test("rejects wrong-typed allocation argument before any host commit", async () => {
   const state = { stockFetches: [], orderFetches: [], commits: [] };
   await assert.rejects(
-    () => execute(`await commitAllocations({ allocations: {}, backorders: [] })`, createInventoryTools(state)),
-    /Invalid arguments for tool 'commitAllocations': parameter 'allocations' expected array, got object/
+    () =>
+      execute(
+        `await commitAllocations({ allocations: {}, backorders: [] })`,
+        createInventoryTools(state),
+      ),
+    /Invalid arguments for tool 'commitAllocations': parameter 'allocations' expected array, got object/,
   );
   assert.deepEqual(state.commits, []);
 });
@@ -373,12 +399,16 @@ await test("rejects wrong-typed allocation argument before any host commit", asy
 await test("rejects optional dryRun of the wrong type and positional calls before host commit", async () => {
   const state = { stockFetches: [], orderFetches: [], commits: [] };
   await assert.rejects(
-    () => execute(`await commitAllocations({ allocations: [], backorders: [], dryRun: "yes" })`, createInventoryTools(state)),
-    /Invalid arguments for tool 'commitAllocations': parameter 'dryRun' expected boolean, got string/
+    () =>
+      execute(
+        `await commitAllocations({ allocations: [], backorders: [], dryRun: "yes" })`,
+        createInventoryTools(state),
+      ),
+    /Invalid arguments for tool 'commitAllocations': parameter 'dryRun' expected boolean, got string/,
   );
   await assert.rejects(
     () => execute(`await commitAllocations([], [])`, createInventoryTools(state)),
-    /Invalid arguments for tool 'commitAllocations': expected one named object argument/
+    /Invalid arguments for tool 'commitAllocations': expected one named object argument/,
   );
   assert.deepEqual(state.commits, []);
 });
@@ -405,7 +435,7 @@ await test("early-return helper short-circuits allocation when an item has no de
     ];
     plan
     `,
-    createInventoryTools(state)
+    createInventoryTools(state),
   );
 
   assert.deepEqual(result.output, [

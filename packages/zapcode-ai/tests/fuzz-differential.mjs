@@ -83,18 +83,24 @@ class Gen {
   numExpr(d) {
     const opts = [() => String(this.int(-20, 20)), () => String(this.int(-81, 81) / 4)];
     const nv = this.varsOf("num");
-    if (nv.length) opts.push(() => this.pick(nv).name, () => this.pick(nv).name);
+    if (nv.length)
+      opts.push(
+        () => this.pick(nv).name,
+        () => this.pick(nv).name,
+      );
     if (d > 0) {
       const op = () => this.pick(["+", "-", "*", "%", "/"]);
       opts.push(() => `(${this.numExpr(d - 1)} ${op()} ${this.numExpr(d - 1)})`);
       opts.push(
         () =>
-          `Math.${this.pick(["floor", "ceil", "round", "trunc", "abs", "sign"])}(${this.numExpr(d - 1)})`
+          `Math.${this.pick(["floor", "ceil", "round", "trunc", "abs", "sign"])}(${this.numExpr(d - 1)})`,
       );
       opts.push(
-        () => `Math.${this.pick(["max", "min"])}(${this.numExpr(d - 1)}, ${this.numExpr(d - 1)})`
+        () => `Math.${this.pick(["max", "min"])}(${this.numExpr(d - 1)}, ${this.numExpr(d - 1)})`,
       );
-      opts.push(() => `(${this.boolExpr(d - 1)} ? ${this.numExpr(d - 1)} : ${this.numExpr(d - 1)})`);
+      opts.push(
+        () => `(${this.boolExpr(d - 1)} ? ${this.numExpr(d - 1)} : ${this.numExpr(d - 1)})`,
+      );
       const anyArr = this.varsOf("arrnum", "arrstr");
       if (anyArr.length) opts.push(() => `${this.pick(anyArr).name}.length`);
       const an = this.varsOf("arrnum");
@@ -114,12 +120,19 @@ class Gen {
   strExpr(d) {
     const opts = [() => this.strLit()];
     const sv = this.varsOf("str");
-    if (sv.length) opts.push(() => this.pick(sv).name, () => this.pick(sv).name);
+    if (sv.length)
+      opts.push(
+        () => this.pick(sv).name,
+        () => this.pick(sv).name,
+      );
     if (d > 0) {
-      opts.push(() => `(${this.strExpr(d - 1)} + ${this.chance(0.5) ? this.strExpr(d - 1) : this.numExpr(d - 1)})`);
+      opts.push(
+        () =>
+          `(${this.strExpr(d - 1)} + ${this.chance(0.5) ? this.strExpr(d - 1) : this.numExpr(d - 1)})`,
+      );
       opts.push(() => `\`\${${this.numExpr(d - 1)}}-\${${this.strExpr(d - 1)}}\``);
       opts.push(
-        () => `(${this.strExpr(d - 1)}).${this.pick(["toUpperCase()", "toLowerCase()", "trim()"])}`
+        () => `(${this.strExpr(d - 1)}).${this.pick(["toUpperCase()", "toLowerCase()", "trim()"])}`,
       );
       opts.push(() => `(${this.strExpr(d - 1)}).slice(${this.int(0, 3)}, ${this.int(-2, 6)})`);
       opts.push(() => `(${this.strExpr(d - 1)}).repeat(${this.int(0, 3)})`);
@@ -133,7 +146,7 @@ class Gen {
       const ov = this.varsOf("obj");
       if (ov.length) {
         opts.push(
-          () => `Object.entries(${this.pick(ov).name}).map(([k, v]) => k + "=" + v).join("&")`
+          () => `Object.entries(${this.pick(ov).name}).map(([k, v]) => k + "=" + v).join("&")`,
         );
         opts.push(() => `Object.values(${this.pick(ov).name}).join(",")`);
         opts.push(() => `JSON.stringify(${this.pick(ov).name})`);
@@ -151,9 +164,14 @@ class Gen {
     if (d > 0) {
       const cmp = () => this.pick(["<", "<=", ">", ">=", "===", "!=="]);
       opts.push(() => `(${this.numExpr(d - 1)} ${cmp()} ${this.numExpr(d - 1)})`);
-      opts.push(() => `(${this.strExpr(d - 1)} ${this.pick(["===", "!==", "<", ">"])} ${this.strExpr(d - 1)})`);
+      opts.push(
+        () =>
+          `(${this.strExpr(d - 1)} ${this.pick(["===", "!==", "<", ">"])} ${this.strExpr(d - 1)})`,
+      );
       opts.push(() => `(${this.strExpr(d - 1)}).includes(${this.strLit()})`);
-      opts.push(() => `(${this.boolExpr(d - 1)} ${this.pick(["&&", "||"])} ${this.boolExpr(d - 1)})`);
+      opts.push(
+        () => `(${this.boolExpr(d - 1)} ${this.pick(["&&", "||"])} ${this.boolExpr(d - 1)})`,
+      );
       opts.push(() => `!(${this.boolExpr(d - 1)})`);
       opts.push(() => `Number.isInteger(${this.numExpr(d - 1)})`);
       const an = this.varsOf("arrnum");
@@ -170,8 +188,7 @@ class Gen {
   arrLit(elemType, d) {
     const len = this.int(0, 4);
     const elems = [];
-    for (let i = 0; i < len; i++)
-      elems.push(elemType === "num" ? this.numExpr(d) : this.strLit());
+    for (let i = 0; i < len; i++) elems.push(elemType === "num" ? this.numExpr(d) : this.strLit());
     return `[${elems.join(", ")}]`;
   }
 
@@ -180,19 +197,35 @@ class Gen {
     const vtype = elemType === "num" ? "arrnum" : "arrstr";
     const opts = [() => this.arrLit(elemType, Math.max(0, d - 1))];
     const av = this.varsOf(vtype);
-    if (av.length) opts.push(() => this.pick(av).name, () => this.pick(av).name);
+    if (av.length)
+      opts.push(
+        () => this.pick(av).name,
+        () => this.pick(av).name,
+      );
     if (d > 0) {
       const base = () => `(${this.arrExpr(elemType, d - 1)})`;
       if (elemType === "num") {
-        opts.push(() => `${base()}.map((x) => ${this.pick(["x * 2", "x + 1", "Math.abs(x)", "x % 3", "x - 4"])})`);
-        opts.push(() => `${base()}.filter((x) => x ${this.pick(["<", ">", "<=", "%2 ==="])} ${this.int(-3, 3)})`);
+        opts.push(
+          () =>
+            `${base()}.map((x) => ${this.pick(["x * 2", "x + 1", "Math.abs(x)", "x % 3", "x - 4"])})`,
+        );
+        opts.push(
+          () =>
+            `${base()}.filter((x) => x ${this.pick(["<", ">", "<=", "%2 ==="])} ${this.int(-3, 3)})`,
+        );
         opts.push(() => `[...${base()}].sort((p, q) => p - q)`);
         opts.push(() => `[...${base()}].sort()`);
         opts.push(() => `[...${base()}, ${this.numExpr(d - 1)}]`);
-        opts.push(() => `Array.from({ length: ${this.int(0, 4)} }, (_, i) => i ${this.pick(["*", "+", "-"])} ${this.int(1, 3)})`);
+        opts.push(
+          () =>
+            `Array.from({ length: ${this.int(0, 4)} }, (_, i) => i ${this.pick(["*", "+", "-"])} ${this.int(1, 3)})`,
+        );
       } else {
         opts.push(() => `${base()}.map((s) => s + ${this.strLit()})`);
-        opts.push(() => `${base()}.filter((s) => s.length ${this.pick(["<", ">", "==="])} ${this.int(1, 5)})`);
+        opts.push(
+          () =>
+            `${base()}.filter((s) => s.length ${this.pick(["<", ">", "==="])} ${this.int(1, 5)})`,
+        );
         opts.push(() => `[...${base()}].sort()`);
         const ov = this.varsOf("obj");
         if (ov.length) opts.push(() => `Object.keys(${this.pick(ov).name})`);
@@ -276,7 +309,7 @@ class Gen {
     this.stmts.push(
       this.chance(0.4)
         ? `if (${this.boolExpr(2)}) { ${thenS} }`
-        : `if (${this.boolExpr(2)}) { ${thenS} } else { ${elseS} }`
+        : `if (${this.boolExpr(2)}) { ${thenS} } else { ${elseS} }`,
     );
   }
 
@@ -303,7 +336,7 @@ class Gen {
     const acc = this.pick(this.mutableScalar());
     const c = this.fresh("c");
     this.stmts.push(
-      `let ${c} = 0; while (${c} < ${this.int(1, 4)}) { ${acc.name} += ${this.expr(acc.type, 1)}; ${c} += 1; }`
+      `let ${c} = 0; while (${c} < ${this.int(1, 4)}) { ${acc.name} += ${this.expr(acc.type, 1)}; ${c} += 1; }`,
     );
   }
 
@@ -319,7 +352,7 @@ class Gen {
       // closure via maker
       const mk = this.fresh("mk");
       this.stmts.push(
-        `const ${mk} = (m) => (x) => x * m + ${this.int(-3, 3)}; const ${name} = ${mk}(${this.int(-2, 4)});`
+        `const ${mk} = (m) => (x) => x * m + ${this.int(-3, 3)}; const ${name} = ${mk}(${this.int(-2, 4)});`,
       );
       this.fns.push({ name, sig: "num" });
       return;
@@ -331,7 +364,7 @@ class Gen {
     this.stmts.push(
       this.chance(0.5)
         ? `const ${name} = (x) => ${body.startsWith("{") ? `(${body})` : body};`
-        : `function ${name}(x) { return ${body}; }`
+        : `function ${name}(x) { return ${body}; }`,
     );
     this.fns.push({ name, sig });
   }
@@ -339,7 +372,7 @@ class Gen {
   stmtTryCatch() {
     const name = this.fresh("t");
     this.stmts.push(
-      `let ${name}; try { if (${this.boolExpr(2)}) { throw new Error(${this.strLit()}); } ${name} = "ok:" + ${this.strExpr(1)}; } catch (e) { ${name} = "err:" + e.message; }`
+      `let ${name}; try { if (${this.boolExpr(2)}) { throw new Error(${this.strLit()}); } ${name} = "ok:" + ${this.strExpr(1)}; } catch (e) { ${name} = "err:" + e.message; }`,
     );
     this.vars.push({ name, type: "str", mutable: true });
   }
@@ -405,7 +438,7 @@ class Gen {
         : `Promise.resolve(${this.strExpr(1)})`,
     ];
     this.stmts.push(
-      `const ${name} = (await Promise.allSettled([${items.join(", ")}])).map((r) => r.status + ":" + (r.value ?? r.reason?.message ?? "")).join("|");`
+      `const ${name} = (await Promise.allSettled([${items.join(", ")}])).map((r) => r.status + ":" + (r.value ?? r.reason?.message ?? "")).join("|");`,
     );
     this.vars.push({ name, type: "str", mutable: false });
   }
@@ -417,7 +450,7 @@ class Gen {
     const body = this.numExpr(2);
     this.vars.pop();
     this.stmts.push(
-      `async function ${f}(x) { await null; return ${body}; } const ${name} = await ${f}(${this.numExpr(1)});`
+      `async function ${f}(x) { await null; return ${body}; } const ${name} = await ${f}(${this.numExpr(1)});`,
     );
     this.vars.push({ name, type: "num", mutable: false });
   }
@@ -435,12 +468,15 @@ class Gen {
           () => this.stmtReassign(),
           () => this.stmtIf(),
           () => this.stmtFor(),
-          () => this.stmtWhile()
+          () => this.stmtWhile(),
         );
         if (this.varsOf("arrnum", "arrstr").length) opts.push(() => this.stmtForOf());
       }
       if (this.varsOf("arrnum", "arrstr").length) {
-        opts.push(() => this.stmtPush(), () => this.stmtDestructureArr());
+        opts.push(
+          () => this.stmtPush(),
+          () => this.stmtDestructureArr(),
+        );
       }
       if (this.varsOf("obj").length) opts.push(() => this.stmtDestructureObj());
       if (this.varsOf("obj", "arrnum", "arrstr").length) opts.push(() => this.stmtJsonRoundTrip());
@@ -450,7 +486,7 @@ class Gen {
         () => this.stmtAwaitResolve(),
         () => this.stmtPromiseAll(),
         () => this.stmtAllSettled(),
-        () => this.stmtAsyncFn()
+        () => this.stmtAsyncFn(),
       );
       this.pick(opts)();
     }
@@ -514,7 +550,9 @@ for (let i = 0; i < COUNT; i++) {
   else passed++;
 }
 
-console.log(`fuzz-differential: seed=${SEED} programs=${COUNT} pass=${passed} fail=${failures.length}`);
+console.log(
+  `fuzz-differential: seed=${SEED} programs=${COUNT} pass=${passed} fail=${failures.length}`,
+);
 
 for (const f of failures) {
   console.error(`\n━━━ DIVERGENCE program #${f.i} (FUZZ_SEED=${SEED}) ━━━`);

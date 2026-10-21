@@ -45,10 +45,7 @@ await test("console.error/warn -> stderr, log/info/debug -> stdout (binding)", (
 
 // 1b. Same split surfaced through the zapcode-ai execute() wrapper.
 await test("ExecutionResult carries a separate stderr stream", async () => {
-  const result = await execute(
-    `console.log("hello"); console.error("oops"); "done"`,
-    {}
-  );
+  const result = await execute(`console.log("hello"); console.error("oops"); "done"`, {});
   assert.equal(result.output, "done");
   assert.equal(result.stdout, "hello\n");
   assert.equal(result.stderr, "oops\n");
@@ -65,9 +62,7 @@ await test("ZapcodeProgramHandle.compile + run (many inputs)", () => {
 
 // 2b. Prepared program preserves the stderr split.
 await test("ZapcodeProgramHandle preserves stdout/stderr split", () => {
-  const program = ZapcodeProgramHandle.compile(
-    `console.log("L"); console.warn("W"); 1`
-  );
+  const program = ZapcodeProgramHandle.compile(`console.log("L"); console.warn("W"); 1`);
   const res = program.run();
   assert.equal(res.stdout, "L\n");
   assert.equal(res.stderr, "W\n");

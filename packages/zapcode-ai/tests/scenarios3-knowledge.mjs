@@ -50,9 +50,7 @@ const CORPUS = {
     { docId: "drive-7", title: "Latency budget", score: 0.42, snippet: "p99 tail" },
     { docId: "notion-3", title: "Reranking runbook", score: 0.81, snippet: "cross encoder dup" },
   ],
-  github: [
-    { docId: "gh-2", title: "Retriever config", score: 0.95, snippet: "top_k tuning" },
-  ],
+  github: [{ docId: "gh-2", title: "Retriever config", score: 0.95, snippet: "top_k tuning" }],
   empty: [],
 };
 
@@ -86,7 +84,7 @@ function createKnowledgeTools(state = {}, failSources = new Set()) {
         if (failSources.has(source)) {
           throw new Error(`source '${source}' is unavailable`);
         }
-        const hits = (CORPUS[source] ?? []).map(hit => ({ ...hit, source }));
+        const hits = (CORPUS[source] ?? []).map((hit) => ({ ...hit, source }));
         return typeof limit === "number" ? hits.slice(0, limit) : hits;
       },
     },
@@ -108,7 +106,7 @@ function createKnowledgeTools(state = {}, failSources = new Set()) {
         summary: { type: "string", description: "Rolled-up digest summary." },
         metadata: { type: "object", optional: true },
       },
-      execute: async input => {
+      execute: async (input) => {
         state.digests.push(input);
         return { saved: true, hitCount: input.topHits.length };
       },
@@ -120,14 +118,14 @@ await test("system prompt exposes named-object signatures and call shapes for KB
   const { system } = zapcode({ tools: createKnowledgeTools() });
   assert.match(
     system,
-    /declare function retrieveSource\(input: \{ source: string; query: string; limit\?: number \}\): Promise<unknown>;/
+    /declare function retrieveSource\(input: \{ source: string; query: string; limit\?: number \}\): Promise<unknown>;/,
   );
   // Single-parameter tools render as a positional signature, not a named object.
   assert.match(system, /declare function summarizeDoc\(docId: string\): Promise<unknown>;/);
   assert.match(system, /Call shape: await summarizeDoc\(docId: string\)/);
   assert.match(
     system,
-    /declare function saveDigest\(input: \{ sources: array; topHits: array; summary: string; metadata\?: object \}\): Promise<unknown>;/
+    /declare function saveDigest\(input: \{ sources: array; topHits: array; summary: string; metadata\?: object \}\): Promise<unknown>;/,
   );
   assert.match(system, /Call shape: await retrieveSource\(\{ source: string, query: string/);
 });
@@ -185,7 +183,7 @@ await test("fans out retrieval with Promise.all over .map(async), merges + dedup
 
     ({ topIds: topK.map(h => h.docId), summarized, contributing })
     `,
-    tools
+    tools,
   );
 
   // shared-1 appears in wiki(0.62)+notion(0.55) -> dedupe keeps 0.62.
@@ -215,7 +213,7 @@ await test("fans out retrieval with Promise.all over .map(async), merges + dedup
   assert.equal(state.digests[0].metadata.merged, 5);
   assert.equal(result.toolCalls.at(-1).name, "saveDigest");
   assert.deepEqual(result.toolCalls.at(-1).input, state.digests[0]);
-  assert.equal(result.toolCalls.filter(c => c.name === "retrieveSource").length, 4);
+  assert.equal(result.toolCalls.filter((c) => c.name === "retrieveSource").length, 4);
 });
 
 await test("STRESS: fan out over a sizable source list, isolate a deliberately-failing source, assert exact merged result", async () => {
@@ -264,7 +262,7 @@ await test("STRESS: fan out over a sizable source list, isolate a deliberately-f
 
     ({ failures, okSources, topHits, mergedCount: merged.length })
     `,
-    tools
+    tools,
   );
 
   // Failing source isolated; siblings produced the deterministic merged result.
@@ -277,15 +275,22 @@ await test("STRESS: fan out over a sizable source list, isolate a deliberately-f
   ]);
 
   // All 6 sources were attempted (any host order).
-  assert.deepEqual([...state.retrieved].sort(), ["broken", "drive", "empty", "github", "notion", "wiki"]);
+  assert.deepEqual([...state.retrieved].sort(), [
+    "broken",
+    "drive",
+    "empty",
+    "github",
+    "notion",
+    "wiki",
+  ]);
 
   // The failing source's toolCall carries .error; siblings carry results, not errors.
-  const retrieveCalls = result.toolCalls.filter(c => c.name === "retrieveSource");
+  const retrieveCalls = result.toolCalls.filter((c) => c.name === "retrieveSource");
   assert.equal(retrieveCalls.length, 6);
-  const failedCall = retrieveCalls.find(c => c.input.source === "broken");
+  const failedCall = retrieveCalls.find((c) => c.input.source === "broken");
   assert.ok(failedCall, "expected a retrieveSource call for the broken source");
   assert.match(String(failedCall.error), /source 'broken' is unavailable/);
-  const okCalls = retrieveCalls.filter(c => c.input.source !== "broken");
+  const okCalls = retrieveCalls.filter((c) => c.input.source !== "broken");
   assert.equal(okCalls.length, 5);
   for (const call of okCalls) {
     assert.ok(!call.error, `sibling source '${call.input.source}' should not carry an error`);
@@ -322,7 +327,7 @@ await test("await in diverse expression positions: array elements, object values
 
     ({ firstIds, winner, backfill })
     `,
-    tools
+    tools,
   );
 
   assert.deepEqual(result.output.firstIds, ["gh-2", "drive-7"]);
@@ -347,7 +352,7 @@ await test("try/finally records a cleanup phase around an awaited retrieval on t
     }
     ({ count: hits.length, topId: hits[0].docId, connectionOpen })
     `,
-    tools
+    tools,
   );
 
   assert.deepEqual(result.output, { count: 1, topId: "gh-2", connectionOpen: false });
@@ -371,9 +376,9 @@ await test("agent program throws when no usable sources are configured, and the 
         }
         total
         `,
-        tools
+        tools,
       ),
-    /no usable knowledge sources configured/
+    /no usable knowledge sources configured/,
   );
   // Nothing retrieved (empty fan-out) and nothing persisted.
   assert.deepEqual(state.retrieved, []);
@@ -385,7 +390,7 @@ await test("rejects a missing required argument on retrieveSource before any hos
   const tools = createKnowledgeTools(state);
   await assert.rejects(
     () => execute(`await retrieveSource({ source: "wiki" })`, tools),
-    /Invalid arguments for tool 'retrieveSource': missing required parameter 'query'/
+    /Invalid arguments for tool 'retrieveSource': missing required parameter 'query'/,
   );
   assert.deepEqual(state.retrieved, []);
 });
@@ -396,19 +401,19 @@ await test("rejects wrong-typed arguments on saveDigest before any host persiste
 
   await assert.rejects(
     () => execute(`await saveDigest({ sources: "wiki", topHits: [], summary: "s" })`, tools),
-    /Invalid arguments for tool 'saveDigest': parameter 'sources' expected array, got string/
+    /Invalid arguments for tool 'saveDigest': parameter 'sources' expected array, got string/,
   );
   await assert.rejects(
     () => execute(`await saveDigest({ sources: [], topHits: [], summary: 42 })`, tools),
-    /Invalid arguments for tool 'saveDigest': parameter 'summary' expected string, got number/
+    /Invalid arguments for tool 'saveDigest': parameter 'summary' expected string, got number/,
   );
   await assert.rejects(
     () => execute(`await saveDigest({ sources: [], topHits: [], summary: "s", limit: 5 })`, tools),
-    /Invalid arguments for tool 'saveDigest': unexpected parameter 'limit'/
+    /Invalid arguments for tool 'saveDigest': unexpected parameter 'limit'/,
   );
   await assert.rejects(
     () => execute(`await saveDigest([], [], "s")`, tools),
-    /Invalid arguments for tool 'saveDigest': expected one named object argument/
+    /Invalid arguments for tool 'saveDigest': expected one named object argument/,
   );
 
   assert.deepEqual(state.digests, []);

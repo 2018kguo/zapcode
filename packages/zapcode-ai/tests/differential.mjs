@@ -225,7 +225,6 @@ const corpus = [
   `const d = new Date(Date.UTC(2026, 6, 4)); return d.toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC'});`,
 ];
 
-
 // ════════════════════════════════════════════════════════════════════════════
 //  Realistic programs — the shapes agent code actually takes: transform tool
 //  results, aggregate, format reports, orchestrate async steps. Not edge
@@ -491,7 +490,6 @@ const realistic = [
      trace.push(state);
    }
    return trace.join(">");`,
-
 
   // ── evaluation counts: side effects run exactly as often as in JS ─────
   // (double evaluation is invisible to value-only assertions — these thread
@@ -1070,12 +1068,12 @@ for (const pin of pinned) {
   assert.deepStrictEqual(
     zap,
     pin.zapcode,
-    `pinned divergence changed (${pin.reason}):\n${pin.body}\n zapcode now: ${JSON.stringify(zap)}`
+    `pinned divergence changed (${pin.reason}):\n${pin.body}\n zapcode now: ${JSON.stringify(zap)}`,
   );
   assert.notDeepStrictEqual(
     zap,
     node,
-    `pin agrees with Node now — promote to the corpus (${pin.reason}):\n${pin.body}`
+    `pin agrees with Node now — promote to the corpus (${pin.reason}):\n${pin.body}`,
   );
   passed++;
 }
@@ -1091,9 +1089,13 @@ if (failures.length > 0) {
 }
 
 if (bothThrew.length > 0) {
-  console.log(`note: ${bothThrew.length} snippet(s) threw in BOTH engines (counted as parity, but check the snippets):`);
+  console.log(
+    `note: ${bothThrew.length} snippet(s) threw in BOTH engines (counted as parity, but check the snippets):`,
+  );
   for (const t of bothThrew) {
     console.log("  node error:", t.node, "\n  snippet:", t.body.slice(0, 100).replace(/\n/g, " "));
   }
 }
-console.log(`differential parity: ${passed} snippets agree with Node (${pinned.length} documented pins held)`);
+console.log(
+  `differential parity: ${passed} snippets agree with Node (${pinned.length} documented pins held)`,
+);

@@ -60,7 +60,7 @@ function createPricingTools(state) {
         totals: { type: "object" },
         currency: { type: "string", optional: true },
       },
-      execute: async input => {
+      execute: async (input) => {
         state.saved.push(input);
         return { ok: true, invoiceId: input.invoiceId, lineCount: input.lineItems.length };
       },
@@ -72,14 +72,14 @@ await test("system prompt renders pricing tool signatures", async () => {
   const { system } = zapcode({ tools: createPricingTools({ saved: [] }) });
   assert.match(
     system,
-    /declare function saveInvoice\(input: \{ invoiceId: string; lineItems: array; totals: object; currency\?: string \}\): Promise<unknown>;/
+    /declare function saveInvoice\(input: \{ invoiceId: string; lineItems: array; totals: object; currency\?: string \}\): Promise<unknown>;/,
   );
+  assert.match(system, /declare function getTaxTable\(jurisdictions: array\): Promise<unknown>;/);
+  assert.match(system, /declare function getBillingClock\(\): Promise<unknown>;/);
   assert.match(
     system,
-    /declare function getTaxTable\(jurisdictions: array\): Promise<unknown>;/
+    /Call shape: await saveInvoice\(\{ invoiceId: string, lineItems: array, totals: object/,
   );
-  assert.match(system, /declare function getBillingClock\(\): Promise<unknown>;/);
-  assert.match(system, /Call shape: await saveInvoice\(\{ invoiceId: string, lineItems: array, totals: object/);
 });
 
 // ---------------------------------------------------------------------------
@@ -152,11 +152,61 @@ await test("prices a multi-jurisdiction invoice with tiered discounts and exact 
 
   assert.equal(result.output.invoiceId, `inv_${BILLING_NOW_MS}`);
   assert.deepEqual(result.output.priced, [
-    { sku: "SEAT-STD", jurisdiction: "CA", gross: 1500, discountRate: 0.2, discount: 300, net: 1200, taxRate: 0.0725, tax: 87, total: 1287 },
-    { sku: "SEAT-PRO", jurisdiction: "CA", gross: 1350, discountRate: 0.05, discount: 67.5, net: 1282.5, taxRate: 0.0725, tax: 92.98, total: 1375.48 },
-    { sku: "ADDON-SMS", jurisdiction: "NY", gross: 39.92, discountRate: 0, discount: 0, net: 39.92, taxRate: 0.08, tax: 3.19, total: 43.11 },
-    { sku: "ADDON-API", jurisdiction: "NY", gross: 199, discountRate: 0, discount: 0, net: 199, taxRate: 0.08, tax: 15.92, total: 214.92 },
-    { sku: "SUP-GOLD", jurisdiction: "TX", gross: 1.2, discountRate: 0.05, discount: 0.06, net: 1.14, taxRate: 0.0625, tax: 0.07, total: 1.21 },
+    {
+      sku: "SEAT-STD",
+      jurisdiction: "CA",
+      gross: 1500,
+      discountRate: 0.2,
+      discount: 300,
+      net: 1200,
+      taxRate: 0.0725,
+      tax: 87,
+      total: 1287,
+    },
+    {
+      sku: "SEAT-PRO",
+      jurisdiction: "CA",
+      gross: 1350,
+      discountRate: 0.05,
+      discount: 67.5,
+      net: 1282.5,
+      taxRate: 0.0725,
+      tax: 92.98,
+      total: 1375.48,
+    },
+    {
+      sku: "ADDON-SMS",
+      jurisdiction: "NY",
+      gross: 39.92,
+      discountRate: 0,
+      discount: 0,
+      net: 39.92,
+      taxRate: 0.08,
+      tax: 3.19,
+      total: 43.11,
+    },
+    {
+      sku: "ADDON-API",
+      jurisdiction: "NY",
+      gross: 199,
+      discountRate: 0,
+      discount: 0,
+      net: 199,
+      taxRate: 0.08,
+      tax: 15.92,
+      total: 214.92,
+    },
+    {
+      sku: "SUP-GOLD",
+      jurisdiction: "TX",
+      gross: 1.2,
+      discountRate: 0.05,
+      discount: 0.06,
+      net: 1.14,
+      taxRate: 0.0625,
+      tax: 0.07,
+      total: 1.21,
+    },
   ]);
   assert.deepEqual(result.output.totals, {
     gross: 3090.12,
@@ -196,7 +246,7 @@ await test("float-drift cent fees aggregate to an exact rounded total", async ()
     const driftDetected = rawSum !== 0.45;
     ({ rawSum, rounded, driftDetected, count: microFees.length })
     `,
-    createPricingTools(state)
+    createPricingTools(state),
   );
 
   assert.equal(result.output.rounded, 0.45);
@@ -232,7 +282,7 @@ await test("prorates annual plans by usage window with Math + chained pipeline",
       lookup: Object.fromEntries(prorated.map(p => [p.id, p.amount])),
     })
     `,
-    createPricingTools(state)
+    createPricingTools(state),
   );
 
   assert.deepEqual(result.output.ids, ["p2", "p1", "p3"]);
@@ -272,7 +322,7 @@ await test("flatMap expands bundles, then ternary tiers and Object.entries aggre
       .sort((a, b) => b.net - a.net);
     ({ rowCount: rows.length, byRegion, ranked, totalRebate: round2(rebated.reduce((s, r) => s + r.rebate, 0)) })
     `,
-    createPricingTools(state)
+    createPricingTools(state),
   );
 
   // west: A120(rebate 9.6 ->110.4) B80(1.6->78.4) C50(1->49) A40(0.8->39.2) = 277.0
@@ -297,9 +347,9 @@ await test("rejects missing required invoice argument before any host persistenc
           totals: { total: 10 },
         })
         `,
-        createPricingTools(state)
+        createPricingTools(state),
       ),
-    /Invalid arguments for tool 'saveInvoice': missing required parameter 'invoiceId'/
+    /Invalid arguments for tool 'saveInvoice': missing required parameter 'invoiceId'/,
   );
   assert.deepEqual(state.saved, []);
 });
@@ -311,29 +361,29 @@ await test("rejects wrong-typed and unexpected invoice arguments before host per
     () =>
       execute(
         `await saveInvoice({ invoiceId: "inv_1", lineItems: { a: 1 }, totals: { total: 0 } })`,
-        createPricingTools(state)
+        createPricingTools(state),
       ),
-    /Invalid arguments for tool 'saveInvoice': parameter 'lineItems' expected array, got object/
+    /Invalid arguments for tool 'saveInvoice': parameter 'lineItems' expected array, got object/,
   );
   await assert.rejects(
     () =>
       execute(
         `await saveInvoice({ invoiceId: "inv_1", lineItems: [], totals: [] })`,
-        createPricingTools(state)
+        createPricingTools(state),
       ),
-    /Invalid arguments for tool 'saveInvoice': parameter 'totals' expected object, got array/
+    /Invalid arguments for tool 'saveInvoice': parameter 'totals' expected object, got array/,
   );
   await assert.rejects(
     () =>
       execute(
         `await saveInvoice({ invoiceId: "inv_1", lineItems: [], totals: {}, draft: true })`,
-        createPricingTools(state)
+        createPricingTools(state),
       ),
-    /Invalid arguments for tool 'saveInvoice': unexpected parameter 'draft'/
+    /Invalid arguments for tool 'saveInvoice': unexpected parameter 'draft'/,
   );
   await assert.rejects(
     () => execute(`await saveInvoice("inv_1", [], {})`, createPricingTools(state)),
-    /Invalid arguments for tool 'saveInvoice': expected one named object argument/
+    /Invalid arguments for tool 'saveInvoice': expected one named object argument/,
   );
 
   assert.deepEqual(state.saved, []);
@@ -343,7 +393,7 @@ await test("getTaxTable validation rejects bad argument type before resolution",
   const state = { saved: [] };
   await assert.rejects(
     () => execute(`await getTaxTable({ jurisdictions: "CA" })`, createPricingTools(state)),
-    /Invalid arguments for tool 'getTaxTable': parameter 'jurisdictions' expected array, got string/
+    /Invalid arguments for tool 'getTaxTable': parameter 'jurisdictions' expected array, got string/,
   );
   assert.deepEqual(state.saved, []);
 });

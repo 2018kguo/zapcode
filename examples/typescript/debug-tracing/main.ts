@@ -35,8 +35,7 @@ const { system, tools, printTrace } = zapcode({
   system: "You are a helpful assistant that can look up weather and do math.",
   tools: {
     getWeather: {
-      description:
-        "Get current weather for a city. Returns { condition: string, temp: number }",
+      description: "Get current weather for a city. Returns { condition: string, temp: number }",
       parameters: {
         city: { type: "string", description: "City name" },
       },
@@ -70,7 +69,10 @@ const { system, tools, printTrace } = zapcode({
 // --- Debug: log each step's generated code, tool calls, and output ---
 function logExecution(result: ExecutionResult) {
   // Print the generated code
-  const indented = result.code.split("\n").map((l) => "  " + l).join("\n");
+  const indented = result.code
+    .split("\n")
+    .map((l) => "  " + l)
+    .join("\n");
   console.log(`\n[zapcode] Code:\n${indented}`);
 
   // Print each tool call
@@ -122,10 +124,7 @@ async function main() {
   console.log(`\n--- Timing ---`);
   console.log(`Total (LLM + Zapcode): ${totalMs}ms`);
   console.log(`Steps: ${result.steps.length}`);
-  const toolCallCount = result.steps.reduce(
-    (count, step) => count + step.toolCalls.length,
-    0,
-  );
+  const toolCallCount = result.steps.reduce((count, step) => count + step.toolCalls.length, 0);
   console.log(`Tool calls: ${toolCallCount}`);
   console.log(
     `Usage: ${result.usage.promptTokens} prompt + ${result.usage.completionTokens} completion = ${result.usage.totalTokens} tokens`,

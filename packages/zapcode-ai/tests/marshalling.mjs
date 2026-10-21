@@ -16,7 +16,7 @@ async function test(name, fn) {
   console.log(`  PASS ${name}`);
 }
 
-const tool = execute_ => ({ description: "", parameters: {}, execute: execute_ });
+const tool = (execute_) => ({ description: "", parameters: {}, execute: execute_ });
 
 console.log("host-boundary marshalling");
 
@@ -34,12 +34,16 @@ await test("L1: BigInt return marshals to a number (no process abort)", async ()
 await test("L2: non-finite return marshals to null", async () => {
   const inf = await execute(`(await f()) === null`, { f: tool(async () => Infinity) });
   assert.equal(inf.output, true);
-  const nan = await execute(`const x = await f(); x.score`, { f: tool(async () => ({ ok: true, score: NaN })) });
+  const nan = await execute(`const x = await f(); x.score`, {
+    f: tool(async () => ({ ok: true, score: NaN })),
+  });
   assert.equal(nan.output, null);
 });
 
 await test("L3: undefined return is usable (void tools)", async () => {
-  const r = await execute(`const x = await save(); x === null`, { save: tool(async () => undefined) });
+  const r = await execute(`const x = await save(); x === null`, {
+    save: tool(async () => undefined),
+  });
   assert.equal(r.output, true);
 });
 
@@ -66,10 +70,7 @@ await test("Date return marshals to an ISO string", async () => {
 // and the host must survive — which is implicit in this script reaching the end.
 
 await test("cycle returned as result is a catchable error, not a host abort", async () => {
-  await assert.rejects(
-    () => execute(`const a = []; a.push(a); a`, {}),
-    /circular structure/i,
-  );
+  await assert.rejects(() => execute(`const a = []; a.push(a); a`, {}), /circular structure/i);
 });
 
 await test("JSON.stringify(cycle) throws the JS circular-structure error in-guest", async () => {
@@ -88,15 +89,23 @@ await test("String()/template/join of a cycle are bounded (no abort)", async () 
 });
 
 await test("structuredClone(cycle) round-trips, preserving the self-reference", async () => {
-  const r = await execute(`const a=[]; a.push(a); const c = structuredClone(a); (c !== a) && (c[0] === c)`, {});
+  const r = await execute(
+    `const a=[]; a.push(a); const c = structuredClone(a); (c !== a) && (c[0] === c)`,
+    {},
+  );
   assert.equal(r.output, true);
 });
 
 await test("a cyclic value passed to a tool is a catchable error, not a host abort", async () => {
   await assert.rejects(
-    () => execute(`const a=[]; a.push(a); await echo(a); 1`, {
-      echo: { description: "", parameters: { x: { type: "object", optional: true } }, execute: async (args) => args.x },
-    }),
+    () =>
+      execute(`const a=[]; a.push(a); await echo(a); 1`, {
+        echo: {
+          description: "",
+          parameters: { x: { type: "object", optional: true } },
+          execute: async (args) => args.x,
+        },
+      }),
     /circular structure/i,
   );
 });
@@ -108,12 +117,20 @@ await test("deeply nested literal is a catchable parse error, not a host abort",
 
 await test("runtime-built deep JSON.stringify is catchable, not a host abort", async () => {
   const code = `let a={x:1}; for(let i=0;i<9000;i++){a={n:a};} JSON.stringify(a).length`;
-  await assert.rejects(() => execute(code, {}, { memoryLimitMb: 64, timeLimitMs: 20000 }), /nesting depth/i);
+  await assert.rejects(
+    () => execute(code, {}, { memoryLimitMb: 64, timeLimitMs: 20000 }),
+    /nesting depth/i,
+  );
 });
 
 await test("Array.from({length: huge}) hits the memory limit (no untracked OOM)", async () => {
   await assert.rejects(
-    () => execute(`const a = Array.from({length: 50000000}); a.length`, {}, { memoryLimitMb: 8, timeLimitMs: 20000 }),
+    () =>
+      execute(
+        `const a = Array.from({length: 50000000}); a.length`,
+        {},
+        { memoryLimitMb: 8, timeLimitMs: 20000 },
+      ),
     /memory limit|allocation limit/i,
   );
 });
@@ -145,11 +162,17 @@ await test("flat(Infinity) on a self-cyclic array is catchable, not a host abort
 
 await test("padStart/join past the cap hit the memory limit", async () => {
   await assert.rejects(
-    () => execute(`'x'.padStart(200000000, 'ab').length`, {}, { memoryLimitMb: 8, timeLimitMs: 20000 }),
+    () =>
+      execute(`'x'.padStart(200000000, 'ab').length`, {}, { memoryLimitMb: 8, timeLimitMs: 20000 }),
     /memory limit/i,
   );
   await assert.rejects(
-    () => execute(`const s='x'.repeat(1000000); const a=[]; let i=0; while(i<300){a.push(s);i=i+1;} a.join('').length`, {}, { memoryLimitMb: 8, timeLimitMs: 20000 }),
+    () =>
+      execute(
+        `const s='x'.repeat(1000000); const a=[]; let i=0; while(i<300){a.push(s);i=i+1;} a.join('').length`,
+        {},
+        { memoryLimitMb: 8, timeLimitMs: 20000 },
+      ),
     /memory limit/i,
   );
 });
@@ -248,10 +271,16 @@ await test("Function global + in/instanceof guards marshal to the host like Node
   r = await execute(`(() => 1) instanceof Object`, {});
   assert.equal(r.output, true);
   // `instanceof` with a non-callable RHS is a catchable TypeError.
-  r = await execute(`let ok=false; try{({}) instanceof 5}catch(e){ok=(e instanceof TypeError)} ok`, {});
+  r = await execute(
+    `let ok=false; try{({}) instanceof 5}catch(e){ok=(e instanceof TypeError)} ok`,
+    {},
+  );
   assert.equal(r.output, true);
   // `in` on a primitive RHS is a catchable TypeError (not silent false).
-  r = await execute(`let ok=false; try{"length" in "abc"}catch(e){ok=(e instanceof TypeError)} ok`, {});
+  r = await execute(
+    `let ok=false; try{"length" in "abc"}catch(e){ok=(e instanceof TypeError)} ok`,
+    {},
+  );
   assert.equal(r.output, true);
   // Actually calling Function is still forbidden, but the violation is now
   // catchable in-guest and the program runs to completion (no exit 139/134).
@@ -269,8 +298,20 @@ await test("Function global + in/instanceof guards marshal to the host like Node
 await test("strict JSON.parse + escapes + reviver this marshal to the host like Node", async () => {
   // Each malformed input is a catchable error, and the program completes.
   for (const bad of [
-    "Infinity", "NaN", "+1", "01", "1.", ".5", "0x1F",
-    "[1,2,]", "[1,,2]", '{"a":1,}', "{a:1}", "'abc'", "[[1,],2]", "",
+    "Infinity",
+    "NaN",
+    "+1",
+    "01",
+    "1.",
+    ".5",
+    "0x1F",
+    "[1,2,]",
+    "[1,,2]",
+    '{"a":1,}',
+    "{a:1}",
+    "'abc'",
+    "[[1,],2]",
+    "",
   ]) {
     const src = `let ok=false; try{ JSON.parse(${JSON.stringify(bad)}) }catch(e){ ok=true } ok`;
     const r = await execute(src, {});
@@ -374,11 +415,17 @@ await test("negative zero keeps its sign across the host boundary like Node", as
 // instruction 0 → infinite loop → allocation-limit error on guest input. It
 // must now complete promptly with the JS-correct result.
 await test("labeled break on a plain block completes (no runaway) like Node", async () => {
-  let r = await execute(`(function(){ let r=''; foo:{ r+='a'; break foo; r+='b'; } return r+'c'; })()`, {});
+  let r = await execute(
+    `(function(){ let r=''; foo:{ r+='a'; break foo; r+='b'; } return r+'c'; })()`,
+    {},
+  );
   assert.equal(r.output, "ac");
 
   // An unlabeled break inside such a block, nested in a loop, breaks the loop.
-  r = await execute(`(function(){ let r=''; for(let i=0;i<3;i++){ blk:{ r+=i; break; } r+='x'; } return r; })()`, {});
+  r = await execute(
+    `(function(){ let r=''; for(let i=0;i<3;i++){ blk:{ r+=i; break; } r+='x'; } return r; })()`,
+    {},
+  );
   assert.equal(r.output, "0");
 });
 
@@ -406,7 +453,10 @@ await test("Map/Set iterators expose next() and feed for-of/spread/Array.from li
   let r = await execute(`JSON.stringify(new Map([["a", 1]]).entries().next())`, {});
   assert.equal(r.output, JSON.stringify({ value: ["a", 1], done: false }));
 
-  r = await execute(`(function(){ let it = new Set([5,6]).values(); return [it.next().value, it.next().value, it.next().done]; })()`, {});
+  r = await execute(
+    `(function(){ let it = new Set([5,6]).values(); return [it.next().value, it.next().value, it.next().done]; })()`,
+    {},
+  );
   assert.deepEqual(r.output, [5, 6, true]);
 
   r = await execute(`[...new Map([["a",1],["b",2]]).keys()]`, {});
@@ -416,7 +466,10 @@ await test("Map/Set iterators expose next() and feed for-of/spread/Array.from li
   assert.deepEqual(r.output, [5, 6]);
 
   // Map/Set built from another collection's iterator.
-  r = await execute(`(function(){ let m = new Map([["a",1]]); return new Map(m.entries()).get("a"); })()`, {});
+  r = await execute(
+    `(function(){ let m = new Map([["a",1]]); return new Map(m.entries()).get("a"); })()`,
+    {},
+  );
   assert.equal(r.output, 1);
 });
 
@@ -425,7 +478,10 @@ await test("object-literal accessors invoke + enumerate across the host boundary
   let r = await execute(`({ get x() { return 42; } }).x`, {});
   assert.equal(r.output, 42);
 
-  r = await execute(`(function(){ let o = { _x: 0, set x(v) { this._x = v * 2; } }; o.x = 7; return o._x; })()`, {});
+  r = await execute(
+    `(function(){ let o = { _x: 0, set x(v) { this._x = v * 2; } }; o.x = 7; return o._x; })()`,
+    {},
+  );
   assert.equal(r.output, 14);
 
   // Enumerable in source order; JSON invokes the getter.
@@ -448,7 +504,10 @@ await test("Number.MIN_VALUE and Object.fromEntries(iterable) match Node", async
   r = await execute(`JSON.stringify(Object.fromEntries(new Map([["a",1],["b",2]])))`, {});
   assert.equal(r.output, '{"a":1,"b":2}');
 
-  r = await execute(`JSON.stringify(Object.fromEntries(Object.entries({a:1,b:2,c:3}).filter(([k,v]) => v > 1)))`, {});
+  r = await execute(
+    `JSON.stringify(Object.fromEntries(Object.entries({a:1,b:2,c:3}).filter(([k,v]) => v > 1)))`,
+    {},
+  );
   assert.equal(r.output, '{"b":2,"c":3}');
 });
 
@@ -461,7 +520,10 @@ await test("property enumeration order matches Node across the boundary", async 
   assert.equal(r.output, '{"1":"b","2":"a","z":"c"}');
 
   // for-in (desugars to Object.keys) sees the same order.
-  r = await execute(`(function(){ let o = {}; o[3] = 1; o[1] = 1; o[2] = 1; let k = ""; for (const x in o) k += x; return k; })()`, {});
+  r = await execute(
+    `(function(){ let o = {}; o[3] = 1; o[1] = 1; o[2] = 1; let k = ""; for (const x in o) k += x; return k; })()`,
+    {},
+  );
   assert.equal(r.output, "123");
 });
 
@@ -469,24 +531,36 @@ await test("property enumeration order matches Node across the boundary", async 
 // Class members compiled inside a function body used to dangle into the wrong
 // global function slots, so instantiating recursed to the stack-depth limit.
 await test("class declared inside a function works across the host boundary", async () => {
-  let r = await execute(`function make(){ class C { constructor(){ this.v = 5; } } return new C().v; } make()`, {});
+  let r = await execute(
+    `function make(){ class C { constructor(){ this.v = 5; } } return new C().v; } make()`,
+    {},
+  );
   assert.equal(r.output, 5);
 
   r = await execute(`(function(){ class C { m(){ return 9; } } return new C().m(); })()`, {});
   assert.equal(r.output, 9);
 
   // Factory pattern with per-instance state.
-  r = await execute(`(function(){ function mk(){ class K { constructor(){ this.n = 0; } inc(){ return ++this.n; } } return new K(); } const c = mk(); return c.inc() + c.inc(); })()`, {});
+  r = await execute(
+    `(function(){ function mk(){ class K { constructor(){ this.n = 0; } inc(){ return ++this.n; } } return new K(); } const c = mk(); return c.inc() + c.inc(); })()`,
+    {},
+  );
   assert.equal(r.output, 3);
 });
 
 // ── tagged templates call the tag with (strings, ...values) ──
 await test("tagged templates work across the host boundary like Node", async () => {
-  let r = await execute(`(function(){ function t(s, ...v){ return s.join("|") + "#" + v.join(","); } return t\`a\${1}b\${2}c\`; })()`, {});
+  let r = await execute(
+    `(function(){ function t(s, ...v){ return s.join("|") + "#" + v.join(","); } return t\`a\${1}b\${2}c\`; })()`,
+    {},
+  );
   assert.equal(r.output, "a|b|c#1,2");
 
   // SQL-builder pattern.
-  r = await execute(`(function(){ function sql(s, ...v){ return s.reduce((a,c,i)=>a+c+(i<v.length?"["+v[i]+"]":""),""); } let id=5; return sql\`id=\${id} x=\${id+1}\`; })()`, {});
+  r = await execute(
+    `(function(){ function sql(s, ...v){ return s.reduce((a,c,i)=>a+c+(i<v.length?"["+v[i]+"]":""),""); } let id=5; return sql\`id=\${id} x=\${id+1}\`; })()`,
+    {},
+  );
   assert.equal(r.output, "id=[5] x=[6]");
 });
 
@@ -496,22 +570,34 @@ await test("toLocaleString and private class fields match Node across the bounda
   assert.equal(r.output, "1,234,567");
 
   // Private fields work and are hidden from reflection.
-  r = await execute(`(function(){ class C { #x = 42; pub = 1; getX(){ return this.#x; } } const c = new C(); return [c.getX(), JSON.stringify(c)]; })()`, {});
+  r = await execute(
+    `(function(){ class C { #x = 42; pub = 1; getX(){ return this.#x; } } const c = new C(); return [c.getX(), JSON.stringify(c)]; })()`,
+    {},
+  );
   assert.deepEqual(r.output, [42, '{"pub":1}']);
 });
 
 // ── Object.defineProperty (data/accessor descriptors + enumerable/writable) ──
 await test("Object.defineProperty matches Node across the host boundary", async () => {
   // Non-enumerable data prop: readable, but hidden from keys/JSON.
-  let r = await execute(`(function(){ const o = {a:1}; Object.defineProperty(o,'x',{value:5}); return [o.x, Object.keys(o), JSON.stringify(o)]; })()`, {});
+  let r = await execute(
+    `(function(){ const o = {a:1}; Object.defineProperty(o,'x',{value:5}); return [o.x, Object.keys(o), JSON.stringify(o)]; })()`,
+    {},
+  );
   assert.deepEqual(r.output, [5, ["a"], '{"a":1}']);
 
   // Non-writable: assignment ignored.
-  r = await execute(`(function(){ const o={}; Object.defineProperty(o,'x',{value:5,writable:false}); o.x=9; return o.x; })()`, {});
+  r = await execute(
+    `(function(){ const o={}; Object.defineProperty(o,'x',{value:5,writable:false}); o.x=9; return o.x; })()`,
+    {},
+  );
   assert.equal(r.output, 5);
 
   // Accessor descriptor invoked on read/write.
-  r = await execute(`(function(){ const o={}; let v=0; Object.defineProperty(o,'x',{get(){return 9},set(n){v=n}}); const a=o.x; o.x=3; return [a,v]; })()`, {});
+  r = await execute(
+    `(function(){ const o={}; let v=0; Object.defineProperty(o,'x',{get(){return 9},set(n){v=n}}); const a=o.x; o.x=3; return [a,v]; })()`,
+    {},
+  );
   assert.deepEqual(r.output, [9, 3]);
 
   // getOwnPropertyDescriptor of a plain prop.
@@ -530,7 +616,10 @@ await test("strings are UTF-16-indexed (astral chars) like Node", async () => {
   assert.deepEqual(r.output, [55357, 56832, 128512]);
 
   // Re-pairing: charAt(0)+charAt(1) reconstructs the astral char.
-  r = await execute(`(function(){ const s = "😀"; return (s.charAt(0) + s.charAt(1)) === s; })()`, {});
+  r = await execute(
+    `(function(){ const s = "😀"; return (s.charAt(0) + s.charAt(1)) === s; })()`,
+    {},
+  );
   assert.equal(r.output, true);
 
   // A re-paired astral string marshals back to the host correctly.
@@ -540,11 +629,17 @@ await test("strings are UTF-16-indexed (astral chars) like Node", async () => {
 
 // ── const reassignment throws a catchable TypeError (mutation still allowed) ──
 await test("const reassignment throws like Node across the host boundary", async () => {
-  let r = await execute(`(function(){ try { const c = 1; c = 2; return "no"; } catch (e) { return e.name; } })()`, {});
+  let r = await execute(
+    `(function(){ try { const c = 1; c = 2; return "no"; } catch (e) { return e.name; } })()`,
+    {},
+  );
   assert.equal(r.output, "TypeError");
 
   // Mutating a const object/array is allowed; only re-binding throws.
-  r = await execute(`(function(){ const o = { x: 1 }; o.x = 2; const a = [1]; a.push(2); return [o.x, a.length]; })()`, {});
+  r = await execute(
+    `(function(){ const o = { x: 1 }; o.x = 2; const a = [1]; a.push(2); return [o.x, a.length]; })()`,
+    {},
+  );
   assert.deepEqual(r.output, [2, 2]);
 });
 
@@ -567,56 +662,94 @@ await test("let/const block scoping matches Node across the host boundary", asyn
 
 // ── .constructor on built-in instances resolves to the global constructor ──
 await test("constructor property matches Node across the host boundary", async () => {
-  let r = await execute(`[({}).constructor === Object, [].constructor === Array, new TypeError("x").constructor === TypeError]`, {});
+  let r = await execute(
+    `[({}).constructor === Object, [].constructor === Array, new TypeError("x").constructor === TypeError]`,
+    {},
+  );
   assert.deepEqual(r.output, [true, true, true]);
 
-  r = await execute(`(function(){ try { null.x; } catch (e) { return e.constructor.name; } })()`, {});
+  r = await execute(
+    `(function(){ try { null.x; } catch (e) { return e.constructor.name; } })()`,
+    {},
+  );
   assert.equal(r.output, "TypeError");
 });
 
 // ── catch-param scoping + for-of/in per-iteration binding ──
 await test("catch-param and for-of/in loop scoping match Node", async () => {
   // Catch param shadows an outer binding only inside the clause.
-  let r = await execute(`(function(){ let e = "outer"; try { throw "x"; } catch (e) {} return e; })()`, {});
+  let r = await execute(
+    `(function(){ let e = "outer"; try { throw "x"; } catch (e) {} return e; })()`,
+    {},
+  );
   assert.equal(r.output, "outer");
 
   // for-of / for-in loop variables get a fresh per-iteration binding.
-  r = await execute(`(function(){ const fs = []; for (const v of [1,2,3]) fs.push(() => v); return fs.map(f => f()); })()`, {});
+  r = await execute(
+    `(function(){ const fs = []; for (const v of [1,2,3]) fs.push(() => v); return fs.map(f => f()); })()`,
+    {},
+  );
   assert.deepEqual(r.output, [1, 2, 3]);
 
-  r = await execute(`(function(){ const fs = []; for (const k in {a:1,b:2}) fs.push(() => k); return fs.map(f => f()); })()`, {});
+  r = await execute(
+    `(function(){ const fs = []; for (const k in {a:1,b:2}) fs.push(() => k); return fs.map(f => f()); })()`,
+    {},
+  );
   assert.deepEqual(r.output, ["a", "b"]);
 });
 
 // ── Symbol.for global registry ──
 await test("Symbol.for registry matches Node across the host boundary", async () => {
-  let r = await execute(`[Symbol.for("x") === Symbol.for("x"), Symbol.for("x") === Symbol("x"), Symbol.keyFor(Symbol.for("hi"))]`, {});
+  let r = await execute(
+    `[Symbol.for("x") === Symbol.for("x"), Symbol.for("x") === Symbol("x"), Symbol.keyFor(Symbol.for("hi"))]`,
+    {},
+  );
   assert.deepEqual(r.output, [true, false, "hi"]);
 });
 
 // ── WeakMap / WeakSet basic operations ──
 await test("WeakMap/WeakSet work across the host boundary", async () => {
-  let r = await execute(`(function(){ const w = new WeakMap(); const k = {}; w.set(k, 1); return [w.get(k), w.has(k), w.has({})]; })()`, {});
+  let r = await execute(
+    `(function(){ const w = new WeakMap(); const k = {}; w.set(k, 1); return [w.get(k), w.has(k), w.has({})]; })()`,
+    {},
+  );
   assert.deepEqual(r.output, [1, true, false]);
 
-  r = await execute(`(function(){ const s = new WeakSet(); const k = {}; s.add(k); s.delete(k); return s.has(k); })()`, {});
+  r = await execute(
+    `(function(){ const s = new WeakSet(); const k = {}; s.add(k); s.delete(k); return s.has(k); })()`,
+    {},
+  );
   assert.equal(r.output, false);
 });
 
 // ── ES2023 immutable array methods (toSorted/toReversed/with/toSpliced) ──
 await test("immutable array methods match Node across the host boundary", async () => {
-  let r = await execute(`[[3,1,2].toSorted(), [1,2,3].toReversed(), [1,2,3].with(1,9), [1,2,3,4].toSpliced(1,2,"a")]`, {});
-  assert.deepEqual(r.output, [[1,2,3], [3,2,1], [1,9,3], [1,"a",4]]);
+  let r = await execute(
+    `[[3,1,2].toSorted(), [1,2,3].toReversed(), [1,2,3].with(1,9), [1,2,3,4].toSpliced(1,2,"a")]`,
+    {},
+  );
+  assert.deepEqual(r.output, [
+    [1, 2, 3],
+    [3, 2, 1],
+    [1, 9, 3],
+    [1, "a", 4],
+  ]);
 
   // Original is unchanged.
   r = await execute(`(function(){ const a=[3,1,2]; const b=a.toSorted(); return [a, b]; })()`, {});
-  assert.deepEqual(r.output, [[3,1,2], [1,2,3]]);
+  assert.deepEqual(r.output, [
+    [3, 1, 2],
+    [1, 2, 3],
+  ]);
 });
 
 // ── BigInt: arbitrary precision in-guest; marshals to a number at the boundary ──
 await test("BigInt works in-guest and marshals to a number across the host boundary", async () => {
   // Arbitrary-precision arithmetic and typeof are correct inside the guest.
-  let r = await execute(`(function(){ return [typeof 10n, String(2n ** 64n), String(123456789012345678901234567890n + 1n)]; })()`, {});
+  let r = await execute(
+    `(function(){ return [typeof 10n, String(2n ** 64n), String(123456789012345678901234567890n + 1n)]; })()`,
+    {},
+  );
   assert.deepEqual(r.output, ["bigint", "18446744073709551616", "123456789012345678901234567891"]);
 
   // A BigInt result marshals to a JS number (i64 when it fits).

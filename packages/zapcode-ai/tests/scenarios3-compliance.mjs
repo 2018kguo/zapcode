@@ -25,10 +25,10 @@ async function check(name, fn) {
 async function expectExecutionError(code, tools, expectedMessage) {
   await assert.rejects(
     () => execute(code, tools),
-    error => {
+    (error) => {
       assert.match(String(error.message), expectedMessage);
       return true;
-    }
+    },
   );
 }
 
@@ -110,7 +110,7 @@ function createComplianceTools({ summaries = [], escalations = [] } = {}) {
         riskScore: { type: "number" },
         tags: { type: "array" },
       },
-      execute: async input => {
+      execute: async (input) => {
         summaries.push(input);
         return { saved: true, documentId: input.documentId, tagCount: input.tags.length };
       },
@@ -124,7 +124,7 @@ function createComplianceTools({ summaries = [], escalations = [] } = {}) {
         severity: { type: "string" },
         evidence: { type: "object" },
       },
-      execute: async input => {
+      execute: async (input) => {
         escalations.push(input);
         return { escalated: true, reviewer: input.reviewer };
       },
@@ -136,9 +136,18 @@ console.log("scenarios3 compliance e2e");
 
 await check("system prompt emits named object signatures for compliance tools", async () => {
   const { system } = zapcode({ tools: createComplianceTools() });
-  assert.match(system, /declare function normalizeParty\(input: \{ rawName: string; role: string \}\): Promise<unknown>;/);
-  assert.match(system, /declare function submitComplianceSummary\(input: \{ documentId: string; summary: object; riskScore: number; tags: array \}\): Promise<unknown>;/);
-  assert.match(system, /Call shape: await escalateForReview\(\{ documentId: string, reviewer: string/);
+  assert.match(
+    system,
+    /declare function normalizeParty\(input: \{ rawName: string; role: string \}\): Promise<unknown>;/,
+  );
+  assert.match(
+    system,
+    /declare function submitComplianceSummary\(input: \{ documentId: string; summary: object; riskScore: number; tags: array \}\): Promise<unknown>;/,
+  );
+  assert.match(
+    system,
+    /Call shape: await escalateForReview\(\{ documentId: string, reviewer: string/,
+  );
 });
 
 await check("parse MSA clauses, normalize fields, and save structured summary", async () => {
@@ -179,7 +188,7 @@ await check("parse MSA clauses, normalize fields, and save structured summary", 
     await submitComplianceSummary({ documentId: docId, summary, riskScore, tags });
     ({ docId, customerId: customer.id, vendorId: vendor.id, effectiveDate, amountUsd, riskScore, assignmentRequiresConsent })
     `,
-    createComplianceTools({ summaries, escalations })
+    createComplianceTools({ summaries, escalations }),
   );
 
   assert.deepEqual(result.output, {
@@ -251,7 +260,7 @@ await check("detect risky DPA clauses and escalate with evidence", async () => {
 
     ({ riskScore, findings, escalated: riskScore >= 75, effectiveDate, amountUsd })
     `,
-    createComplianceTools({ summaries, escalations })
+    createComplianceTools({ summaries, escalations }),
   );
 
   assert.deepEqual(result.output, {
@@ -281,7 +290,7 @@ await check("schema validation rejects malformed compliance summary calls", asyn
     })
     `,
     tools,
-    /Invalid arguments for tool 'submitComplianceSummary': missing required parameter 'riskScore'/
+    /Invalid arguments for tool 'submitComplianceSummary': missing required parameter 'riskScore'/,
   );
 
   await expectExecutionError(
@@ -294,7 +303,7 @@ await check("schema validation rejects malformed compliance summary calls", asyn
     })
     `,
     tools,
-    /Invalid arguments for tool 'submitComplianceSummary': parameter 'summary' expected object, got string/
+    /Invalid arguments for tool 'submitComplianceSummary': parameter 'summary' expected object, got string/,
   );
 
   await expectExecutionError(
@@ -308,14 +317,16 @@ await check("schema validation rejects malformed compliance summary calls", asyn
     })
     `,
     tools,
-    /Invalid arguments for tool 'escalateForReview': unexpected parameter 'evidnce'/
+    /Invalid arguments for tool 'escalateForReview': unexpected parameter 'evidnce'/,
   );
 });
 
-await check("autoFix returns structured errors and prevents invalid review side effects", async () => {
-  const escalations = [];
-  const result = await execute(
-    `
+await check(
+  "autoFix returns structured errors and prevents invalid review side effects",
+  async () => {
+    const escalations = [];
+    const result = await execute(
+      `
     await escalateForReview({
       documentId: "DPA-BAD-4",
       reviewer: "privacy-counsel",
@@ -324,17 +335,18 @@ await check("autoFix returns structured errors and prevents invalid review side 
       evidence: [],
     })
     `,
-    createComplianceTools({ escalations }),
-    { autoFix: true }
-  );
+      createComplianceTools({ escalations }),
+      { autoFix: true },
+    );
 
-  assert.equal(result.output, null);
-  assert.match(result.error, /parameter 'evidence' expected object, got array/);
-  assert.deepEqual(escalations, []);
-  assert.equal(result.trace.status, "error");
-  const failedToolSpan = result.trace.children.find(span => span.name === "tool_call");
-  assert.equal(failedToolSpan.attributes["zapcode.tool.name"], "escalateForReview");
-  assert.match(failedToolSpan.attributes["zapcode.tool.error"], /expected object/);
-});
+    assert.equal(result.output, null);
+    assert.match(result.error, /parameter 'evidence' expected object, got array/);
+    assert.deepEqual(escalations, []);
+    assert.equal(result.trace.status, "error");
+    const failedToolSpan = result.trace.children.find((span) => span.name === "tool_call");
+    assert.equal(failedToolSpan.attributes["zapcode.tool.name"], "escalateForReview");
+    assert.match(failedToolSpan.attributes["zapcode.tool.error"], /expected object/);
+  },
+);
 
 console.log(`\n${passed} compliance scenario checks passed.`);

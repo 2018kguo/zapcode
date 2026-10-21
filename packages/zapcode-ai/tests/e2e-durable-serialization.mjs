@@ -84,7 +84,9 @@ await test("a top-level closure over a module-level binding survives reload", as
 
 await test("a class instance keeps its fields & methods across reload", async () => {
   let s = createSession({ tools: {} });
-  await s.runChunk(`class Counter { constructor(){ this.n = 0; } inc(){ this.n++; return this; } } const c = new Counter(); c.inc(); c.inc();`);
+  await s.runChunk(
+    `class Counter { constructor(){ this.n = 0; } inc(){ this.n++; return this; } } const c = new Counter(); c.inc(); c.inc();`,
+  );
   s = reload(s);
   const r = await s.runChunk(`c.inc(); c.n`);
   assert.equal(r.output, 3);
@@ -94,7 +96,9 @@ await test("array mutations persist across reloads (heap identity preserved)", a
   let s = createSession({ tools: {} });
   await s.runChunk(`const state = { items: [], count: 0 };`);
   s = reload(s);
-  await s.runChunk(`state.items.push('a'); state.items.push('b'); state.count = state.items.length;`);
+  await s.runChunk(
+    `state.items.push('a'); state.items.push('b'); state.count = state.items.length;`,
+  );
   s = reload(s);
   const r = await s.runChunk(`state.items.join(',') + ':' + state.count`);
   assert.equal(r.output, "a,b:2");
@@ -112,16 +116,23 @@ await test("Map and Set survive reload with their contents", async () => {
   let s = createSession({ tools: {} });
   await s.runChunk(`const m = new Map([['x', 1]]); const set = new Set([1, 2]);`);
   s = reload(s);
-  const r = await s.runChunk(`m.set('y', 2); set.add(3); m.size + ':' + set.size + ':' + m.get('x')`);
+  const r = await s.runChunk(
+    `m.set('y', 2); set.add(3); m.size + ':' + set.size + ':' + m.get('x')`,
+  );
   assert.equal(r.output, "2:3:1");
 });
 
 await test("nested data structure round-trips byte-stably", async () => {
   let s = createSession({ tools: {} });
-  await s.runChunk(`const tree = { id: 1, children: [{ id: 2, children: [] }, { id: 3, children: [{ id: 4 }] }] };`);
+  await s.runChunk(
+    `const tree = { id: 1, children: [{ id: 2, children: [] }, { id: 3, children: [{ id: 4 }] }] };`,
+  );
   s = reload(s);
   const r = await s.runChunk(`JSON.stringify(tree)`);
-  assert.equal(r.output, '{"id":1,"children":[{"id":2,"children":[]},{"id":3,"children":[{"id":4}]}]}');
+  assert.equal(
+    r.output,
+    '{"id":1,"children":[{"id":2,"children":[]},{"id":3,"children":[{"id":4}]}]}',
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -180,7 +191,10 @@ await test("a Promise.all batch suspension carries every call and resumes in ord
   assert.equal(sus.completed, false);
   assert.equal(sus.kind, "suspended_many");
   assert.equal(sus.calls.length, 3);
-  assert.deepEqual(sus.calls.map(c => c.args[0]), ["a", "b", "c"]);
+  assert.deepEqual(
+    sus.calls.map((c) => c.args[0]),
+    ["a", "b", "c"],
+  );
   // Resume the batch with the settled values, in a fresh handle.
   const done = ZapcodeSessionHandle.load(sus.session).resumeMany(["A", "B", "C"]);
   assert.equal(done.completed, true);
@@ -192,7 +206,9 @@ await test("a Promise.all batch suspension carries every call and resumes in ord
 // ---------------------------------------------------------------------------
 
 await test("a tool-using workflow defined in one chunk runs after reload", async () => {
-  const makeTools = () => ({ fetchRow: tool(async ({ id }) => id * 100, { id: { type: "number" } }) });
+  const makeTools = () => ({
+    fetchRow: tool(async ({ id }) => id * 100, { id: { type: "number" } }),
+  });
   let s = createSession({ tools: makeTools() });
   await s.runChunk(`async function step(id){ return await fetchRow({ id }); }`);
   s = loadSession(s.dump(), { tools: makeTools() });
@@ -227,7 +243,9 @@ await test("nested_closure_capture_survives_serialization", async () => {
 
   // Sanity: it works WITHOUT a reload.
   let s = createSession({ tools: {} });
-  const same = await s.runChunk(`function mk(){ let n = 10; return () => ++n; } const inc = mk(); inc() + ',' + inc()`);
+  const same = await s.runChunk(
+    `function mk(){ let n = 10; return () => ++n; } const inc = mk(); inc() + ',' + inc()`,
+  );
   assert.equal(same.output, "11,12");
 
   // After a reload, the captured `n` survives: the next ++n continues from 11.

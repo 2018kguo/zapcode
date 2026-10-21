@@ -45,18 +45,12 @@ await check("flat: Infinity depth", async () => {
 });
 
 await check("flatMap: depth-1 flatten with transform", async () => {
-  const r = await execute(
-    `["hello world", "foo bar"].flatMap(s => s.split(" "))`,
-    {}
-  );
+  const r = await execute(`["hello world", "foo bar"].flatMap(s => s.split(" "))`, {});
   assert.deepEqual(r.output, ["hello", "world", "foo", "bar"]);
 });
 
 await check("flatMap: nested array expand with index", async () => {
-  const r = await execute(
-    `[1,2,3].flatMap((x, i) => [x, i])`,
-    {}
-  );
+  const r = await execute(`[1,2,3].flatMap((x, i) => [x, i])`, {});
   assert.deepEqual(r.output, [1, 0, 2, 1, 3, 2]);
 });
 
@@ -65,34 +59,22 @@ await check("flatMap: nested array expand with index", async () => {
 // ===========================================================================
 
 await check("findLast: returns last matching element", async () => {
-  const r = await execute(
-    `[1,2,3,4,5].findLast(x => x % 2 === 0)`,
-    {}
-  );
+  const r = await execute(`[1,2,3,4,5].findLast(x => x % 2 === 0)`, {});
   assert.equal(r.output, 4);
 });
 
 await check("findLast: returns undefined when no match", async () => {
-  const r = await execute(
-    `[1,3,5].findLast(x => x % 2 === 0)`,
-    {}
-  );
+  const r = await execute(`[1,3,5].findLast(x => x % 2 === 0)`, {});
   assert.equal(r.output, undefined);
 });
 
 await check("findLastIndex: returns index of last matching element", async () => {
-  const r = await execute(
-    `[1,2,3,4,5].findLastIndex(x => x % 2 === 0)`,
-    {}
-  );
+  const r = await execute(`[1,2,3,4,5].findLastIndex(x => x % 2 === 0)`, {});
   assert.equal(r.output, 3);
 });
 
 await check("findLastIndex: returns -1 when no match", async () => {
-  const r = await execute(
-    `[1,3,5].findLastIndex(x => x % 2 === 0)`,
-    {}
-  );
+  const r = await execute(`[1,3,5].findLastIndex(x => x % 2 === 0)`, {});
   assert.equal(r.output, -1);
 });
 
@@ -101,34 +83,28 @@ await check("findLastIndex: returns -1 when no match", async () => {
 // ===========================================================================
 
 await check("splice: delete 1 element", async () => {
-  const r = await execute(
-    `const a = [1,2,3,4,5]; const removed = a.splice(2,1); [a, removed]`,
-    {}
-  );
+  const r = await execute(`const a = [1,2,3,4,5]; const removed = a.splice(2,1); [a, removed]`, {});
   assert.deepEqual(r.output, [[1, 2, 4, 5], [3]]);
 });
 
 await check("splice: insert elements (0 deletions)", async () => {
-  const r = await execute(
-    `const a = [1,2,5]; a.splice(2, 0, 3, 4); a`,
-    {}
-  );
+  const r = await execute(`const a = [1,2,5]; a.splice(2, 0, 3, 4); a`, {});
   assert.deepEqual(r.output, [1, 2, 3, 4, 5]);
 });
 
 await check("splice: replace slice and return removed", async () => {
   const r = await execute(
     `const a = [1,2,3,4,5]; const removed = a.splice(1, 2, 20, 30); [a, removed]`,
-    {}
+    {},
   );
-  assert.deepEqual(r.output, [[1, 20, 30, 4, 5], [2, 3]]);
+  assert.deepEqual(r.output, [
+    [1, 20, 30, 4, 5],
+    [2, 3],
+  ]);
 });
 
 await check("splice: negative start index", async () => {
-  const r = await execute(
-    `const a = [1,2,3,4,5]; a.splice(-2, 1); a`,
-    {}
-  );
+  const r = await execute(`const a = [1,2,3,4,5]; a.splice(-2, 1); a`, {});
   assert.deepEqual(r.output, [1, 2, 3, 5]);
 });
 
@@ -152,10 +128,7 @@ await check("fill: fill with negative end", async () => {
 });
 
 await check("fill: build array via fill+map", async () => {
-  const r = await execute(
-    `new Array(5).fill(0).map((_, i) => i * i)`,
-    {}
-  );
+  const r = await execute(`new Array(5).fill(0).map((_, i) => i * i)`, {});
   assert.deepEqual(r.output, [0, 1, 4, 9, 16]);
 });
 
@@ -215,7 +188,7 @@ await check("sort: stable with comparator (preserves equal-key order)", async ()
     ];
     items.sort((x, y) => x.pri - y.pri).map(i => i.name)
     `,
-    {}
+    {},
   );
   // stable sort: pri=1 → b,d; pri=2 → a,c; pri=3 → e
   assert.deepEqual(r.output, ["b", "d", "a", "c", "e"]);
@@ -262,10 +235,7 @@ await check("reduceRight: string reversal", async () => {
 });
 
 await check("reduceRight: build reversed array", async () => {
-  const r = await execute(
-    `[1,2,3].reduceRight((acc, x) => { acc.push(x); return acc; }, [])`,
-    {}
-  );
+  const r = await execute(`[1,2,3].reduceRight((acc, x) => { acc.push(x); return acc; }, [])`, {});
   assert.deepEqual(r.output, [3, 2, 1]);
 });
 
@@ -280,7 +250,7 @@ await check("computed object keys {[k]: v}", async () => {
     const obj = { [prefix + "a"]: 1, [prefix + "b"]: 2 };
     obj
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, { key_a: 1, key_b: 2 });
 });
@@ -295,7 +265,7 @@ await check("computed key from variable in loop", async () => {
     }
     obj
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, { x: 0, y: 10, z: 20 });
 });
@@ -308,24 +278,18 @@ await check("Object.assign: merges two objects", async () => {
     Object.assign(target, source);
     target
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, { a: 1, b: 99, c: 3 });
 });
 
 await check("Object.assign: returns the mutated target", async () => {
-  const r = await execute(
-    `Object.assign({ a: 1 }, { b: 2 })`,
-    {}
-  );
+  const r = await execute(`Object.assign({ a: 1 }, { b: 2 })`, {});
   assert.deepEqual(r.output, { a: 1, b: 2 });
 });
 
 await check("Object.assign: multi-source merge", async () => {
-  const r = await execute(
-    `Object.assign({}, { a: 1 }, { b: 2 }, { c: 3 })`,
-    {}
-  );
+  const r = await execute(`Object.assign({}, { a: 1 }, { b: 2 }, { c: 3 })`, {});
   assert.deepEqual(r.output, { a: 1, b: 2, c: 3 });
 });
 
@@ -336,7 +300,7 @@ await check("delete operator removes key", async () => {
     delete o.b;
     o
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, { a: 1, c: 3 });
 });
@@ -348,7 +312,7 @@ await check("delete returns true and key becomes undefined", async () => {
     const deleted = delete o.x;
     [deleted, o.x, "x" in o]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [true, undefined, false]);
 });
@@ -359,7 +323,7 @@ await check("in operator: key present and absent", async () => {
     const o = { a: 1, b: undefined };
     ["a" in o, "b" in o, "c" in o]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [true, true, false]);
 });
@@ -370,7 +334,7 @@ await check("in operator on array: numeric index", async () => {
     const a = [10, 20, 30];
     [0 in a, 2 in a, 5 in a]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [true, true, false]);
 });
@@ -383,7 +347,7 @@ await check("Object.freeze: prevents mutation", async () => {
     o.c = 3;
     o
     `,
-    {}
+    {},
   );
   // Frozen object — mutation silently fails in non-strict mode
   assert.deepEqual(r.output, { a: 1, b: 2 });
@@ -394,10 +358,7 @@ await check("Object.freeze: prevents mutation", async () => {
 // ===========================================================================
 
 await check("Set dedup via spread", async () => {
-  const r = await execute(
-    `[...new Set([1,2,2,3,3,3,4])]`,
-    {}
-  );
+  const r = await execute(`[...new Set([1,2,2,3,3,3,4])]`, {});
   assert.deepEqual(r.output, [1, 2, 3, 4]);
 });
 
@@ -409,7 +370,7 @@ await check("Set union", async () => {
     const union = new Set([...a, ...b]);
     [...union].sort((x,y)=>x-y)
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [1, 2, 3, 4, 5]);
 });
@@ -422,7 +383,7 @@ await check("Set intersection", async () => {
     const inter = new Set([...a].filter(x => b.has(x)));
     [...inter].sort((x,y)=>x-y)
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [2, 4]);
 });
@@ -435,7 +396,7 @@ await check("Set difference (a minus b)", async () => {
     const diff = new Set([...a].filter(x => !b.has(x)));
     [...diff].sort((x,y)=>x-y)
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [1, 3]);
 });
@@ -453,7 +414,7 @@ await check("Set.has / add / delete", async () => {
     s.delete(2);
     [s.has(1), s.has(2), s.has(3), s.has(4), s.size]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [true, false, true, true, 3]);
 });
@@ -466,16 +427,13 @@ await check("Set for-of iteration", async () => {
     for (const v of s) out.push(v);
     out
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["x", "y", "z"]);
 });
 
 await check("Array.from(set) preserves insertion order", async () => {
-  const r = await execute(
-    `Array.from(new Set([3,1,2,1,3]))`,
-    {}
-  );
+  const r = await execute(`Array.from(new Set([3,1,2,1,3]))`, {});
   assert.deepEqual(r.output, [3, 1, 2]);
 });
 
@@ -488,7 +446,7 @@ await check("unique-by-key using Set of primitives", async () => {
     ];
     [...new Set(rows.map(r => r.tag))].sort()
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["a", "b", "c"]);
 });
@@ -503,7 +461,7 @@ await check("Map constructor from Object.entries", async () => {
     const m = new Map(Object.entries({ a: 1, b: 2, c: 3 }));
     [m.get("a"), m.get("b"), m.get("c")]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [1, 2, 3]);
 });
@@ -518,7 +476,7 @@ await check("Map: frequency count", async () => {
     }
     [freq.get("apple"), freq.get("banana"), freq.get("cherry")]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [3, 2, 1]);
 });
@@ -539,7 +497,7 @@ await check("Map: group-by with array values", async () => {
     }
     [groups.get("A"), groups.get("B"), groups.get("C")]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [[1, 3], [2, 5], [4]]);
 });
@@ -554,7 +512,7 @@ await check("Map.entries() iteration", async () => {
     }
     pairs
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["x=10", "y=20", "z=30"]);
 });
@@ -567,7 +525,7 @@ await check("Map.keys() iteration", async () => {
     for (const k of m.keys()) keys.push(k);
     keys
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["a", "b"]);
 });
@@ -580,7 +538,7 @@ await check("Map.values() iteration", async () => {
     for (const v of m.values()) vals.push(v);
     vals
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [10, 20]);
 });
@@ -592,7 +550,7 @@ await check("Map.size after deletions", async () => {
     m.delete("b");
     m.size
     `,
-    {}
+    {},
   );
   assert.equal(r.output, 2);
 });
@@ -605,7 +563,7 @@ await check("Map.forEach", async () => {
     m.forEach((val, key) => { out.push(key + ":" + val); });
     out
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["a:1", "b:2", "c:3"]);
 });
@@ -618,7 +576,7 @@ await check("nested Map (Map of Maps)", async () => {
     outer.set("group2", new Map([["x", 99]]));
     [outer.get("group1").get("x"), outer.get("group2").get("x"), outer.get("group1").get("y")]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [10, 99, 20]);
 });
@@ -630,7 +588,7 @@ await check("Map built from array pairs constructor", async () => {
     const m = new Map(pairs);
     [m.get("one"), m.get("two"), m.get("three"), m.size]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [1, 2, 3, 3]);
 });
@@ -647,9 +605,13 @@ await check("zip two arrays", async () => {
     const b = ["a", "b", "c"];
     a.map((x, i) => [x, b[i]])
     `,
-    {}
+    {},
   );
-  assert.deepEqual(r.output, [[1, "a"], [2, "b"], [3, "c"]]);
+  assert.deepEqual(r.output, [
+    [1, "a"],
+    [2, "b"],
+    [3, "c"],
+  ]);
 });
 
 await check("chunk array into groups of N", async () => {
@@ -663,7 +625,7 @@ await check("chunk array into groups of N", async () => {
     }
     chunks
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [[1, 2, 3], [4, 5, 6], [7]]);
 });
@@ -683,7 +645,7 @@ await check("unique-by-key: first occurrence wins", async () => {
     });
     unique.map(r => r.name)
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["Alice", "Bob", "Carol"]);
 });
@@ -698,7 +660,7 @@ await check("sort by multiple keys (pri asc, then name asc)", async () => {
     items.sort((x, y) => x.pri !== y.pri ? x.pri - y.pri : x.name < y.name ? -1 : x.name > y.name ? 1 : 0);
     items.map(i => i.name)
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["a", "d", "b", "c"]);
 });
@@ -709,9 +671,13 @@ await check("transpose 2D matrix", async () => {
     const matrix = [[1,2,3],[4,5,6],[7,8,9]];
     matrix[0].map((_, i) => matrix.map(row => row[i]))
     `,
-    {}
+    {},
   );
-  assert.deepEqual(r.output, [[1, 4, 7], [2, 5, 8], [3, 6, 9]]);
+  assert.deepEqual(r.output, [
+    [1, 4, 7],
+    [2, 5, 8],
+    [3, 6, 9],
+  ]);
 });
 
 await check("partition array into two by predicate", async () => {
@@ -721,9 +687,12 @@ await check("partition array into two by predicate", async () => {
     const [evens, odds] = nums.reduce(([e, o], x) => x % 2 === 0 ? [[...e, x], o] : [e, [...o, x]], [[], []]);
     [evens, odds]
     `,
-    {}
+    {},
   );
-  assert.deepEqual(r.output, [[2, 4, 6], [1, 3, 5]]);
+  assert.deepEqual(r.output, [
+    [2, 4, 6],
+    [1, 3, 5],
+  ]);
 });
 
 // ===========================================================================
@@ -751,12 +720,12 @@ await check("realistic: group by field, count+sum, sorted summary", async () => 
       .sort((a, b) => b.totalAmount - a.totalAmount)
       .map(r => ({ region: r.region, count: r.count, totalAmount: r.totalAmount }))
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [
     { region: "north", count: 1, totalAmount: 310 },
-    { region: "west",  count: 3, totalAmount: 350 },
-    { region: "east",  count: 2, totalAmount: 290 },
+    { region: "west", count: 3, totalAmount: 350 },
+    { region: "east", count: 2, totalAmount: 290 },
   ]);
 });
 
@@ -777,7 +746,7 @@ await check("realistic: top-N per group (top 2 products by revenue)", async () =
       .slice(0, 2)
       .map(e => ({ product: e[0], total: e[1] }))
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [
     { product: "C", total: 400 },
@@ -802,7 +771,7 @@ await check("realistic: pivot product counts per region", async () => {
     }
     pivot
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, {
     west: { widget: 2, gadget: 1 },
@@ -821,7 +790,7 @@ await check("indexOf and lastIndexOf", async () => {
     const a = [1, 2, 3, 2, 1];
     [a.indexOf(2), a.lastIndexOf(2), a.indexOf(9)]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [1, 3, -1]);
 });
@@ -831,10 +800,7 @@ await check("indexOf and lastIndexOf", async () => {
 // Workaround: note that [1, null, 3].includes(null) → true works correctly
 
 await check("concat: multiple arrays and primitives", async () => {
-  const r = await execute(
-    `[1,2].concat([3,4], 5, [6])`,
-    {}
-  );
+  const r = await execute(`[1,2].concat([3,4], 5, [6])`, {});
   assert.deepEqual(r.output, [1, 2, 3, 4, 5, 6]);
 });
 
@@ -844,7 +810,7 @@ await check("every and some", async () => {
     const a = [2, 4, 6, 8];
     [a.every(x => x % 2 === 0), a.some(x => x > 5), a.every(x => x > 5)]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [true, true, false]);
 });
@@ -865,7 +831,7 @@ await check("reverse mutates in place and returns self", async () => {
     const b = a.reverse();
     [a, b === a]
     `,
-    {}
+    {},
   );
   // reverse mutates a and b should be the same reference (same array)
   assert.deepEqual(r.output[0], [5, 4, 3, 2, 1]);
@@ -881,7 +847,7 @@ await check("chained: filter + map + reduce pipeline", async () => {
       .map(x => x * x)
       .reduce((acc, x) => acc + x, 0)
     `,
-    {}
+    {},
   );
   // evens: [2,4,6,8,10] → squares: [4,16,36,64,100] → sum: 220
   assert.equal(r.output, 220);
@@ -897,12 +863,16 @@ await check("Object.keys / values / entries on plain object", async () => {
     const o = { a: 1, b: 2, c: 3 };
     [Object.keys(o), Object.values(o), Object.entries(o)]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [
     ["a", "b", "c"],
     [1, 2, 3],
-    [["a", 1], ["b", 2], ["c", 3]],
+    [
+      ["a", 1],
+      ["b", 2],
+      ["c", 3],
+    ],
   ]);
 });
 
@@ -912,7 +882,7 @@ await check("Object.fromEntries from map", async () => {
     const m = new Map([["x", 10], ["y", 20]]);
     Object.fromEntries(m)
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, { x: 10, y: 20 });
 });
@@ -924,7 +894,7 @@ await check("spread object merge: later keys win", async () => {
     const override = { color: "blue", extra: true };
     ({ ...defaults, ...override })
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, { color: "blue", size: "medium", weight: 1, extra: true });
 });
@@ -941,7 +911,7 @@ await check("deep nested access + optional chaining + nullish coalescing", async
     };
     data.users.map(u => u.profile?.address?.city ?? "unknown")
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["NYC", "unknown", "unknown"]);
 });
@@ -954,7 +924,7 @@ await check("structuredClone: deep clone independence", async () => {
     clone.a.b.push(99);
     [original.a.b, clone.a.b]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output[0], [1, 2, 3]);
   assert.deepEqual(r.output[1], [1, 2, 3, 99]);
@@ -967,7 +937,7 @@ await check("building lookup map with Object.fromEntries + map", async () => {
     const lookup = Object.fromEntries(users.map(u => [u.id, u.name]));
     [lookup[1], lookup[2], lookup[3]]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["Alice", "Bob", "Carol"]);
 });
@@ -977,26 +947,17 @@ await check("building lookup map with Object.fromEntries + map", async () => {
 // ===========================================================================
 
 await check("Array.from with length and mapFn", async () => {
-  const r = await execute(
-    `Array.from({ length: 5 }, (_, i) => i * 2)`,
-    {}
-  );
+  const r = await execute(`Array.from({ length: 5 }, (_, i) => i * 2)`, {});
   assert.deepEqual(r.output, [0, 2, 4, 6, 8]);
 });
 
 await check("Array.from with string (char split)", async () => {
-  const r = await execute(
-    `Array.from("hello")`,
-    {}
-  );
+  const r = await execute(`Array.from("hello")`, {});
   assert.deepEqual(r.output, ["h", "e", "l", "l", "o"]);
 });
 
 await check("Array.from on Set with map function", async () => {
-  const r = await execute(
-    `Array.from(new Set([1, 2, 3]), x => x * 10)`,
-    {}
-  );
+  const r = await execute(`Array.from(new Set([1, 2, 3]), x => x * 10)`, {});
   assert.deepEqual(r.output, [10, 20, 30]);
 });
 
@@ -1012,7 +973,7 @@ await check("sort: comparator returning 0 preserves order (stability)", async ()
     const b = [...a].sort(() => 0);
     b
     `,
-    {}
+    {},
   );
   // stable sort: all equal comparisons → original order preserved
   assert.deepEqual(r.output, [3, 1, 4, 1, 5, 9]);
@@ -1024,7 +985,7 @@ await check("sort: objects by multiple criteria using localeCompare", async () =
     const names = ["Bob", "alice", "Charlie", "alice"];
     names.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["alice", "alice", "Bob", "Charlie"]);
 });
@@ -1056,7 +1017,7 @@ await check("realistic: CSV parse + group + sort pipeline (pure, no tools)", asy
       .map(g => ({ dept: g.dept, avg: g.total / g.count }))
       .sort((a, b) => b.avg - a.avg)
     `,
-    {}
+    {},
   );
   assert.equal(r.output.length, 2);
   assert.equal(r.output[0].dept, "eng");
@@ -1116,57 +1077,72 @@ await check("BUG-forEach: callback never executes (counter stays 0)", async () =
   assert.equal(r.output, 3);
 });
 
-await check("BUG-callback-side-effects: external mutations in callback block bodies never execute", async () => {
-  // Any mutation of variables declared OUTSIDE a callback block body silently fails.
-  // Affects: forEach (entirely), map/filter/reduce side effects.
-  // Return values work; only external-variable mutations are broken.
-  const r = await execute(
-    `
+await check(
+  "BUG-callback-side-effects: external mutations in callback block bodies never execute",
+  async () => {
+    // Any mutation of variables declared OUTSIDE a callback block body silently fails.
+    // Affects: forEach (entirely), map/filter/reduce side effects.
+    // Return values work; only external-variable mutations are broken.
+    const r = await execute(
+      `
     let sum = 0;
     [1,2,3].map(x => { sum = sum + x; return x; });
     sum
     `,
-    {}
-  );
-  // BUG: returns 0 (sum never updated)
-  assert.equal(r.output, 6);
-});
+      {},
+    );
+    // BUG: returns 0 (sum never updated)
+    assert.equal(r.output, 6);
+  },
+);
 
-await check("BUG-computed-key-expr: computed key [expr] always produces key '<computed>'", async () => {
-  // Only computed keys that are plain string literals work: {'x':1} ✓
-  // Any expression (variable, concatenation, method call) produces key '<computed>'.
-  const r = await execute(`const k = "foo"; ({ [k]: 42 })`, {});
-  // BUG: returns { "<computed>": 42 }
-  assert.deepEqual(r.output, { foo: 42 });
-});
+await check(
+  "BUG-computed-key-expr: computed key [expr] always produces key '<computed>'",
+  async () => {
+    // Only computed keys that are plain string literals work: {'x':1} ✓
+    // Any expression (variable, concatenation, method call) produces key '<computed>'.
+    const r = await execute(`const k = "foo"; ({ [k]: 42 })`, {});
+    // BUG: returns { "<computed>": 42 }
+    assert.deepEqual(r.output, { foo: 42 });
+  },
+);
 
-await check("BUG-computed-key-concat: computed key with string concatenation is '<computed>'", async () => {
-  const r = await execute(`const p = "key_"; ({ [p + "a"]: 1, [p + "b"]: 2 })`, {});
-  // BUG: returns { "<computed>": 2 } (second overwrites first)
-  assert.deepEqual(r.output, { key_a: 1, key_b: 2 });
-});
+await check(
+  "BUG-computed-key-concat: computed key with string concatenation is '<computed>'",
+  async () => {
+    const r = await execute(`const p = "key_"; ({ [p + "a"]: 1, [p + "b"]: 2 })`, {});
+    // BUG: returns { "<computed>": 2 } (second overwrites first)
+    assert.deepEqual(r.output, { key_a: 1, key_b: 2 });
+  },
+);
 
-await check("BUG-object-assign-mutation: Object.assign does not mutate the target variable binding", async () => {
-  // Object.assign returns a new object with merged keys.
-  // The original target variable still holds the OLD unmerged object.
-  // Real JS: Object.assign MUTATES the target and returns it (same reference).
-  const r = await execute(
-    `
+await check(
+  "BUG-object-assign-mutation: Object.assign does not mutate the target variable binding",
+  async () => {
+    // Object.assign returns a new object with merged keys.
+    // The original target variable still holds the OLD unmerged object.
+    // Real JS: Object.assign MUTATES the target and returns it (same reference).
+    const r = await execute(
+      `
     const t = { a: 1 };
     Object.assign(t, { b: 2 });
     t.b
     `,
-    {}
-  );
-  // BUG: returns null (t was not mutated; t.b is undefined/null)
-  assert.equal(r.output, 2);
-});
+      {},
+    );
+    // BUG: returns null (t was not mutated; t.b is undefined/null)
+    assert.equal(r.output, 2);
+  },
+);
 
-await check("BUG-delete: delete operator is not supported (throws unsupported syntax)", async () => {
-  // throws: unsupported syntax: delete operator is not supported
-  const r = await execute(`const o = { a: 1, b: 2 }; delete o.b; Object.keys(o)`, {});
-  assert.deepEqual(r.output, ["a"]);
-});
+await check(
+  "BUG-delete: delete operator is not supported (throws unsupported syntax)",
+  async () => {
+    // throws: unsupported syntax: delete operator is not supported
+    const r = await execute(`const o = { a: 1, b: 2 }; delete o.b; Object.keys(o)`, {});
+    assert.deepEqual(r.output, ["a"]);
+  },
+);
 
 await check("object-freeze: Object.freeze silently ignores property mutation", async () => {
   // Frozen objects silently ignore mutations in non-strict mode (now enforced).
@@ -1176,7 +1152,7 @@ await check("object-freeze: Object.freeze silently ignores property mutation", a
     o.a = 99;
     o.a
     `,
-    {}
+    {},
   );
   // The write is ignored, so the frozen value (1) is preserved.
   assert.equal(r.output, 1);
@@ -1191,7 +1167,7 @@ await check("BUG-map-forEach: Map.prototype.forEach is missing", async () => {
     m.forEach((v, k) => out.push(k));
     out
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["a", "b"]);
 });
@@ -1208,29 +1184,32 @@ await check("BUG-map-stores-by-copy: Map stores values by copy, not by reference
     obj.x = 99;
     m.get("k").x
     `,
-    {}
+    {},
   );
   // BUG: returns 1 (mutation of obj not visible via Map.get)
   assert.equal(r.output, 99);
 });
 
-await check("BUG-map-group-by: Map.get(k).push(v) — push result doesn't update Map value", async () => {
-  // Consequence of Map-stores-by-copy bug:
-  // Cannot use Map as a group-by accumulator with mutable array values.
-  // Workaround: use plain object {} as accumulator.
-  const r = await execute(
-    `
+await check(
+  "BUG-map-group-by: Map.get(k).push(v) — push result doesn't update Map value",
+  async () => {
+    // Consequence of Map-stores-by-copy bug:
+    // Cannot use Map as a group-by accumulator with mutable array values.
+    // Workaround: use plain object {} as accumulator.
+    const r = await execute(
+      `
     const m = new Map();
     m.set("A", []);
     m.get("A").push(1);
     m.get("A").push(2);
     m.get("A")
     `,
-    {}
-  );
-  // BUG: returns [] (pushes not reflected; Map holds original empty array snapshot)
-  assert.deepEqual(r.output, [1, 2]);
-});
+      {},
+    );
+    // BUG: returns [] (pushes not reflected; Map holds original empty array snapshot)
+    assert.deepEqual(r.output, [1, 2]);
+  },
+);
 
 await check("BUG-NaN-is-null: NaN literal serializes as null (not IEEE 754 NaN)", async () => {
   // NaN is a valid JavaScript value; it should not be null.
@@ -1245,28 +1224,34 @@ await check("BUG-NaN-is-null: NaN literal serializes as null (not IEEE 754 NaN)"
   // Test that isNaN still works on the "null" output:
 });
 
-await check("BUG-includes-NaN: [1,NaN,3].includes(NaN) returns false (NaN stored as null)", async () => {
-  // In real JS, Array.includes uses SameValueZero which matches NaN to NaN.
-  // In Zapcode, NaN is stored as null, so includes(NaN) checks for null (not found).
-  const r = await execute(`[1,NaN,3].includes(NaN)`, {});
-  // BUG: returns false
-  assert.equal(r.output, true);
-});
+await check(
+  "BUG-includes-NaN: [1,NaN,3].includes(NaN) returns false (NaN stored as null)",
+  async () => {
+    // In real JS, Array.includes uses SameValueZero which matches NaN to NaN.
+    // In Zapcode, NaN is stored as null, so includes(NaN) checks for null (not found).
+    const r = await execute(`[1,NaN,3].includes(NaN)`, {});
+    // BUG: returns false
+    assert.equal(r.output, true);
+  },
+);
 
-await check("BUG-object-fromEntries-Map: Object.fromEntries(map) returns {} — Map not iterable by fromEntries", async () => {
-  // Object.fromEntries([...]) with array pairs works.
-  // Object.fromEntries(map) fails silently, returning {}.
-  // Workaround: Object.fromEntries(map.entries()) works correctly.
-  const r = await execute(
-    `
+await check(
+  "BUG-object-fromEntries-Map: Object.fromEntries(map) returns {} — Map not iterable by fromEntries",
+  async () => {
+    // Object.fromEntries([...]) with array pairs works.
+    // Object.fromEntries(map) fails silently, returning {}.
+    // Workaround: Object.fromEntries(map.entries()) works correctly.
+    const r = await execute(
+      `
     const m = new Map([["x", 10], ["y", 20]]);
     Object.fromEntries(m)
     `,
-    {}
-  );
-  // BUG: returns {}
-  assert.deepEqual(r.output, { x: 10, y: 20 });
-});
+      {},
+    );
+    // BUG: returns {}
+    assert.deepEqual(r.output, { x: 10, y: 20 });
+  },
+);
 
 await check("BUG-array-from-mapfn: Array.from(iterable, mapFn) — mapFn is ignored", async () => {
   // Array.from with a map function (second argument) silently ignores the mapFn.
@@ -1275,13 +1260,16 @@ await check("BUG-array-from-mapfn: Array.from(iterable, mapFn) — mapFn is igno
   assert.deepEqual(r.output, [10, 20, 30]);
 });
 
-await check("BUG-array-from-length-mapfn: Array.from({length:n}, mapFn) — length obj not iterable", async () => {
-  // Array.from({length:n}) returns [] (array-like with length not supported).
-  // Array.from({length:n}, mapFn) also returns [] (mapFn also ignored).
-  const r = await execute(`Array.from({ length: 4 }, (_, i) => i)`, {});
-  // BUG: returns []
-  assert.deepEqual(r.output, [0, 1, 2, 3]);
-});
+await check(
+  "BUG-array-from-length-mapfn: Array.from({length:n}, mapFn) — length obj not iterable",
+  async () => {
+    // Array.from({length:n}) returns [] (array-like with length not supported).
+    // Array.from({length:n}, mapFn) also returns [] (mapFn also ignored).
+    const r = await execute(`Array.from({ length: 4 }, (_, i) => i)`, {});
+    // BUG: returns []
+    assert.deepEqual(r.output, [0, 1, 2, 3]);
+  },
+);
 
 await check("BUG-localeCompare: String.prototype.localeCompare is missing", async () => {
   // throws "type error: undefined is not a function"
@@ -1289,56 +1277,65 @@ await check("BUG-localeCompare: String.prototype.localeCompare is missing", asyn
   assert.equal(r.output, true);
 });
 
-await check("BUG-closure-capture: outer callback param captured as 0 in nested callback", async () => {
-  // When an outer callback parameter (including the index param) is captured
-  // by an inner (nested) callback, the inner callback always sees value 0
-  // (the initial/first iteration value), not the current outer iteration value.
-  // Workaround: pass the outer value explicitly to a named function, not a nested callback.
-  const r = await execute(
-    `
+await check(
+  "BUG-closure-capture: outer callback param captured as 0 in nested callback",
+  async () => {
+    // When an outer callback parameter (including the index param) is captured
+    // by an inner (nested) callback, the inner callback always sees value 0
+    // (the initial/first iteration value), not the current outer iteration value.
+    // Workaround: pass the outer value explicitly to a named function, not a nested callback.
+    const r = await execute(
+      `
     // outer index 'i' should be 0,1,2 — inner callback captures it
     [1,2,3].map((_, i) => [0].map(() => i))
     `,
-    {}
-  );
-  // BUG: returns [[0],[0],[0]] — inner always sees i=0
-  assert.deepEqual(r.output, [[0], [1], [2]]);
-});
+      {},
+    );
+    // BUG: returns [[0],[0],[0]] — inner always sees i=0
+    assert.deepEqual(r.output, [[0], [1], [2]]);
+  },
+);
 
-await check("BUG-closure-capture: outer value param captured as first value in nested callback", async () => {
-  // Not just the index — the value param also always appears as first iteration value.
-  const r = await execute(
-    `
+await check(
+  "BUG-closure-capture: outer value param captured as first value in nested callback",
+  async () => {
+    // Not just the index — the value param also always appears as first iteration value.
+    const r = await execute(
+      `
     ["a","b","c"].map((v, i) => [0].map(() => v))
     `,
-    {}
-  );
-  // BUG: returns [["a"],["a"],["a"]] — inner always sees v="a" (first iteration)
-  assert.deepEqual(r.output, [["a"], ["b"], ["c"]]);
-});
+      {},
+    );
+    // BUG: returns [["a"],["a"],["a"]] — inner always sees v="a" (first iteration)
+    assert.deepEqual(r.output, [["a"], ["b"], ["c"]]);
+  },
+);
 
-await check("BUG-sort-multikey: sort with ternary comparator on object properties gives wrong order", async () => {
-  // Single-key sort works: [{p:2},{p:1}].sort((x,y)=>x.p-y.p) → [{p:1},{p:2}] ✓
-  // But ternary-based comparator on object properties is broken:
-  // x.p !== y.p ? x.p - y.p : 0  — condition evaluates but result is wrong order
-  const r = await execute(
-    `
+await check(
+  "BUG-sort-multikey: sort with ternary comparator on object properties gives wrong order",
+  async () => {
+    // Single-key sort works: [{p:2},{p:1}].sort((x,y)=>x.p-y.p) → [{p:1},{p:2}] ✓
+    // But ternary-based comparator on object properties is broken:
+    // x.p !== y.p ? x.p - y.p : 0  — condition evaluates but result is wrong order
+    const r = await execute(
+      `
     const items = [{p:2,n:"b"},{p:1,n:"a"}];
     items.sort((x, y) => x.p !== y.p ? x.p - y.p : 0);
     items.map(i => i.n)
     `,
-    {}
-  );
-  // BUG: returns ["b","a"] (original order, not sorted by p asc)
-  assert.deepEqual(r.output, ["a", "b"]);
-});
+      {},
+    );
+    // BUG: returns ["b","a"] (original order, not sorted by p asc)
+    assert.deepEqual(r.output, ["a", "b"]);
+  },
+);
 
 // ===========================================================================
 // Summary
 // ===========================================================================
-const failed = results.filter(r => !r[1]);
-const bugs   = results.filter(r => !r[1] && r[0].startsWith("BUG-"));
-const others = results.filter(r => !r[1] && !r[0].startsWith("BUG-"));
+const failed = results.filter((r) => !r[1]);
+const bugs = results.filter((r) => !r[1] && r[0].startsWith("BUG-"));
+const others = results.filter((r) => !r[1] && !r[0].startsWith("BUG-"));
 
 console.log(`\n${results.length - failed.length}/${results.length} passed`);
 if (others.length) {

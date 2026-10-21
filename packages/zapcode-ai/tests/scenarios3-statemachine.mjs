@@ -58,9 +58,9 @@ function createWorkflowTools(events) {
         state: { type: "object", description: "State snapshot after the step." },
         note: { type: "string", optional: true },
       },
-      execute: async input => {
+      execute: async (input) => {
         events.push({ type: "recordStep", input });
-        return { ok: true, index: events.filter(e => e.type === "recordStep").length };
+        return { ok: true, index: events.filter((e) => e.type === "recordStep").length };
       },
     },
     finalizeWorkflow: {
@@ -70,7 +70,7 @@ function createWorkflowTools(events) {
         finalState: { type: "object" },
         stepCount: { type: "number" },
       },
-      execute: async input => {
+      execute: async (input) => {
         events.push({ type: "finalizeWorkflow", input });
         return { finalized: true, runId: input.runId, steps: input.stepCount };
       },
@@ -108,7 +108,7 @@ await test("closure factories: counter + accumulator capture mutable state in on
 
     ({ count: counter.get(), acc: acc.snapshot() })
     `,
-    {}
+    {},
   );
   assert.deepEqual(result.output, {
     count: 13,
@@ -135,7 +135,7 @@ await test("closures capture for-(let) loop variable per-iteration; var shares o
       var: varFns.map(f => f()).join(","),
     })
     `,
-    {}
+    {},
   );
   // Per-iteration `let` binding is correct in this build.
   assert.equal(result.output.let, "0,1,2,3");
@@ -174,7 +174,7 @@ await test("higher-order step functions: compose, pipe, and map/filter/reduce/so
       sorted: sorted.join(","),
     })
     `,
-    {}
+    {},
   );
   assert.deepEqual(result.output, {
     composed: 11, // dbl(5)=10, inc=11
@@ -225,7 +225,7 @@ await test("recursive task-tree expansion produces deterministic depth-first ord
 
     ({ order, count: flat.length, depthSum, maxDepth })
     `,
-    {}
+    {},
   );
   assert.deepEqual(result.output, {
     order: "deploy > build > compile > bundle > minify > migrate > release > notify",
@@ -258,19 +258,19 @@ await test("invalid recordStep arguments reject before the host log is touched",
 
   await assert.rejects(
     () => execute(`await recordStep({ name: "init" })`, tools),
-    /Invalid arguments for tool 'recordStep': missing required parameter 'state'/
+    /Invalid arguments for tool 'recordStep': missing required parameter 'state'/,
   );
   await assert.rejects(
     () => execute(`await recordStep({ name: "init", state: {}, bogus: true })`, tools),
-    /Invalid arguments for tool 'recordStep': unexpected parameter 'bogus'/
+    /Invalid arguments for tool 'recordStep': unexpected parameter 'bogus'/,
   );
   await assert.rejects(
     () => execute(`await recordStep({ name: 42, state: {} })`, tools),
-    /Invalid arguments for tool 'recordStep': parameter 'name' expected string, got number/
+    /Invalid arguments for tool 'recordStep': parameter 'name' expected string, got number/,
   );
   await assert.rejects(
     () => execute(`await recordStep([{ name: "init", state: {} }])`, tools),
-    /Invalid arguments for tool 'recordStep': expected one named object argument/
+    /Invalid arguments for tool 'recordStep': expected one named object argument/,
   );
 
   assert.deepEqual(events, []);
@@ -282,15 +282,16 @@ await test("invalid finalizeWorkflow arguments reject before finalize runs", asy
 
   await assert.rejects(
     () => execute(`await finalizeWorkflow({ runId: "r1", finalState: {} })`, tools),
-    /Invalid arguments for tool 'finalizeWorkflow': missing required parameter 'stepCount'/
+    /Invalid arguments for tool 'finalizeWorkflow': missing required parameter 'stepCount'/,
   );
   await assert.rejects(
-    () => execute(`await finalizeWorkflow({ runId: "r1", finalState: {}, stepCount: "two" })`, tools),
-    /Invalid arguments for tool 'finalizeWorkflow': parameter 'stepCount' expected number, got string/
+    () =>
+      execute(`await finalizeWorkflow({ runId: "r1", finalState: {}, stepCount: "two" })`, tools),
+    /Invalid arguments for tool 'finalizeWorkflow': parameter 'stepCount' expected number, got string/,
   );
   await assert.rejects(
     () => execute(`await finalizeWorkflow({ runId: "r1", finalState: [], stepCount: 1 })`, tools),
-    /Invalid arguments for tool 'finalizeWorkflow': parameter 'finalState' expected object, got array/
+    /Invalid arguments for tool 'finalizeWorkflow': parameter 'finalState' expected object, got array/,
   );
 
   assert.equal(events.length, 0);
@@ -374,7 +375,9 @@ await test("STRESS: durable state machine replays a registry across many dump/lo
   // After all reloads, the top-level state must reflect every step exactly:
   // n: 0 ->seed=1 ->inc=2 ->inc=3 ->double=6 ->inc=7
   session = reload(session, tools);
-  const view = await session.runChunk(`({ n: wf.n, history: wf.history.join(">"), runId: wf.runId })`);
+  const view = await session.runChunk(
+    `({ n: wf.n, history: wf.history.join(">"), runId: wf.runId })`,
+  );
   assert.deepEqual(view.output, {
     n: 7,
     history: "seed>inc>inc>double>inc",
@@ -390,9 +393,9 @@ await test("STRESS: durable state machine replays a registry across many dump/lo
 
   // Host-side recorded-state introspection: the durable log captured the exact
   // running value of n after each step, plus a single finalize.
-  const recorded = events.filter(e => e.type === "recordStep").map(e => e.input.state.n);
+  const recorded = events.filter((e) => e.type === "recordStep").map((e) => e.input.state.n);
   assert.deepEqual(recorded, [1, 2, 3, 6, 7]);
-  const finals = events.filter(e => e.type === "finalizeWorkflow");
+  const finals = events.filter((e) => e.type === "finalizeWorkflow");
   assert.equal(finals.length, 1);
   assert.equal(finals[0].input.stepCount, 5);
 });
@@ -446,7 +449,7 @@ await test("factory-local closure state survives dump/load (matches Node)", asyn
     const tick = makeCounter();
     [tick(), tick(), tick()].join(",")
     `,
-    tools
+    tools,
   );
   assert.equal(inChunk.output, "1,2,3");
 

@@ -56,9 +56,7 @@ console.log("e2e durable session workflows");
 
 await test("a workflow defined in chunk 1 keeps running across many reloads", async () => {
   let s = createSession({ tools: {} });
-  await s.runChunk(
-    `let log = []; function step(name) { log.push(name); return log.length; }`
-  );
+  await s.runChunk(`let log = []; function step(name) { log.push(name); return log.length; }`);
   // Five process hops, each appending one step.
   for (const name of ["a", "b", "c", "d", "e"]) {
     s = reload(s);
@@ -83,7 +81,7 @@ await test("top-level numeric accumulator threads through reloads", async () => 
 await test("a class instance accumulates state across reloads", async () => {
   let s = createSession({ tools: {} });
   await s.runChunk(
-    `class Acc { constructor() { this.items = []; } add(x) { this.items.push(x); return this; } total() { return this.items.reduce((a, b) => a + b, 0); } } const a = new Acc();`
+    `class Acc { constructor() { this.items = []; } add(x) { this.items.push(x); return this; } total() { return this.items.reduce((a, b) => a + b, 0); } } const a = new Acc();`,
   );
   s = reload(s);
   await s.runChunk(`a.add(3).add(4);`);
@@ -112,7 +110,7 @@ await test("a tool-using async workflow accumulates results across reloads", asy
   });
   let s = createSession({ tools: makeTools() });
   await s.runChunk(
-    `let results = []; async function collect(id) { results.push(await fetchScore({ id })); return results.length; }`
+    `let results = []; async function collect(id) { results.push(await fetchScore({ id })); return results.length; }`,
   );
   s = loadSession(s.dump(), { tools: makeTools() });
   await s.runChunk(`await collect(1);`);
@@ -129,7 +127,7 @@ await test("a parallel tool batch inside a reloaded workflow resolves in order",
   });
   let s = createSession({ tools: makeTools() });
   await s.runChunk(
-    `async function loadAll(keys) { return await Promise.all(keys.map(k => load({ k }))); }`
+    `async function loadAll(keys) { return await Promise.all(keys.map(k => load({ k }))); }`,
   );
   s = loadSession(s.dump(), { tools: makeTools() });
   const r = await s.runChunk(`(await loadAll(['a', 'b', 'c'])).join('-')`);
@@ -207,7 +205,9 @@ await test("dump() is idempotent for an idle session", async () => {
   assert.equal(d1.length, d2.length);
   assert.ok(d1.length > 0);
   // and reloading either preserves the value
-  const r = await loadSession(d2, { tools: {} }).runChunk(`config.retries + ':' + config.tags.join('')`);
+  const r = await loadSession(d2, { tools: {} }).runChunk(
+    `config.retries + ':' + config.tags.join('')`,
+  );
   assert.equal(r.output, "3:xy");
 });
 
@@ -266,7 +266,7 @@ await test("a live generator instance held at top level makes the session un-dum
   const s = createSession({ tools: {} });
   await assert.rejects(
     () => s.runChunk(`function* g() { yield 1; yield 2; } const it = g(); it.next().value`),
-    /generators cannot be persisted/
+    /generators cannot be persisted/,
   );
 });
 
@@ -275,7 +275,7 @@ await test("driving a generator to completion inside one chunk is fine", async (
   // values at the top level.
   let s = createSession({ tools: {} });
   await s.runChunk(
-    `function* g() { yield 1; yield 2; yield 3; } let collected = []; for (const v of g()) collected.push(v);`
+    `function* g() { yield 1; yield 2; yield 3; } let collected = []; for (const v of g()) collected.push(v);`,
   );
   s = reload(s);
   const r = await s.runChunk(`collected.join(',')`);

@@ -66,7 +66,10 @@ function createSupportTools(state = {}) {
       },
       execute: async ({ accountIds }) => {
         lookups.push([...accountIds]);
-        return accountIds.map(accountId => ACCOUNTS[accountId] ?? { accountId, tier: "unknown", ownerId: null, openTickets: 0 });
+        return accountIds.map(
+          (accountId) =>
+            ACCOUNTS[accountId] ?? { accountId, tier: "unknown", ownerId: null, openTickets: 0 },
+        );
       },
     },
     getAccountOwner: {
@@ -79,7 +82,9 @@ function createSupportTools(state = {}) {
           throw new Error(`CRM owner lookup failed for ${accountId}`);
         }
         const account = ACCOUNTS[accountId];
-        return account?.ownerId ? { ownerId: account.ownerId, displayName: account.ownerId.replace("owner_", "") } : null;
+        return account?.ownerId
+          ? { ownerId: account.ownerId, displayName: account.ownerId.replace("owner_", "") }
+          : null;
       },
     },
     routeTicket: {
@@ -94,7 +99,7 @@ function createSupportTools(state = {}) {
         reason: { type: "string" },
         metadata: { type: "object", optional: true },
       },
-      execute: async input => {
+      execute: async (input) => {
         routed.push(input);
         return { routed: true, messageId: input.messageId, escalationPath: input.escalationPath };
       },
@@ -110,7 +115,7 @@ function createSupportTools(state = {}) {
         recommendedQueue: { type: "string" },
         metadata: { type: "object", optional: true },
       },
-      execute: async input => {
+      execute: async (input) => {
         fallbacks.push(input);
         return { saved: true, status: input.status };
       },
@@ -173,7 +178,7 @@ await test("classifies inbound messages and batches CRM account lookup before ro
 
     decisions
     `,
-    harness.tools
+    harness.tools,
   );
 
   assert.equal(harness.lookups.length, 1);
@@ -185,7 +190,7 @@ await test("classifies inbound messages and batches CRM account lookup before ro
   assert.equal(harness.routed[0].escalationPath, "account-owner-and-oncall");
   assert.equal(harness.routed[1].classification, "billing_refund");
   assert.equal(harness.routed[1].priority, 3);
-  assert.equal(result.toolCalls.filter(call => call.name === "batchLookupAccounts").length, 1);
+  assert.equal(result.toolCalls.filter((call) => call.name === "batchLookupAccounts").length, 1);
   assert.deepEqual(result.toolCalls.at(-1).input, harness.routed[1]);
 });
 
@@ -205,9 +210,9 @@ await test("validates required routing arguments before host side effects", asyn
           reason: "missing ownerId should fail before persistence",
         })
         `,
-        harness.tools
+        harness.tools,
       ),
-    /Invalid arguments for tool 'routeTicket': missing required parameter 'ownerId'/
+    /Invalid arguments for tool 'routeTicket': missing required parameter 'ownerId'/,
   );
 
   assert.deepEqual(harness.routed, []);
@@ -250,7 +255,7 @@ await test("chooses owner escalation for enterprise incident and manager fallbac
 
     paths
     `,
-    harness.tools
+    harness.tools,
   );
 
   assert.deepEqual(result.output, ["named-account-owner", "support-manager"]);
@@ -298,7 +303,7 @@ await test("catches failed tool calls and returns a structured manual-triage fal
     }
     outcome
     `,
-    harness.tools
+    harness.tools,
   );
 
   assert.deepEqual(harness.routed, []);
@@ -307,7 +312,7 @@ await test("catches failed tool calls and returns a structured manual-triage fal
   assert.equal(harness.fallbacks[0].classification, "technical_incident");
   assert.match(harness.fallbacks[0].error, /CRM owner lookup failed for acct_broken/);
   assert.equal(result.output.recommendedQueue, "enterprise-support-manager");
-  const failedOwnerCall = result.toolCalls.find(call => call.name === "getAccountOwner");
+  const failedOwnerCall = result.toolCalls.find((call) => call.name === "getAccountOwner");
   assert.match(failedOwnerCall.error, /CRM owner lookup failed for acct_broken/);
   assert.deepEqual(result.toolCalls.at(-1).input, harness.fallbacks[0]);
 });
@@ -334,7 +339,7 @@ await test("optional chaining and nullish coalescing work inside tool argument o
     }
     true
     `,
-    harness.tools
+    harness.tools,
   );
 
   assert.equal(result.output, true);

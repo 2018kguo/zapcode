@@ -44,11 +44,11 @@ async function check(name, fn) {
 // Shared fixtures
 // ---------------------------------------------------------------------------
 const SALES = [
-  { id: 1, region: "west",  product: "widget", amount: 120, qty: 3 },
-  { id: 2, region: "east",  product: "gadget", amount: 200, qty: 2 },
-  { id: 3, region: "west",  product: "gadget", amount: 150, qty: 1 },
-  { id: 4, region: "east",  product: "widget", amount: 90,  qty: 4 },
-  { id: 5, region: "west",  product: "widget", amount: 80,  qty: 2 },
+  { id: 1, region: "west", product: "widget", amount: 120, qty: 3 },
+  { id: 2, region: "east", product: "gadget", amount: 200, qty: 2 },
+  { id: 3, region: "west", product: "gadget", amount: 150, qty: 1 },
+  { id: 4, region: "east", product: "widget", amount: 90, qty: 4 },
+  { id: 5, region: "west", product: "widget", amount: 80, qty: 2 },
   { id: 6, region: "north", product: "gadget", amount: 310, qty: 5 },
 ];
 function salesTools() {
@@ -76,7 +76,7 @@ await check("group-by reduce: sum amount by region", async () => {
     }, {});
     totals
     `,
-    salesTools()
+    salesTools(),
   );
   assert.deepEqual(r.output, { west: 350, east: 290, north: 310 });
 });
@@ -98,7 +98,7 @@ await check("reduce: count and average qty per product", async () => {
     }
     result
     `,
-    salesTools()
+    salesTools(),
   );
   assert.equal(r.output.widget.count, 3);
   assert.equal(r.output.widget.avgQty, 3);
@@ -126,7 +126,7 @@ await check("dedup by id using Map.set + Object collect", async () => {
     }
     deduped.map(r => r.id)
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [1, 2, 3]);
 });
@@ -164,11 +164,11 @@ await check("merge two datasets by id (left join via plain object lookup)", asyn
     });
     merged
     `,
-    tools
+    tools,
   );
   assert.deepEqual(r.output, [
     { id: 10, name: "Alice", score: 95 },
-    { id: 20, name: "Bob",   score: 80 },
+    { id: 20, name: "Bob", score: 80 },
     { id: 30, name: "Carol", score: null },
   ]);
 });
@@ -184,7 +184,7 @@ await check("filter west region, sort by amount desc, top 2", async () => {
       .slice(0, 2);
     top.map(s => s.id)
     `,
-    salesTools()
+    salesTools(),
   );
   // west: id1=120, id3=150, id5=80 → sorted desc: id3, id1
   assert.deepEqual(r.output, [3, 1]);
@@ -196,7 +196,7 @@ await check("paginated fetch via while loop + .map() workaround", async () => {
   const pages = [
     { records: [{ id: 1 }, { id: 2 }], nextCursor: "c1" },
     { records: [{ id: 3 }, { id: 4 }], nextCursor: "c2" },
-    { records: [{ id: 5 }],            nextCursor: null  },
+    { records: [{ id: 5 }], nextCursor: null },
   ];
   let callIdx = 0;
   const tools = {
@@ -219,7 +219,7 @@ await check("paginated fetch via while loop + .map() workaround", async () => {
     }
     all
     `,
-    tools
+    tools,
   );
   assert.deepEqual(r.output, [1, 2, 3, 4, 5]);
 });
@@ -235,7 +235,7 @@ await check("flatMap to flatten nested arrays and pluck fields", async () => {
     ];
     departments.flatMap(d => d.employees.map(e => e.name))
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["Alice", "Bob", "Carol", "Dave", "Eve"]);
 });
@@ -254,11 +254,11 @@ await check("rename keys with object spread (workaround: named param + dot-acces
     }));
     renamed
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [
     { id: 1, name: "Alice Smith" },
-    { id: 2, name: "Bob Jones"  },
+    { id: 2, name: "Bob Jones" },
   ]);
 });
 
@@ -269,7 +269,12 @@ await check("JSON.parse from tool, transform, JSON.stringify", async () => {
       description: "Return a raw JSON string.",
       parameters: {},
       execute: async () =>
-        JSON.stringify({ events: [{ ts: 1000, type: "click" }, { ts: 2000, type: "view" }] }),
+        JSON.stringify({
+          events: [
+            { ts: 1000, type: "click" },
+            { ts: 2000, type: "view" },
+          ],
+        }),
     },
   };
   const r = await execute(
@@ -279,15 +284,12 @@ await check("JSON.parse from tool, transform, JSON.stringify", async () => {
     const mapped = data.events.map(e => ({ ts: e.ts, type: e.type, tsMs: e.ts * 1000 }));
     JSON.stringify(mapped)
     `,
-    tools
+    tools,
   );
-  assert.deepEqual(
-    JSON.parse(r.output),
-    [
-      { ts: 1000, type: "click", tsMs: 1000000 },
-      { ts: 2000, type: "view",  tsMs: 2000000 },
-    ]
-  );
+  assert.deepEqual(JSON.parse(r.output), [
+    { ts: 1000, type: "click", tsMs: 1000000 },
+    { ts: 2000, type: "view", tsMs: 2000000 },
+  ]);
 });
 
 // 10. Derived fields: normalize email, compute revenue
@@ -306,7 +308,7 @@ await check("derived fields: normalize email, compute revenue", async () => {
       revenue: Number(rec.price) * Number(rec.qty),
     }))
     `,
-    {}
+    {},
   );
   assert.equal(r.output[0].email, "alice@example.com");
   assert.equal(r.output[0].revenue, 19.99 * 3);
@@ -317,9 +319,11 @@ await check("derived fields: normalize email, compute revenue", async () => {
 // 11. Partition into buckets
 // Workaround: use plain object + for-of with explicit const arr = bucket.prop; arr.push()
 // OR: use separate arrays and combine at the end
-await check("partition records into buckets by score range (workaround: separate arrays)", async () => {
-  const r = await execute(
-    `
+await check(
+  "partition records into buckets by score range (workaround: separate arrays)",
+  async () => {
+    const r = await execute(
+      `
     const scores = [10, 45, 62, 78, 91, 55, 33, 88];
     const low = [], mid = [], high = [];
     for (const s of scores) {
@@ -329,14 +333,15 @@ await check("partition records into buckets by score range (workaround: separate
     }
     ({ low, mid, high })
     `,
-    {}
-  );
-  assert.deepEqual(r.output, {
-    low:  [10, 33],
-    mid:  [45, 62, 55],
-    high: [78, 91, 88],
-  });
-});
+      {},
+    );
+    assert.deepEqual(r.output, {
+      low: [10, 33],
+      mid: [45, 62, 55],
+      high: [78, 91, 88],
+    });
+  },
+);
 
 // 12. Parallel fan-out: Promise.all([fetchA, fetchB, fetchC]) then combine
 // Workaround: avoid Map constructor (BUG-C), use for-of + object lookup instead
@@ -354,8 +359,8 @@ await check("parallel fan-out: Promise.all then combine (plain object lookup)", 
       description: "Return customers.",
       parameters: {},
       execute: async () => [
-        { customerId: 10, name: "Alice", tier: "gold"   },
-        { customerId: 20, name: "Bob",   tier: "silver" },
+        { customerId: 10, name: "Alice", tier: "gold" },
+        { customerId: 20, name: "Bob", tier: "silver" },
       ],
     },
     fetchDiscounts: {
@@ -382,11 +387,11 @@ await check("parallel fan-out: Promise.all then combine (plain object lookup)", 
       };
     })
     `,
-    tools
+    tools,
   );
   assert.deepEqual(r.output, [
     { orderId: 1, customer: "Alice", total: 200, discounted: 160 },
-    { orderId: 2, customer: "Bob",   total: 350, discounted: 315 },
+    { orderId: 2, customer: "Bob", total: 350, discounted: 315 },
   ]);
 });
 
@@ -422,12 +427,12 @@ await check("join: enrich line-items with product catalog", async () => {
       return { lineId: li.lineId, name: prod.name, qty: li.qty, subtotal: li.qty * prod.unitPrice };
     })
     `,
-    tools
+    tools,
   );
   assert.deepEqual(r.output, [
-    { lineId: 1, name: "Widget", qty: 2, subtotal: 20  },
+    { lineId: 1, name: "Widget", qty: 2, subtotal: 20 },
     { lineId: 2, name: "Gadget", qty: 5, subtotal: 125 },
-    { lineId: 3, name: "Widget", qty: 1, subtotal: 10  },
+    { lineId: 3, name: "Widget", qty: 1, subtotal: 10 },
   ]);
 });
 
@@ -442,7 +447,7 @@ await check("Object.entries + reduce to filter inventory", async () => {
     }
     inStock
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, { apples: 50, cherries: 120, elderberries: 15 });
 });
@@ -454,7 +459,7 @@ await check("String coercion and padStart for zero-padded IDs", async () => {
     const ids = [1, 23, 456, 7890];
     ids.map(id => String(id).padStart(6, "0"))
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["000001", "000023", "000456", "007890"]);
 });
@@ -483,7 +488,7 @@ await check("sequential per-record enrichment via for-of + tool call", async () 
     }
     users.filter(u => u.active).map(u => u.id)
     `,
-    tools
+    tools,
   );
   assert.deepEqual(r.output, [101, 103]);
 });
@@ -513,7 +518,7 @@ await check("CSV-ish parse + transform + aggregate pipeline", async () => {
       return acc;
     }, {})
     `,
-    tools
+    tools,
   );
   assert.deepEqual(r.output, { west: 250, east: 250, north: 300 });
 });
@@ -531,7 +536,7 @@ await check("compute ordinal rank via sort + index", async () => {
     const sorted = [...scores].sort((a, b) => b.score - a.score);
     sorted.map((s, i) => ({ name: s.name, rank: i + 1 })).map(r => r.name)
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["Carol", "Alice", "Bob", "Dave"]);
 });
@@ -544,7 +549,7 @@ await check("spread merge of two arrays preserves order", async () => {
     const b = [4, 5, 6];
     [...a, ...b]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [1, 2, 3, 4, 5, 6]);
 });
@@ -560,7 +565,7 @@ await check("nullish coalescing and optional chaining", async () => {
     ];
     rows.map(r => r.meta?.label ?? "unknown")
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["foo", "unknown", "unknown"]);
 });
@@ -588,7 +593,7 @@ await check("generator function iterated with for-of", async () => {
     for (const x of range(1, 6)) out.push(x);
     out
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [1, 2, 3, 4, 5]);
 });
@@ -603,7 +608,7 @@ await check("Map.set / Map.get / Map.has basic operations", async () => {
     m.set("c", 3);
     [m.get("a"), m.get("b"), m.has("c"), m.has("z")]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [1, 2, true, false]);
 });
@@ -620,11 +625,11 @@ await check("destructuring assignment in function body (not param pattern)", asy
     }
     [normalize({ name: "Alice", score: 90 }), normalize({ name: "Bob", active: false })]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [
-    { name: "Alice", active: true,  score: 90 },
-    { name: "Bob",   active: false, score: 0  },
+    { name: "Alice", active: true, score: 90 },
+    { name: "Bob", active: false, score: 0 },
   ]);
 });
 
@@ -642,7 +647,7 @@ await check("BUG-A: push on array inside object literal mutates object reference
     o.a.push(1);
     o
     `,
-    {}
+    {},
   );
   // BUG: actual output is [1] (array) — should be { a: [1] }
   assert.deepEqual(r.output, { a: [1] });
@@ -658,7 +663,7 @@ await check("BUG-B: for-of body: inline r.prop arg to push() yields empty result
     for (const r of items) out.push(r.id);
     out
     `,
-    {}
+    {},
   );
   // BUG: actual output is []
   assert.deepEqual(r.output, [1, 2, 3]);
@@ -671,24 +676,27 @@ await check("BUG-C: new Map(arrayOfPairs) — constructor ignores pairs", async 
     const m = new Map([["alpha", 1], ["beta", 2]]);
     [m.has("alpha"), m.get("alpha"), m.has("beta")]
     `,
-    {}
+    {},
   );
   // BUG: actual output is [false, null, false]
   assert.deepEqual(r.output, [true, 1, true]);
 });
 
-await check("BUG-D: arrow ({ a }) => expr — destructured binding resolves to whole arg", async () => {
-  // const f = ({ a }) => a; f({ a: 42 }) returns { a: 42 } instead of 42
-  const r = await execute(
-    `
+await check(
+  "BUG-D: arrow ({ a }) => expr — destructured binding resolves to whole arg",
+  async () => {
+    // const f = ({ a }) => a; f({ a: 42 }) returns { a: 42 } instead of 42
+    const r = await execute(
+      `
     const f = ({ a }) => a;
     f({ a: 42 })
     `,
-    {}
-  );
-  // BUG: returns { a: 42 } (whole object)
-  assert.equal(r.output, 42);
-});
+      {},
+    );
+    // BUG: returns { a: 42 } (whole object)
+    assert.equal(r.output, 42);
+  },
+);
 
 await check("BUG-E: function({ a, b }) param destructuring — first param = whole obj", async () => {
   // function f({ a, b }) { return [a, b]; } f({ a:10, b:20 }) → [{ a:10, b:20 }, null]
@@ -697,7 +705,7 @@ await check("BUG-E: function({ a, b }) param destructuring — first param = who
     function f({ a, b }) { return [a, b]; }
     f({ a: 10, b: 20 })
     `,
-    {}
+    {},
   );
   // BUG: returns [{ a: 10, b: 20 }, null]
   assert.deepEqual(r.output, [10, 20]);
@@ -712,7 +720,7 @@ await check("BUG-F: for-of inline destructuring — all pattern-bound vars are n
     for (const { id, name } of rows) out.push({ id, name });
     out
     `,
-    {}
+    {},
   );
   // BUG: returns [{ id: null, name: null }, { id: null, name: null }]
   assert.deepEqual(r.output, [
@@ -738,10 +746,7 @@ await check("MISSING-BUILTIN: parseFloat", async () => {
 
 await check("MISSING-BUILTIN: Object.fromEntries", async () => {
   // throws "type error: Object.fromEntries is not a function"
-  const r = await execute(
-    `Object.fromEntries([["a", 1], ["b", 2]])`,
-    {}
-  );
+  const r = await execute(`Object.fromEntries([["a", 1], ["b", 2]])`, {});
   assert.deepEqual(r.output, { a: 1, b: 2 });
 });
 
@@ -765,7 +770,7 @@ await check("MISSING-BUILTIN: structuredClone", async () => {
     c.x.y = 99;
     [o.x.y, c.x.y]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [1, 99]);
 });
@@ -776,19 +781,22 @@ await check("MISSING-BUILTIN: Set constructor", async () => {
   assert.equal(r.output, 3);
 });
 
-await check("MISSING-BUILTIN: Map.size is broken (returns 'function' type instead of number)", async () => {
-  // m.size should be a number; instead it is a function (getter not working)
-  const r = await execute(
-    `
+await check(
+  "MISSING-BUILTIN: Map.size is broken (returns 'function' type instead of number)",
+  async () => {
+    // m.size should be a number; instead it is a function (getter not working)
+    const r = await execute(
+      `
     const m = new Map();
     m.set("a", 1);
     m.set("b", 2);
     m.size
     `,
-    {}
-  );
-  assert.equal(r.output, 2);
-});
+      {},
+    );
+    assert.equal(r.output, 2);
+  },
+);
 
 await check("MISSING-BUILTIN: Array.from(map.values())", async () => {
   // throws "type error: Array.values is not a function" (mistakenly calls Array.values)
@@ -799,7 +807,7 @@ await check("MISSING-BUILTIN: Array.from(map.values())", async () => {
     m.set("b", 2);
     Array.from(m.values())
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [1, 2]);
 });
@@ -812,7 +820,7 @@ await check("MISSING-BUILTIN: spread over generator is not iterable", async () =
     function* gen() { yield 1; yield 2; yield 3; }
     [...gen()]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [1, 2, 3]);
 });
@@ -820,14 +828,16 @@ await check("MISSING-BUILTIN: spread over generator is not iterable", async () =
 // ===========================================================================
 // Summary
 // ===========================================================================
-const failed = results.filter(r => !r[1]);
-const bugs   = results.filter(r => !r[1] && r[0].startsWith("BUG-"));
-const missing = results.filter(r => !r[1] && r[0].startsWith("MISSING-"));
-const etl    = results.filter(r => !r[1] && !r[0].startsWith("BUG-") && !r[0].startsWith("MISSING-"));
+const failed = results.filter((r) => !r[1]);
+const bugs = results.filter((r) => !r[1] && r[0].startsWith("BUG-"));
+const missing = results.filter((r) => !r[1] && r[0].startsWith("MISSING-"));
+const etl = results.filter(
+  (r) => !r[1] && !r[0].startsWith("BUG-") && !r[0].startsWith("MISSING-"),
+);
 
 console.log(`\n${results.length - failed.length}/${results.length} passed`);
-if (etl.length)     console.log(`  ETL scenario failures (unexpected): ${etl.length}`);
-if (bugs.length)    console.log(`  Confirmed interpreter bugs (expected to fail): ${bugs.length}`);
+if (etl.length) console.log(`  ETL scenario failures (unexpected): ${etl.length}`);
+if (bugs.length) console.log(`  Confirmed interpreter bugs (expected to fail): ${bugs.length}`);
 if (missing.length) console.log(`  Missing builtins (expected to fail): ${missing.length}`);
 
 if (etl.length) {

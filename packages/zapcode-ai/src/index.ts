@@ -308,10 +308,7 @@ function generateDeclaration(name: string, def: ToolDefinition): string {
   return `declare function ${name}(${params}): Promise<unknown>;`;
 }
 
-function buildSystemPrompt(
-  tools: Record<string, ToolDefinition>,
-  userSystem?: string
-): string {
+function buildSystemPrompt(tools: Record<string, ToolDefinition>, userSystem?: string): string {
   const toolDocs = Object.entries(tools)
     .map(([name, def]) => {
       const signature =
@@ -412,7 +409,9 @@ function isValidIdentifier(name: string): boolean {
 function validateToolDefinitions(toolDefs: Record<string, ToolDefinition>): void {
   for (const name of Object.keys(toolDefs)) {
     if (!isValidIdentifier(name)) {
-      throw new Error(`Invalid tool name '${name}': tool names must be valid JavaScript identifiers.`);
+      throw new Error(
+        `Invalid tool name '${name}': tool names must be valid JavaScript identifiers.`,
+      );
     }
     if (RESERVED_TOOL_NAMES.has(name)) {
       throw new Error(`Invalid tool name '${name}': this name is reserved by Zapcode.`);
@@ -459,8 +458,8 @@ function sanitizeToolResult(value: unknown, seen: WeakSet<object> = new WeakSet(
     for (const [k, v] of value) out[String(k)] = sanitizeToolResult(v, seen);
     return out;
   }
-  if (value instanceof Set) return Array.from(value, v => sanitizeToolResult(v, seen));
-  if (Array.isArray(value)) return value.map(v => sanitizeToolResult(v, seen));
+  if (value instanceof Set) return Array.from(value, (v) => sanitizeToolResult(v, seen));
+  if (Array.isArray(value)) return value.map((v) => sanitizeToolResult(v, seen));
   if (typeof value === "object") {
     if (seen.has(value)) return null; // break accidental cycles
     seen.add(value);
@@ -500,15 +499,13 @@ function formatToolSignature(name: string, def: ToolDefinition): string {
   const params = Object.entries(def.parameters)
     .map(([paramName, param]) => `${paramName}${param.optional ? "?" : ""}: ${param.type}`)
     .join(", ");
-  return Object.keys(def.parameters).length > 1
-    ? `${name}({ ${params} })`
-    : `${name}(${params})`;
+  return Object.keys(def.parameters).length > 1 ? `${name}({ ${params} })` : `${name}(${params})`;
 }
 
 function buildNamedArgs(
   functionName: string,
   toolDef: ToolDefinition,
-  args: unknown[]
+  args: unknown[],
 ): Record<string, unknown> {
   const paramEntries = Object.entries(toolDef.parameters);
   const paramNames = paramEntries.map(([name]) => name);
@@ -528,29 +525,28 @@ function buildNamedArgs(
   if (paramEntries.length > 1 && !usesNamedObject) {
     throw new Error(
       `Invalid arguments for tool '${functionName}': expected one named object argument. ` +
-        `Use ${formatToolSignature(functionName, toolDef)}.`
+        `Use ${formatToolSignature(functionName, toolDef)}.`,
     );
   }
-  const namedArgs =
-    usesNamedObject
-      ? { ...singleObjectArg }
-      : Object.fromEntries(paramNames.map((name, index) => [name, args[index]]));
+  const namedArgs = usesNamedObject
+    ? { ...singleObjectArg }
+    : Object.fromEntries(paramNames.map((name, index) => [name, args[index]]));
 
   if (!usesNamedObject) {
     const extraCount = args.length - paramNames.length;
     if (extraCount > 0) {
       throw new Error(
         `Invalid arguments for tool '${functionName}': received ${args.length} positional ` +
-          `arguments but expected ${paramNames.length}. Use ${formatToolSignature(functionName, toolDef)}.`
+          `arguments but expected ${paramNames.length}. Use ${formatToolSignature(functionName, toolDef)}.`,
       );
     }
   }
 
-  const unexpected = Object.keys(namedArgs).filter(name => !toolDef.parameters[name]);
+  const unexpected = Object.keys(namedArgs).filter((name) => !toolDef.parameters[name]);
   if (unexpected.length > 0) {
     throw new Error(
       `Invalid arguments for tool '${functionName}': unexpected parameter '${unexpected[0]}'. ` +
-        `Expected ${formatToolSignature(functionName, toolDef)}.`
+        `Expected ${formatToolSignature(functionName, toolDef)}.`,
     );
   }
 
@@ -560,7 +556,7 @@ function buildNamedArgs(
       if (!paramDef.optional) {
         throw new Error(
           `Invalid arguments for tool '${functionName}': missing required parameter '${paramName}'. ` +
-            `Expected ${formatToolSignature(functionName, toolDef)}.`
+            `Expected ${formatToolSignature(functionName, toolDef)}.`,
         );
       }
       delete namedArgs[paramName];
@@ -578,7 +574,7 @@ function buildNamedArgs(
     if (!matchesParamType(value, paramDef)) {
       throw new Error(
         `Invalid arguments for tool '${functionName}': parameter '${paramName}' expected ` +
-          `${paramDef.type}, got ${jsTypeName(value)}. Expected ${formatToolSignature(functionName, toolDef)}.`
+          `${paramDef.type}, got ${jsTypeName(value)}. Expected ${formatToolSignature(functionName, toolDef)}.`,
       );
     }
   }
@@ -588,7 +584,7 @@ function buildNamedArgs(
 
 function shouldTreatSingleObjectArgAsNamed(
   toolDef: ToolDefinition,
-  arg: Record<string, unknown>
+  arg: Record<string, unknown>,
 ): boolean {
   const entries = Object.entries(toolDef.parameters);
   if (entries.length !== 1) return false;
@@ -601,7 +597,7 @@ function shouldTreatSingleObjectArgAsNamed(
 
   // For a single object param, support foo({ payload: {...} }) as named input,
   // but keep foo({ arbitrary: "shape" }) as the payload value itself.
-  return Object.keys(arg).length === 1 || Object.keys(arg).some(key => !toolDef.parameters[key]);
+  return Object.keys(arg).length === 1 || Object.keys(arg).some((key) => !toolDef.parameters[key]);
 }
 
 // ---------------------------------------------------------------------------
@@ -617,9 +613,7 @@ function declarationForTypeCheck(name: string, def: ToolDefinition): string {
   const ret = def.returns ? `Promise<${def.returns}>` : "Promise<any>";
   const entries = Object.entries(def.parameters);
   if (entries.length > 1) {
-    const fields = entries
-      .map(([p, d]) => `${p}${d.optional ? "?" : ""}: ${d.type}`)
-      .join("; ");
+    const fields = entries.map(([p, d]) => `${p}${d.optional ? "?" : ""}: ${d.type}`).join("; ");
     return `declare function ${name}(input: { ${fields} }): ${ret};`;
   }
   if (entries.length === 0) {
@@ -685,7 +679,7 @@ export interface TypecheckOptions {
 }
 
 const TYPECHECK_LIB_DECLS =
-  '\ndeclare const console: { log(...args: any[]): void; error(...args: any[]): void; warn(...args: any[]): void };\n';
+  "\ndeclare const console: { log(...args: any[]): void; error(...args: any[]): void; warn(...args: any[]): void };\n";
 
 function buildToolDeclarations(toolDefs: Record<string, ToolDefinition>): string {
   return (
@@ -715,7 +709,7 @@ function wrapAgentCode(code: string): string {
 export async function typecheck(
   code: string,
   toolDefs: Record<string, ToolDefinition>,
-  options: TypecheckOptions = {}
+  options: TypecheckOptions = {},
 ): Promise<TypecheckResult> {
   const engine = options.engine ?? "auto";
   const strict = options.strict ?? true;
@@ -738,7 +732,9 @@ export async function typecheck(
       return result("typescript", await runTscApi(toolDeclarations, main, strict));
     }
     if (engine === candidate) {
-      throw new Error(`engine '${candidate}' requested but '${CHECKER_PACKAGES[candidate].pkg}' is not installed`);
+      throw new Error(
+        `engine '${candidate}' requested but '${CHECKER_PACKAGES[candidate].pkg}' is not installed`,
+      );
     }
   }
   throw new Error(`unknown typecheck engine '${engine}'`);
@@ -800,7 +796,7 @@ async function runCliChecker(
   checkerBin: string,
   toolDecls: string,
   main: string,
-  strict: boolean
+  strict: boolean,
 ): Promise<TypeDiagnostic[]> {
   const fs = await import("node:fs/promises");
   const os = await import("node:os");
@@ -824,14 +820,14 @@ async function runCliChecker(
           types: [],
         },
         files: ["__tools__.d.ts", "__main__.ts"],
-      })
+      }),
     );
     const output = await new Promise<string>((resolve) => {
       execFile(
         process.execPath,
         [checkerBin, "--project", dir, "--pretty", "false"],
         { cwd: dir, timeout: 30_000 },
-        (_err, stdout, stderr) => resolve(`${stdout}\n${stderr}`)
+        (_err, stdout, stderr) => resolve(`${stdout}\n${stderr}`),
       );
     });
     return parseTscOutput(output);
@@ -872,7 +868,7 @@ function parseTscOutput(output: string): TypeDiagnostic[] {
 async function runTscApi(
   toolDecls: string,
   main: string,
-  strict: boolean
+  strict: boolean,
 ): Promise<TypeDiagnostic[]> {
   let ts: any;
   try {
@@ -881,7 +877,7 @@ async function runTscApi(
   } catch {
     throw new Error(
       "Type-checking needs one of: 'tsrs', '@typescript/native-preview' (tsgo) or 'typescript'. " +
-        "Install one (e.g. npm i -D tsrs) or disable the typeCheck option."
+        "Install one (e.g. npm i -D tsrs) or disable the typeCheck option.",
     );
   }
 
@@ -902,7 +898,8 @@ async function runTscApi(
       ? ts.createSourceFile(name, virtual[name], langVersion)
       : origGetSourceFile(name, langVersion, ...rest);
   const origReadFile = host.readFile.bind(host);
-  host.readFile = (name: string) => (virtual[name] !== undefined ? virtual[name] : origReadFile(name));
+  host.readFile = (name: string) =>
+    virtual[name] !== undefined ? virtual[name] : origReadFile(name);
   const origFileExists = host.fileExists.bind(host);
   host.fileExists = (name: string) => virtual[name] !== undefined || origFileExists(name);
 
@@ -937,14 +934,12 @@ async function runTscApi(
  */
 async function typeCheckGeneratedCode(
   code: string,
-  toolDefs: Record<string, ToolDefinition>
+  toolDefs: Record<string, ToolDefinition>,
 ): Promise<string[]> {
   // The execute pre-pass keeps the historical loose profile; the standalone
   // typecheck() defaults to strict.
   const result = await typecheck(code, toolDefs, { strict: false });
-  return result.diagnostics.map(
-    (d) => `line ${d.line}, col ${d.column}: ${d.message}`
-  );
+  return result.diagnostics.map((d) => `line ${d.line}, col ${d.column}: ${d.message}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -976,7 +971,7 @@ async function executeCode(
     makeDriver?: () => ZapcodeDriver;
     /** Inputs bound as variables in the program (used by {@link prepare}). */
     inputs?: Record<string, unknown>;
-  }
+  },
 ): Promise<ExecutionResult> {
   validateToolDefinitions(toolDefs);
   const toolNames = Object.keys(toolDefs);
@@ -1022,7 +1017,7 @@ async function executeCode(
       const toolDef = toolDefs[name];
       if (!toolDef) {
         throw new Error(
-          `Guest code called unknown function '${name}'. Available: ${toolNames.join(", ")}`
+          `Guest code called unknown function '${name}'. Available: ${toolNames.join(", ")}`,
         );
       }
       const toolSpan = tracing
@@ -1215,7 +1210,16 @@ async function executeCode(
  * ```
  */
 export function zapcode(options: ZapcodeAIOptions): ZapcodeAIResult {
-  const { tools: toolDefs, system: userSystem, memoryLimitMb, timeLimitMs, adapters, debug, autoFix, typeCheck } = options;
+  const {
+    tools: toolDefs,
+    system: userSystem,
+    memoryLimitMb,
+    timeLimitMs,
+    adapters,
+    debug,
+    autoFix,
+    typeCheck,
+  } = options;
   validateToolDefinitions(toolDefs);
 
   const system = buildSystemPrompt(toolDefs, userSystem);
@@ -1325,7 +1329,7 @@ export function zapcode(options: ZapcodeAIOptions): ZapcodeAIResult {
 
   const getTrace = (): TraceSpan | undefined => {
     if (!sessionTrace) return undefined;
-    endSpan(sessionTrace, sessionTrace.children.some(c => c.status === "ok") ? "ok" : "error");
+    endSpan(sessionTrace, sessionTrace.children.some((c) => c.status === "ok") ? "ok" : "error");
     return sessionTrace;
   };
 
@@ -1338,7 +1342,16 @@ export function zapcode(options: ZapcodeAIOptions): ZapcodeAIResult {
     }
   };
 
-  return { system, tools, openaiTools, anthropicTools, handleToolCall, custom, getTrace, printTrace: printSessionTrace };
+  return {
+    system,
+    tools,
+    openaiTools,
+    anthropicTools,
+    handleToolCall,
+    custom,
+    getTrace,
+    printTrace: printSessionTrace,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1421,7 +1434,7 @@ export interface AdapterContext {
  */
 export function createAdapter<TOutput>(
   name: string,
-  adapt: (context: AdapterContext) => TOutput
+  adapt: (context: AdapterContext) => TOutput,
 ): ZapcodeAdapter<TOutput> {
   return { name, adapt };
 }
@@ -1464,7 +1477,7 @@ export async function execute(
     typeCheck?: boolean;
     /** Label identifying this script — named in error messages / `report.error.script`. */
     scriptName?: string;
-  }
+  },
 ): Promise<ExecutionResult> {
   return executeCode(code, tools, options ?? {});
 }
@@ -1506,7 +1519,7 @@ export interface DryRunResult {
 export async function dryRun(
   code: string,
   toolDefs: Record<string, ToolDefinition>,
-  options?: { timeLimitMs?: number; memoryLimitMb?: number; engine?: TypecheckOptions["engine"] }
+  options?: { timeLimitMs?: number; memoryLimitMb?: number; engine?: TypecheckOptions["engine"] },
 ): Promise<DryRunResult> {
   const tc = await typecheck(code, toolDefs, { engine: options?.engine });
 
@@ -1571,7 +1584,7 @@ export interface PreparedProgram {
    */
   run(
     inputs?: Record<string, unknown>,
-    options?: { debug?: boolean; autoFix?: boolean }
+    options?: { debug?: boolean; autoFix?: boolean },
   ): Promise<ExecutionResult>;
 }
 
@@ -1585,7 +1598,7 @@ export interface PreparedProgram {
 export function prepare(
   code: string,
   toolDefs: Record<string, ToolDefinition>,
-  options?: { memoryLimitMb?: number; timeLimitMs?: number }
+  options?: { memoryLimitMb?: number; timeLimitMs?: number },
 ): PreparedProgram {
   validateToolDefinitions(toolDefs);
   const handle = ZapcodeProgramHandle.compile(code, {
@@ -1626,12 +1639,12 @@ async function invokeToolCall(
   toolNames: string[],
   name: string,
   rawArgs: unknown[],
-  toolCalls: ExecutionResult["toolCalls"]
+  toolCalls: ExecutionResult["toolCalls"],
 ): Promise<ToolOutcome> {
   const toolDef = toolDefs[name];
   if (!toolDef) {
     throw new Error(
-      `Guest code called unknown function '${name}'. Available: ${toolNames.join(", ")}`
+      `Guest code called unknown function '${name}'. Available: ${toolNames.join(", ")}`,
     );
   }
   const namedArgs = buildNamedArgs(name, toolDef, rawArgs); // throws → abort
@@ -1689,7 +1702,7 @@ async function settleBatch<S>(
   handle: BatchResumable<S>,
   combinator: PromiseCombinator,
   calls: BatchCall[],
-  invoke: (name: string, args: unknown[]) => Promise<ToolOutcome>
+  invoke: (name: string, args: unknown[]) => Promise<ToolOutcome>,
 ): Promise<S> {
   // A *malformed* call (unknown function / bad args) throws a plain error and
   // must ABORT the whole execution — it is never catchable by the guest. Track
@@ -1702,7 +1715,7 @@ async function settleBatch<S>(
   // with a `BatchToolError` (catchable by the combinator). A malformed call's
   // throw is recorded as fatal and re-surfaced as a never-settling rejection so
   // it can't accidentally win a race/any.
-  const promises = calls.map(async call => {
+  const promises = calls.map(async (call) => {
     let outcome: ToolOutcome;
     try {
       outcome = await invoke(call.name, call.args);
@@ -1731,10 +1744,10 @@ async function settleBatch<S>(
       }
       case "allSettled": {
         const settled = await Promise.allSettled(promises);
-        const objects = settled.map(s =>
+        const objects = settled.map((s) =>
           s.status === "fulfilled"
             ? { status: "fulfilled", value: s.value }
-            : { status: "rejected", reason: batchErrorReason(s.reason) }
+            : { status: "rejected", reason: batchErrorReason(s.reason) },
         );
         resume = () => handle.resumeMany(objects);
         break;
@@ -1783,7 +1796,7 @@ class BatchToolError extends Error {
 /** Best-effort message extraction for a rejection reason or AggregateError. */
 function batchErrorMessage(err: unknown): string {
   if (err instanceof AggregateError) {
-    const inner = err.errors?.map(e => batchErrorMessage(e)).join(", ");
+    const inner = err.errors?.map((e) => batchErrorMessage(e)).join(", ");
     return inner ? `AggregateError: ${inner}` : "AggregateError: all promises were rejected";
   }
   if (err instanceof Error) return err.message;
@@ -1876,7 +1889,7 @@ export interface ZapcodeSession {
 function makeSession(
   initialBytes: Buffer,
   toolDefs: Record<string, ToolDefinition>,
-  scriptName?: string
+  scriptName?: string,
 ): ZapcodeSession {
   validateToolDefinitions(toolDefs);
   const toolNames = Object.keys(toolDefs);
@@ -1885,7 +1898,7 @@ function makeSession(
 
   const runChunk = async (
     code: string,
-    inputs?: Record<string, unknown>
+    inputs?: Record<string, unknown>,
   ): Promise<SessionChunkResult> => {
     chunkIndex++;
     const toolCalls: ExecutionResult["toolCalls"] = [];
@@ -1896,10 +1909,16 @@ function makeSession(
         const handle = ZapcodeSessionHandle.load(state.session);
         if (state.kind === "suspended_many") {
           state = await settleBatch(handle, state.combinator, state.calls, (name, args) =>
-            invokeToolCall(toolDefs, toolNames, name, args, toolCalls)
+            invokeToolCall(toolDefs, toolNames, name, args, toolCalls),
           );
         } else {
-          const outcome = await invokeToolCall(toolDefs, toolNames, state.functionName, state.args, toolCalls);
+          const outcome = await invokeToolCall(
+            toolDefs,
+            toolNames,
+            state.functionName,
+            state.args,
+            toolCalls,
+          );
           state = outcome.ok
             ? handle.resume(outcome.result)
             : handle.resumeErrorObject(outcome.message, outcome.name);
@@ -1908,7 +1927,12 @@ function makeSession(
 
       // Persist the new idle state for the next chunk / dump().
       sessionBytes = state.session;
-      return { output: state.output, stdout: state.stdout ?? "", stderr: state.stderr ?? "", toolCalls };
+      return {
+        output: state.output,
+        stdout: state.stdout ?? "",
+        stderr: state.stderr ?? "",
+        toolCalls,
+      };
     } catch (err: any) {
       // Name the erring session + chunk on the thrown error (opt-in via
       // scriptName); the failed chunk does NOT advance sessionBytes, so the

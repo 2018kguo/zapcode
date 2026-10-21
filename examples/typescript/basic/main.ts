@@ -5,11 +5,7 @@
  * Run with: npx tsx main.ts
  */
 
-import {
-  Zapcode,
-  ZapcodeSessionHandle,
-  ZapcodeSnapshotHandle,
-} from "@2018kguo/zapcode";
+import { Zapcode, ZapcodeSessionHandle, ZapcodeSnapshotHandle } from "@2018kguo/zapcode";
 
 // --- 1. Simple expression ---
 const simple = new Zapcode("1 + 2 * 3");
@@ -22,7 +18,7 @@ const greeter = new Zapcode(
     const greeting = \`Hello, \${name}! You are \${age} years old.\`;
     greeting
   `,
-  { inputs: ["name", "age"] }
+  { inputs: ["name", "age"] },
 );
 const greetResult = greeter.run({ name: "Zapcode", age: 30 });
 console.log(greetResult.output); // "Hello, Zapcode! You are 30 years old."
@@ -53,7 +49,7 @@ const weatherApp = new Zapcode(
     inputs: ["city"],
     externalFunctions: ["getWeather"],
     timeLimitMs: 5000,
-  }
+  },
 );
 
 const state = weatherApp.start({ city: "London" });
@@ -112,7 +108,7 @@ const asyncMapExample = new Zapcode(
     });
     results
   `,
-  { externalFunctions: ["getWeather"] }
+  { externalFunctions: ["getWeather"] },
 );
 
 const mockWeatherData: Record<string, unknown> = {
@@ -141,7 +137,7 @@ let sessionState = session.runChunk(
         reports.push(await getWeather(city));
     }
     reports.map(report => report.condition).join(",")
-  `
+  `,
 );
 
 while (!sessionState.completed) {

@@ -38,11 +38,9 @@ const tools = {
 console.log("type-check e2e");
 
 await test("valid code passes the type-check and runs", async () => {
-  const result = await execute(
-    `const w = await getWeather("Tokyo"); w.temp`,
-    tools,
-    { typeCheck: true }
-  );
+  const result = await execute(`const w = await getWeather("Tokyo"); w.temp`, tools, {
+    typeCheck: true,
+  });
   assert.equal(result.output, 26);
 });
 
@@ -59,7 +57,7 @@ await test("wrong argument type is caught before execution", async () => {
   };
   await assert.rejects(
     () => execute(`await getWeather(123)`, spyTools, { typeCheck: true }),
-    /Type error before execution/
+    /Type error before execution/,
   );
   assert.equal(ran, false, "the tool must not run when the type-check fails");
 });
@@ -67,14 +65,14 @@ await test("wrong argument type is caught before execution", async () => {
 await test("unknown tool name is caught before execution", async () => {
   await assert.rejects(
     () => execute(`await getWether("Tokyo")`, tools, { typeCheck: true }),
-    /Type error before execution/
+    /Type error before execution/,
   );
 });
 
 await test("missing required argument on a multi-param tool is caught", async () => {
   await assert.rejects(
     () => execute(`await escalateTo({ assignee: "x", dueAtMs: 1 })`, tools, { typeCheck: true }),
-    /Type error before execution/
+    /Type error before execution/,
   );
 });
 
@@ -102,15 +100,25 @@ const typedTools = {
   ping: { description: "Ping.", parameters: {}, execute: async () => "pong" },
 };
 
-const enginePackage = { tsrs: "tsrs", tsgo: "@typescript/native-preview", typescript: "typescript" };
+const enginePackage = {
+  tsrs: "tsrs",
+  tsgo: "@typescript/native-preview",
+  typescript: "typescript",
+};
 for (const engine of ["typescript", "tsgo", "tsrs"]) {
   let available = true;
-  try { await import(`${enginePackage[engine]}/package.json`, { with: { type: "json" } }); }
-  catch { available = false; }
-  if (!available) { console.log(`  - skipping ${engine} (not installed)`); continue; }
+  try {
+    await import(`${enginePackage[engine]}/package.json`, { with: { type: "json" } });
+  } catch {
+    available = false;
+  }
+  if (!available) {
+    console.log(`  - skipping ${engine} (not installed)`);
+    continue;
+  }
 
   await test(`[${engine}] structured diagnostics with agent-relative positions`, async () => {
-    const code = 'const w = await getWeather({ city: 42 });\nreturn w.temp.toUpperCase();';
+    const code = "const w = await getWeather({ city: 42 });\nreturn w.temp.toUpperCase();";
     const r = await typecheck(code, typedTools, { engine });
     assert.equal(r.engine, engine);
     assert.equal(r.ok, false);
@@ -137,7 +145,7 @@ for (const engine of ["typescript", "tsgo", "tsrs"]) {
 }
 
 await test("formatDiagnosticsForModel cites the offending line with a caret", async () => {
-  const code = 'const w = await getWeather({ city: 42 });\nreturn w;';
+  const code = "const w = await getWeather({ city: 42 });\nreturn w;";
   const r = await typecheck(code, typedTools);
   const text = formatDiagnosticsForModel(r, code);
   assert.match(text, /Type error at line 1, column \d+/);

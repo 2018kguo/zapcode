@@ -24,7 +24,7 @@ console.log("driver e2e");
 test("drives a multi-hop run, resuming each external call in memory", () => {
   const d = ZapcodeDriver.fromCode(
     `let sum = 0; for (let i = 0; i < 3; i++) { sum += await step({ i }); } sum`,
-    { externalFunctions: ["step"] }
+    { externalFunctions: ["step"] },
   );
   let s = d.start();
   let hops = 0;
@@ -41,7 +41,7 @@ test("drives a multi-hop run, resuming each external call in memory", () => {
 test("cumulative stdout/stderr survive across hops", () => {
   const d = ZapcodeDriver.fromCode(
     `console.log("a"); await f(); console.warn("b"); await f(); console.log("c"); "done"`,
-    { externalFunctions: ["f"] }
+    { externalFunctions: ["f"] },
   );
   let s = d.start();
   while (!s.completed) s = d.resume(null);
@@ -53,7 +53,7 @@ test("cumulative stdout/stderr survive across hops", () => {
 test("resumeMany settles a Promise.all batch", () => {
   const d = ZapcodeDriver.fromCode(
     `const xs = await Promise.all([f("a"), f("b"), f("c")]); xs.join("/")`,
-    { externalFunctions: ["f"] }
+    { externalFunctions: ["f"] },
   );
   let s = d.start();
   assert.equal(s.kind, "suspended_many");
@@ -67,7 +67,7 @@ test("resumeMany settles a Promise.all batch", () => {
 test("resumeErrorObject raises a real Error the guest can catch", () => {
   const d = ZapcodeDriver.fromCode(
     `try { await f(); "no"; } catch (e) { [e instanceof Error, e.name, e.message].join(":"); }`,
-    { externalFunctions: ["f"] }
+    { externalFunctions: ["f"] },
   );
   let s = d.start();
   s = d.resumeErrorObject("kaboom", "TypeError");

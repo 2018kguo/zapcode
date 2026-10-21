@@ -87,7 +87,10 @@ await test("calls are recorded in execution order", async () => {
     a: tool(async () => 1),
     b: tool(async () => 2),
   });
-  assert.deepEqual(r.toolCalls.map((c) => c.name), ["a", "b", "a"]);
+  assert.deepEqual(
+    r.toolCalls.map((c) => c.name),
+    ["a", "b", "a"],
+  );
 });
 
 await test("a call in a not-taken branch is absent from the log", async () => {
@@ -95,7 +98,10 @@ await test("a call in a not-taken branch is absent from the log", async () => {
     a: tool(async () => 1),
     b: tool(async () => 2),
   });
-  assert.deepEqual(r.toolCalls.map((c) => c.name), ["b"]);
+  assert.deepEqual(
+    r.toolCalls.map((c) => c.name),
+    ["b"],
+  );
 });
 
 await test("a loop records one entry per invocation", async () => {
@@ -103,7 +109,10 @@ await test("a loop records one entry per invocation", async () => {
     tick: tool(async ({ i }) => i, { i: { type: "number" } }),
   });
   assert.equal(r.toolCalls.length, 3);
-  assert.deepEqual(r.toolCalls.map((c) => c.input.i), [0, 1, 2]);
+  assert.deepEqual(
+    r.toolCalls.map((c) => c.input.i),
+    [0, 1, 2],
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -112,7 +121,9 @@ await test("a loop records one entry per invocation", async () => {
 
 await test("a failed call records a string error and an undefined result", async () => {
   const r = await execute(`try { await fail({}); } catch (e) {} 'done'`, {
-    fail: tool(async () => { throw new Error("boom"); }),
+    fail: tool(async () => {
+      throw new Error("boom");
+    }),
   });
   const rec = r.toolCalls[0];
   assert.equal(rec.name, "fail");
@@ -128,7 +139,11 @@ await test("a caught tool error is a real Error in the guest (message/name/insta
   // name is preserved.
   const r = await execute(
     `try { await fail({}); 'no'; } catch (e) { [e instanceof Error, e.name, e.message].join(':'); }`,
-    { fail: tool(async () => { throw new TypeError("kaboom"); }) }
+    {
+      fail: tool(async () => {
+        throw new TypeError("kaboom");
+      }),
+    },
   );
   assert.equal(r.output, "true:TypeError:kaboom");
 });
@@ -150,15 +165,18 @@ await test("well-typed primitive args validate and reach the tool with their typ
 
 await test("a wrong-typed argument is rejected before execution", async () => {
   await assert.rejects(
-    () => execute(`await f({ n: 'not a number' })`, { f: tool(async (a) => a, { n: { type: "number" } }) }),
-    /expected number, got string/
+    () =>
+      execute(`await f({ n: 'not a number' })`, {
+        f: tool(async (a) => a, { n: { type: "number" } }),
+      }),
+    /expected number, got string/,
   );
 });
 
 await test("a missing required argument is rejected before execution", async () => {
   await assert.rejects(
     () => execute(`await f({})`, { f: tool(async (a) => a, { req: { type: "number" } }) }),
-    /parameter 'req'/
+    /parameter 'req'/,
   );
 });
 
@@ -166,7 +184,7 @@ await test("calling an unregistered tool name throws a ReferenceError", async ()
   // As in Node, an unbound identifier throws "<name> is not defined".
   await assert.rejects(
     () => execute(`await doesNotExist({})`, { real: tool(async () => 1) }),
-    /doesNotExist is not defined/
+    /doesNotExist is not defined/,
   );
 });
 
@@ -196,7 +214,7 @@ await test("a no-arg tool accepts both tool() and tool({})", async () => {
 await test("a structured result is usable as a live value and recorded", async () => {
   const r = await execute(
     `const row = await fetch({ id: 7 }); row.tags.map(t => t.toUpperCase()).join(',')`,
-    { fetch: tool(async ({ id }) => ({ id, tags: ["a", "b"] }), { id: { type: "number" } }) }
+    { fetch: tool(async ({ id }) => ({ id, tags: ["a", "b"] }), { id: { type: "number" } }) },
   );
   assert.equal(r.output, "A,B");
   assert.deepEqual(r.toolCalls[0].result, { id: 7, tags: ["a", "b"] });

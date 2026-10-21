@@ -31,7 +31,7 @@ function createRoutingTools(escalations) {
         reason: { type: "string", description: "Why this assignee was chosen." },
         metadata: { type: "object", optional: true },
       },
-      execute: async input => {
+      execute: async (input) => {
         escalations.push(input);
         return { ok: true, assignee: input.assignee };
       },
@@ -43,10 +43,10 @@ async function expectExecutionError(code, expectedMessage) {
   const escalations = [];
   await assert.rejects(
     () => execute(code, createRoutingTools(escalations)),
-    error => {
+    (error) => {
       assert.match(String(error.message), expectedMessage);
       return true;
-    }
+    },
   );
   assert.deepEqual(escalations, []);
 }
@@ -54,10 +54,10 @@ async function expectExecutionError(code, expectedMessage) {
 async function expectToolError(code, tools, expectedMessage) {
   await assert.rejects(
     () => execute(code, tools),
-    error => {
+    (error) => {
       assert.match(String(error.message), expectedMessage);
       return true;
-    }
+    },
   );
 }
 
@@ -65,7 +65,7 @@ async function expectToolError(code, tools, expectedMessage) {
   const { system } = zapcode({ tools: createRoutingTools([]) });
   assert.match(
     system,
-    /declare function escalateTo\(input: \{ assignee: string; dueAtMs: number; reason: string; metadata\?: object \}\): Promise<unknown>;/
+    /declare function escalateTo\(input: \{ assignee: string; dueAtMs: number; reason: string; metadata\?: object \}\): Promise<unknown>;/,
   );
   assert.match(system, /Call shape: await escalateTo\(\{ assignee: string, dueAtMs: number/);
   assert.match(system, /Prefer the declared function signatures above exactly/);
@@ -88,7 +88,7 @@ async function expectToolError(code, tools, expectedMessage) {
     });
     assignee
     `,
-    createRoutingTools(escalations)
+    createRoutingTools(escalations),
   );
 
   assert.equal(result.output, "guy Y");
@@ -110,7 +110,7 @@ async function expectToolError(code, tools, expectedMessage) {
     await escalateTo({ assignee, dueAtMs, reason: "User date is not within one week from now" });
     assignee
     `,
-    createRoutingTools(escalations)
+    createRoutingTools(escalations),
   );
 
   assert.equal(result.output, "guy X");
@@ -137,7 +137,7 @@ async function expectToolError(code, tools, expectedMessage) {
       await escalateTo({ assignee, dueAtMs, reason: "calendar routing" });
       assignee
       `,
-      createRoutingTools(escalations)
+      createRoutingTools(escalations),
     );
 
     assert.equal(result.output, expectedAssignee);
@@ -154,7 +154,7 @@ await expectExecutionError(
     reason: "wrong due date type",
   })
   `,
-  /Invalid arguments for tool 'escalateTo': parameter 'dueAtMs' expected number, got string/
+  /Invalid arguments for tool 'escalateTo': parameter 'dueAtMs' expected number, got string/,
 );
 
 await expectExecutionError(
@@ -164,7 +164,7 @@ await expectExecutionError(
     reason: "missing due date",
   })
   `,
-  /Invalid arguments for tool 'escalateTo': missing required parameter 'dueAtMs'/
+  /Invalid arguments for tool 'escalateTo': missing required parameter 'dueAtMs'/,
 );
 
 await expectExecutionError(
@@ -176,12 +176,12 @@ await expectExecutionError(
     assigne: "guy X",
   })
   `,
-  /Invalid arguments for tool 'escalateTo': unexpected parameter 'assigne'/
+  /Invalid arguments for tool 'escalateTo': unexpected parameter 'assigne'/,
 );
 
 await expectExecutionError(
   `await escalateTo("guy Y", 1780444800000, "looks valid")`,
-  /Invalid arguments for tool 'escalateTo': expected one named object argument/
+  /Invalid arguments for tool 'escalateTo': expected one named object argument/,
 );
 
 await expectExecutionError(
@@ -192,7 +192,7 @@ await expectExecutionError(
     reason: "NaN due date",
   })
   `,
-  /Invalid arguments for tool 'escalateTo': parameter 'dueAtMs' expected number, got null/
+  /Invalid arguments for tool 'escalateTo': parameter 'dueAtMs' expected number, got null/,
 );
 
 // An optional field written as `metadata: undefined` crosses the boundary as
@@ -208,7 +208,7 @@ await expectExecutionError(
       metadata: undefined,
     })
     `,
-    createRoutingTools(escalations)
+    createRoutingTools(escalations),
   );
 
   assert.equal(escalations.length, 1);
@@ -224,7 +224,7 @@ await expectExecutionError(
     metadata: [],
   })
   `,
-  /Invalid arguments for tool 'escalateTo': parameter 'metadata' expected object, got array/
+  /Invalid arguments for tool 'escalateTo': parameter 'metadata' expected object, got array/,
 );
 
 {
@@ -237,7 +237,7 @@ await expectExecutionError(
       reason: "metadata intentionally omitted",
     })
     `,
-    createRoutingTools(escalations)
+    createRoutingTools(escalations),
   );
 
   assert.equal(escalations.length, 1);
@@ -265,7 +265,7 @@ await expectExecutionError(
         tags: { type: "array" },
         metadata: { type: "object", optional: true },
       },
-      execute: async input => {
+      execute: async (input) => {
         routed.push(input);
         return { routed: true, queue: input.queue };
       },
@@ -288,7 +288,7 @@ await expectExecutionError(
     });
     priority
     `,
-    supportTools
+    supportTools,
   );
 
   assert.equal(result.output, 1);
@@ -309,7 +309,7 @@ await expectExecutionError(
     })
     `,
     supportTools,
-    /Invalid arguments for tool 'routeTicket': parameter 'tags' expected array, got string/
+    /Invalid arguments for tool 'routeTicket': parameter 'tags' expected array, got string/,
   );
 
   await expectToolError(
@@ -325,7 +325,7 @@ await expectExecutionError(
     })
     `,
     supportTools,
-    /Invalid arguments for tool 'routeTicket': parameter 'metadata' expected object, got array/
+    /Invalid arguments for tool 'routeTicket': parameter 'metadata' expected object, got array/,
   );
 
   await expectToolError(
@@ -340,7 +340,7 @@ await expectExecutionError(
     })
     `,
     supportTools,
-    /Invalid arguments for tool 'routeTicket': unexpected parameter 'accoundId'/
+    /Invalid arguments for tool 'routeTicket': unexpected parameter 'accoundId'/,
   );
 
   await expectToolError(
@@ -354,7 +354,7 @@ await expectExecutionError(
     })
     `,
     supportTools,
-    /Invalid arguments for tool 'routeTicket': missing required parameter 'ticketId'/
+    /Invalid arguments for tool 'routeTicket': missing required parameter 'ticketId'/,
   );
 
   await expectToolError(
@@ -369,7 +369,7 @@ await expectExecutionError(
     })
     `,
     supportTools,
-    /Invalid arguments for tool 'routeTicket': parameter 'priority' expected number, got string/
+    /Invalid arguments for tool 'routeTicket': parameter 'priority' expected number, got string/,
   );
 }
 
@@ -384,7 +384,7 @@ await expectExecutionError(
         approvers: { type: "array" },
         evidence: { type: "object", optional: true },
       },
-      execute: async input => {
+      execute: async (input) => {
         approvals.push(input);
         return { ok: true, approverCount: input.approvers.length };
       },
@@ -409,7 +409,7 @@ await expectExecutionError(
     const saved = await savePayload({ invoiceId: "inv_1", amountUsd: 1250.5 });
     saved.keys.sort().join(",")
     `,
-    approvalTools
+    approvalTools,
   );
 
   assert.equal(result.output, "amountUsd,invoiceId");
@@ -418,13 +418,13 @@ await expectExecutionError(
   await expectToolError(
     `await requestApproval({ amountUsd: 1 / 0, urgent: true, approvers: [] })`,
     approvalTools,
-    /Invalid arguments for tool 'requestApproval': parameter 'amountUsd' expected number, got null/
+    /Invalid arguments for tool 'requestApproval': parameter 'amountUsd' expected number, got null/,
   );
 
   await expectToolError(
     `await savePayload({ payload: { ok: true }, extra: true })`,
     approvalTools,
-    /Invalid arguments for tool 'savePayload': unexpected parameter 'extra'/
+    /Invalid arguments for tool 'savePayload': unexpected parameter 'extra'/,
   );
 }
 
@@ -439,7 +439,7 @@ await expectExecutionError(
     })
     `,
     createRoutingTools(escalations),
-    { autoFix: true }
+    { autoFix: true },
   );
 
   assert.equal(result.output, null);
@@ -447,7 +447,7 @@ await expectExecutionError(
   assert.deepEqual(escalations, []);
   assert.equal(result.trace.status, "error");
   assert.match(result.trace.attributes["zapcode.error"], /expected number/);
-  const failedToolSpan = result.trace.children.find(span => span.name === "tool_call");
+  const failedToolSpan = result.trace.children.find((span) => span.name === "tool_call");
   assert.equal(failedToolSpan.status, "error");
   assert.equal(failedToolSpan.attributes["zapcode.tool.name"], "escalateTo");
   assert.match(failedToolSpan.attributes["zapcode.tool.error"], /expected number/);
@@ -462,12 +462,12 @@ await expectExecutionError(
     "ok"
     `,
     createRoutingTools(escalations),
-    { autoFix: true }
+    { autoFix: true },
   );
 
   assert.equal(result.output, "ok");
   const toolSpan = result.trace.children.find(
-    span => span.name === "tool_call" && span.attributes["zapcode.tool.name"] === "escalateTo"
+    (span) => span.name === "tool_call" && span.attributes["zapcode.tool.name"] === "escalateTo",
   );
   assert.equal(toolSpan.status, "ok");
   assert.match(toolSpan.attributes["zapcode.tool.args"], /guy Y/);
@@ -485,7 +485,17 @@ await expectExecutionError(
 }
 
 {
-  for (const name of ["console", "Math", "eval", "Function", "require", "process", "globalThis", "execute_code", "x-y"]) {
+  for (const name of [
+    "console",
+    "Math",
+    "eval",
+    "Function",
+    "require",
+    "process",
+    "globalThis",
+    "execute_code",
+    "x-y",
+  ]) {
     assert.throws(
       () =>
         zapcode({
@@ -497,7 +507,7 @@ await expectExecutionError(
             },
           },
         }),
-      /Invalid tool name/
+      /Invalid tool name/,
     );
   }
 }

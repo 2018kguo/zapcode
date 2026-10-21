@@ -42,7 +42,7 @@ function createSchedulingTools(escalations) {
         const parsed = Date.parse(normalized);
         if (Number.isNaN(parsed)) {
           throw new Error(
-            `invalid schedule date '${date}'${timezone ? ` for timezone '${timezone}'` : ""}`
+            `invalid schedule date '${date}'${timezone ? ` for timezone '${timezone}'` : ""}`,
           );
         }
         return parsed;
@@ -51,13 +51,16 @@ function createSchedulingTools(escalations) {
     recordEscalation: {
       description: "Record the escalation selected by scheduling logic.",
       parameters: {
-        contact: { type: "string", description: "Escalation contact, either contact Y or contact X." },
+        contact: {
+          type: "string",
+          description: "Escalation contact, either contact Y or contact X.",
+        },
         dueAtMs: { type: "number", description: "Scheduled time as epoch milliseconds." },
         reason: { type: "string", description: "Why this contact was selected." },
         priority: { type: "number", optional: true, description: "Priority from 1 high to 5 low." },
         notes: { type: "string", optional: true, description: "Free-form user notes." },
       },
-      execute: async input => {
+      execute: async (input) => {
         escalations.push(input);
         return { ok: true, contact: input.contact };
       },
@@ -69,10 +72,10 @@ async function expectNoEscalationError(code, expectedMessage) {
   const escalations = [];
   await assert.rejects(
     () => execute(code, createSchedulingTools(escalations)),
-    error => {
+    (error) => {
       assert.match(String(error.message), expectedMessage);
       return true;
-    }
+    },
   );
   assert.deepEqual(escalations, []);
 }
@@ -100,11 +103,11 @@ await test("system prompt exposes named-object scheduling signatures", async () 
   const { system } = zapcode({ tools: createSchedulingTools([]) });
   assert.match(
     system,
-    /declare function parseScheduleDate\(input: \{ date: string; timezone\?: string \}\): Promise<unknown>;/
+    /declare function parseScheduleDate\(input: \{ date: string; timezone\?: string \}\): Promise<unknown>;/,
   );
   assert.match(
     system,
-    /declare function recordEscalation\(input: \{ contact: string; dueAtMs: number; reason: string; priority\?: number; notes\?: string \}\): Promise<unknown>;/
+    /declare function recordEscalation\(input: \{ contact: string; dueAtMs: number; reason: string; priority\?: number; notes\?: string \}\): Promise<unknown>;/,
   );
   assert.match(system, /Call shape: await recordEscalation\(\{ contact: string, dueAtMs: number/);
 });
@@ -112,8 +115,11 @@ await test("system prompt exposes named-object scheduling signatures", async () 
 await test("date within one week routes to escalation contact Y with notes and priority", async () => {
   const escalations = [];
   const result = await execute(
-    routeCode(JSON.stringify("2026-06-05"), 'priority: 1,\n      notes: "VIP customer asked for same-week scheduling",'),
-    createSchedulingTools(escalations)
+    routeCode(
+      JSON.stringify("2026-06-05"),
+      'priority: 1,\n      notes: "VIP customer asked for same-week scheduling",',
+    ),
+    createSchedulingTools(escalations),
   );
 
   assert.equal(result.output, "contact Y");
@@ -127,7 +133,10 @@ await test("date within one week routes to escalation contact Y with notes and p
 
 await test("date outside one week routes to escalation contact X with optional fields omitted", async () => {
   const escalations = [];
-  const result = await execute(routeCode(JSON.stringify("2026-06-20")), createSchedulingTools(escalations));
+  const result = await execute(
+    routeCode(JSON.stringify("2026-06-20")),
+    createSchedulingTools(escalations),
+  );
 
   assert.equal(result.output, "contact X");
   assert.equal(escalations.length, 1);
@@ -139,8 +148,8 @@ await test("date outside one week routes to escalation contact X with optional f
 await test("timezone-offset ISO string inside the one-week window routes to contact Y", async () => {
   const escalations = [];
   const result = await execute(
-    routeCode(JSON.stringify("2026-06-08T00:30:00-04:00"), 'priority: 2,'),
-    createSchedulingTools(escalations)
+    routeCode(JSON.stringify("2026-06-08T00:30:00-04:00"), "priority: 2,"),
+    createSchedulingTools(escalations),
   );
 
   assert.equal(result.output, "contact Y");
@@ -152,7 +161,7 @@ await test("timezone-offset ISO string just beyond one week routes to contact X"
   const escalations = [];
   const result = await execute(
     routeCode(JSON.stringify("2026-06-08T12:00:01Z"), 'notes: "one second past the SLA window",'),
-    createSchedulingTools(escalations)
+    createSchedulingTools(escalations),
   );
 
   assert.equal(result.output, "contact X");
@@ -170,7 +179,10 @@ await test("boundary matrix covers past, now-day, seven-day, and eight-day routi
 
   for (const [userDate, expectedContact] of cases) {
     const escalations = [];
-    const result = await execute(routeCode(JSON.stringify(userDate)), createSchedulingTools(escalations));
+    const result = await execute(
+      routeCode(JSON.stringify(userDate)),
+      createSchedulingTools(escalations),
+    );
     assert.equal(result.output, expectedContact);
     assert.equal(escalations.length, 1);
     assert.equal(escalations[0].contact, expectedContact);
@@ -180,21 +192,21 @@ await test("boundary matrix covers past, now-day, seven-day, and eight-day routi
 await test("missing date argument produces a crisp validation error before host execution", async () => {
   await expectNoEscalationError(
     `await parseScheduleDate({ timezone: "America/New_York" })`,
-    /Invalid arguments for tool 'parseScheduleDate': missing required parameter 'date'/
+    /Invalid arguments for tool 'parseScheduleDate': missing required parameter 'date'/,
   );
 });
 
 await test("invalid date argument type produces a crisp validation error", async () => {
   await expectNoEscalationError(
     `await parseScheduleDate({ date: 20260605, timezone: "America/New_York" })`,
-    /Invalid arguments for tool 'parseScheduleDate': parameter 'date' expected string, got number/
+    /Invalid arguments for tool 'parseScheduleDate': parameter 'date' expected string, got number/,
   );
 });
 
 await test("semantic invalid date string is surfaced as a catchable tool error", async () => {
   await expectNoEscalationError(
     `await parseScheduleDate({ date: "next Friday", timezone: "America/New_York" })`,
-    /invalid schedule date 'next Friday' for timezone 'America\/New_York'/
+    /invalid schedule date 'next Friday' for timezone 'America\/New_York'/,
   );
 });
 
@@ -207,7 +219,7 @@ await test("missing dueAtMs on escalation produces a crisp validation error", as
       priority: 1,
     })
     `,
-    /Invalid arguments for tool 'recordEscalation': missing required parameter 'dueAtMs'/
+    /Invalid arguments for tool 'recordEscalation': missing required parameter 'dueAtMs'/,
   );
 });
 
@@ -221,7 +233,7 @@ await test("optional priority and notes fields reject wrong types", async () => 
       priority: "high",
     })
     `,
-    /Invalid arguments for tool 'recordEscalation': parameter 'priority' expected number, got string/
+    /Invalid arguments for tool 'recordEscalation': parameter 'priority' expected number, got string/,
   );
 
   await expectNoEscalationError(
@@ -233,14 +245,14 @@ await test("optional priority and notes fields reject wrong types", async () => 
       notes: { text: "call customer first" },
     })
     `,
-    /Invalid arguments for tool 'recordEscalation': parameter 'notes' expected string, got object/
+    /Invalid arguments for tool 'recordEscalation': parameter 'notes' expected string, got object/,
   );
 });
 
 await test("positional multi-argument scheduling calls are rejected with the named-object guidance", async () => {
   await expectNoEscalationError(
     `await recordEscalation("contact Y", 1780660800000, "positional call")`,
-    /Invalid arguments for tool 'recordEscalation': expected one named object argument/
+    /Invalid arguments for tool 'recordEscalation': expected one named object argument/,
   );
 });
 

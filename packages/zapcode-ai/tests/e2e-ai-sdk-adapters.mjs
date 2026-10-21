@@ -49,12 +49,12 @@ const weatherTools = {
   getWeather: tool(
     "Get current weather for a city",
     { city: { type: "string", description: "City name" } },
-    async ({ city }) => `sunny in ${city}`
+    async ({ city }) => `sunny in ${city}`,
   ),
   add: tool(
     "Add two numbers",
     { a: { type: "number" }, b: { type: "number" } },
-    async ({ a, b }) => a + b
+    async ({ a, b }) => a + b,
   ),
 };
 
@@ -76,17 +76,27 @@ await test("system prompt is a non-empty string documenting each tool", async ()
 await test("system prompt renders a declare-function signature and call shape", async () => {
   const { system } = zapcode({
     tools: {
-      multi: tool("Multi-arg tool", { a: { type: "number" }, b: { type: "string" } }, async () => 0),
+      multi: tool(
+        "Multi-arg tool",
+        { a: { type: "number" }, b: { type: "string" } },
+        async () => 0,
+      ),
     },
   });
-  assert.ok(system.includes("declare function multi(input: { a: number; b: string }): Promise<unknown>;"));
+  assert.ok(
+    system.includes("declare function multi(input: { a: number; b: string }): Promise<unknown>;"),
+  );
   assert.ok(system.includes("await multi({ a: number, b: string })"));
 });
 
 await test("optional params render with `?` in the signature", async () => {
   const { system } = zapcode({
     tools: {
-      opt: tool("Optional tool", { req: { type: "number" }, maybe: { type: "string", optional: true } }, async () => 0),
+      opt: tool(
+        "Optional tool",
+        { req: { type: "number" }, maybe: { type: "string", optional: true } },
+        async () => 0,
+      ),
     },
   });
   assert.ok(system.includes("req: number; maybe?: string"));
@@ -95,7 +105,11 @@ await test("optional params render with `?` in the signature", async () => {
 await test("per-parameter descriptions are NOT rendered (documented L8 residual)", async () => {
   const { system } = zapcode({
     tools: {
-      look: tool("Look something up", { id: { type: "string", description: "UNIQUE-PARAM-DESC-MARKER" } }, async () => 0),
+      look: tool(
+        "Look something up",
+        { id: { type: "string", description: "UNIQUE-PARAM-DESC-MARKER" } },
+        async () => 0,
+      ),
     },
   });
   // The tool-level description shows; the per-param description marker does not.
@@ -165,7 +179,7 @@ await test("handleToolCall runs code, resolves tools, and returns the full resul
 await test("handleToolCall composes multiple tool calls in emitted code", async () => {
   const z = zapcode({ tools: weatherTools });
   const r = await z.handleToolCall(
-    `const a = await add({ a: 2, b: 3 }); const b = await add({ a: a, b: 10 }); b`
+    `const a = await add({ a: 2, b: 3 }); const b = await add({ a: a, b: 10 }); b`,
   );
   assert.equal(r.output, 15);
   assert.equal(r.toolCalls.length, 2);
@@ -193,7 +207,11 @@ await test("a guest runtime error rejects handleToolCall (autoFix off by default
 await test("an optional param omitted by the LLM is stripped from the recorded input", async () => {
   const z = zapcode({
     tools: {
-      look: tool("Look", { req: { type: "number" }, opt: { type: "string", optional: true } }, async (x) => x.req),
+      look: tool(
+        "Look",
+        { req: { type: "number" }, opt: { type: "string", optional: true } },
+        async (x) => x.req,
+      ),
     },
   });
   const r = await z.handleToolCall(`await look({ req: 5 })`);

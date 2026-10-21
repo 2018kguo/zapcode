@@ -6,11 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { execute } from "../dist/index.js";
-import {
-  Zapcode,
-  ZapcodeSnapshotHandle,
-  ZapcodeSessionHandle,
-} from "@2018kguo/zapcode";
+import { Zapcode, ZapcodeSnapshotHandle, ZapcodeSessionHandle } from "@2018kguo/zapcode";
 
 let passed = 0;
 async function test(name, fn) {
@@ -39,7 +35,7 @@ await test("deep suspend/resume chain serializes on every hop", () => {
     }
     acc
     `,
-    { externalFunctions: ["step"] }
+    { externalFunctions: ["step"] },
   );
   let state = sandbox.start();
   let hops = 0;
@@ -70,7 +66,7 @@ await test("closure captured before a suspend works after resume", async () => {
         parameters: {},
         execute: async () => 10,
       },
-    }
+    },
   );
   assert.equal(result.output, 20);
 });
@@ -93,7 +89,7 @@ await test("class instance mutated across a mid-method suspend", async () => {
         parameters: {},
         execute: async () => 5,
       },
-    }
+    },
   );
   assert.equal(result.output, 10);
 });
@@ -111,7 +107,7 @@ await test("try/finally runs its finally block after a resumed call", async () =
     }
     log.join(",")
     `,
-    { work: { description: "do work", parameters: {}, execute: async () => 1 } }
+    { work: { description: "do work", parameters: {}, execute: async () => 1 } },
   );
   assert.equal(result.output, "before,after,finally");
 });
@@ -122,7 +118,7 @@ await test("Promise.all of 25 calls preserves order across dump/load", () => {
   const session = ZapcodeSessionHandle.create({ externalFunctions: ["load"] });
   const keys = Array.from({ length: 25 }, (_, i) => `k${i}`);
   const suspended = session.runChunk(
-    `await Promise.all([${keys.map(k => `load("${k}")`).join(", ")}])`
+    `await Promise.all([${keys.map((k) => `load("${k}")`).join(", ")}])`,
   );
   assert.equal(suspended.kind, "suspended_many");
   assert.equal(suspended.calls.length, 25);
@@ -150,7 +146,7 @@ await test("mixed Promise.all unwraps inner promises and keeps plain values", as
         parameters: { k: { type: "string" } },
         execute: async ({ k }) => `got:${k}`,
       },
-    }
+    },
   );
   assert.deepEqual(result.output, ["got:a", 42, "literal", "got:b"]);
 });
@@ -162,7 +158,13 @@ await test("sequential Promise.all batches in one chunk", async () => {
     const b = await Promise.all([f(3), f(4)]);
     [...a, ...b]
     `,
-    { f: { description: "f", parameters: { n: { type: "number" } }, execute: async ({ n }) => n * 10 } }
+    {
+      f: {
+        description: "f",
+        parameters: { n: { type: "number" } },
+        execute: async ({ n }) => n * 10,
+      },
+    },
   );
   assert.deepEqual(result.output, [10, 20, 30, 40]);
 });
@@ -177,7 +179,7 @@ await test("Promise.all inside a loop batches each iteration", async () => {
     }
     rows
     `,
-    { f: { description: "f", parameters: { n: { type: "number" } }, execute: async ({ n }) => n } }
+    { f: { description: "f", parameters: { n: { type: "number" } }, execute: async ({ n }) => n } },
   );
   // i + (i+100) for i in 0..3 → 100, 102, 104
   assert.deepEqual(result.output, [100, 102, 104]);
@@ -213,7 +215,7 @@ await test("rejection in a parallel batch is catchable and lets the workflow rec
           throw new Error("kaboom");
         },
       },
-    }
+    },
   );
   assert.equal(result.output, "recovered:fallback");
 });
@@ -229,9 +231,17 @@ await test("a guest re-throw from catch propagates to the host", async () => {
           throw "wrapped: " + e;
         }
         `,
-        { fail: { description: "fail", parameters: {}, execute: async () => { throw new Error("x"); } } }
+        {
+          fail: {
+            description: "fail",
+            parameters: {},
+            execute: async () => {
+              throw new Error("x");
+            },
+          },
+        },
       ),
-    /wrapped/
+    /wrapped/,
   );
 });
 
@@ -242,7 +252,7 @@ await test("resumeMany with the wrong number of results is rejected", () => {
   const suspended = session.runChunk(`await Promise.all([f(1), f(2), f(3)])`);
   assert.throws(
     () => ZapcodeSessionHandle.load(suspended.session).resumeMany([1, 2]),
-    /expected 3 results but got 2/
+    /expected 3 results but got 2/,
   );
 });
 
@@ -257,14 +267,17 @@ await test("a tampered snapshot is rejected on load", () => {
 await test("loading a session blob as a plain snapshot is rejected", () => {
   const session = ZapcodeSessionHandle.create({ externalFunctions: [] });
   const dump = session.dump();
-  assert.throws(() => ZapcodeSnapshotHandle.load(dump), /expected a snapshot blob but got a session blob/);
+  assert.throws(
+    () => ZapcodeSnapshotHandle.load(dump),
+    /expected a snapshot blob but got a session blob/,
+  );
 });
 
 await test("an infinite loop is bounded by a resource limit (doesn't hang)", async () => {
   // Either the time or allocation guard may trip first — both bound the runaway.
   await assert.rejects(
     () => execute(`let acc = 0; while (true) { acc = acc + 1; }`, {}, { timeLimitMs: 100 }),
-    /(time|allocation) limit/i
+    /(time|allocation) limit/i,
   );
 });
 
@@ -282,17 +295,14 @@ await test("a bare tool call inside .map yields deferred promises that Promise.a
 
   // Bare .map without await: each element is a deferred Promise object; the
   // tools are not run because nothing consumes the promises.
-  const deferred = await execute(
-    `[1, 2, 3].map(n => f(n)).map(p => typeof p).join(",")`,
-    { f }
-  );
+  const deferred = await execute(`[1, 2, 3].map(n => f(n)).map(p => typeof p).join(",")`, { f });
   assert.equal(deferred.output, "object,object,object");
   assert.equal(deferred.toolCalls.length, 0);
 
   // Promise.all over the mapped deferred calls runs them all, in order.
   const all = await execute(
     `const out = await Promise.all([1, 2, 3].map(n => f(n))); out.join(",")`,
-    { f }
+    { f },
   );
   assert.equal(all.output, "10,20,30");
   assert.equal(all.toolCalls.length, 3);
@@ -317,7 +327,7 @@ await test("array methods, JSON, and nested destructuring over tool results", as
         parameters: { id: { type: "number" } },
         execute: async ({ id }) => ({ id: "r" + id, amount: id * 10 }),
       },
-    }
+    },
   );
   assert.deepEqual(JSON.parse(result.output), { total: 60, top: ["r2", "r3"] });
 });
@@ -336,7 +346,7 @@ await test("object rest + spread merging tool results", async () => {
         parameters: {},
         execute: async () => ({ region: "us", retries: 3 }),
       },
-    }
+    },
   );
   assert.equal(result.output, 'prod:{"region":"us","retries":3}');
 });

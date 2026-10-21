@@ -99,7 +99,7 @@ function createEtlTools(state, rows = RAW_CUSTOMERS) {
         rows: { type: "array" },
         summary: { type: "object" },
       },
-      execute: async input => {
+      execute: async (input) => {
         state.saved.push(input);
         return { ok: true, rowCount: input.rows.length, statuses: input.summary.statuses };
       },
@@ -227,19 +227,19 @@ await test("rejects invalid external tool arguments before host persistence runs
 
   await assert.rejects(
     () => execute(`await persistCleanCustomers({ rows: {}, summary: { imported: 0 } })`, tools),
-    /Invalid arguments for tool 'persistCleanCustomers': parameter 'rows' expected array, got object/
+    /Invalid arguments for tool 'persistCleanCustomers': parameter 'rows' expected array, got object/,
   );
   await assert.rejects(
     () => execute(`await persistCleanCustomers({ rows: [], summary: [] })`, tools),
-    /Invalid arguments for tool 'persistCleanCustomers': parameter 'summary' expected object, got array/
+    /Invalid arguments for tool 'persistCleanCustomers': parameter 'summary' expected object, got array/,
   );
   await assert.rejects(
     () => execute(`await persistCleanCustomers({ rows: [], summary: {}, extra: true })`, tools),
-    /Invalid arguments for tool 'persistCleanCustomers': unexpected parameter 'extra'/
+    /Invalid arguments for tool 'persistCleanCustomers': unexpected parameter 'extra'/,
   );
   await assert.rejects(
     () => execute(`await persistCleanCustomers([], {})`, tools),
-    /Invalid arguments for tool 'persistCleanCustomers': expected one named object argument/
+    /Invalid arguments for tool 'persistCleanCustomers': expected one named object argument/,
   );
 
   assert.deepEqual(state.saved, []);

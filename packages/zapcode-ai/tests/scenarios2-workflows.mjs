@@ -108,7 +108,10 @@ await check("workflow-01: support triage with parallel enrichment and escalation
         priority: { type: "number" },
         reason: { type: "string" },
       },
-      execute: async (input) => { escalations.push(input); return { routed: true }; },
+      execute: async (input) => {
+        escalations.push(input);
+        return { routed: true };
+      },
     },
   };
 
@@ -134,7 +137,7 @@ await check("workflow-01: support triage with parallel enrichment and escalation
 
     ({ priority, queue, openTickets: account.openTickets })
     `,
-    tools
+    tools,
   );
 
   assert.deepEqual(result.output, { priority: 1, queue: "vip-critical", openTickets: 9 });
@@ -167,7 +170,10 @@ await check("workflow-02: calendar SLA routing with deadline computation", async
         message: { type: "string" },
         urgency: { type: "string" },
       },
-      execute: async (input) => { notifications.push(input); return { sent: true }; },
+      execute: async (input) => {
+        notifications.push(input);
+        return { sent: true };
+      },
     },
   };
 
@@ -202,7 +208,7 @@ await check("workflow-02: calendar SLA routing with deadline computation", async
     }
     report.map(r => r.id + ":" + r.urgency).join(",")
     `,
-    tools
+    tools,
   );
 
   // R3 due=2026-05-31=now, diffDays=0 (NOT < 0, so NOT overdue), slaDays=1, 0<=1 → urgent
@@ -216,8 +222,20 @@ await check("workflow-02: calendar SLA routing with deadline computation", async
 // --- 3. Data pipeline: paginated fetch → validate → transform → write ---
 await check("workflow-03: paginated ETL pipeline with validation and write", async () => {
   const pages = [
-    { rows: [{ id: 1, email: "alice@test.com", amount: "19.99" }, { id: 2, email: "bad-email", amount: "5.00" }], next: "p2" },
-    { rows: [{ id: 3, email: "carol@example.org", amount: "abc" },  { id: 4, email: "dave@co.io", amount: "100.00" }], next: null },
+    {
+      rows: [
+        { id: 1, email: "alice@test.com", amount: "19.99" },
+        { id: 2, email: "bad-email", amount: "5.00" },
+      ],
+      next: "p2",
+    },
+    {
+      rows: [
+        { id: 3, email: "carol@example.org", amount: "abc" },
+        { id: 4, email: "dave@co.io", amount: "100.00" },
+      ],
+      next: null,
+    },
   ];
   let pageIdx = 0;
   const written = [];
@@ -229,8 +247,15 @@ await check("workflow-03: paginated ETL pipeline with validation and write", asy
     },
     writeRecord: {
       description: "Write a validated record.",
-      parameters: { id: { type: "number" }, email: { type: "string" }, amountCents: { type: "number" } },
-      execute: async (rec) => { written.push(rec); return { ok: true }; },
+      parameters: {
+        id: { type: "number" },
+        email: { type: "string" },
+        amountCents: { type: "number" },
+      },
+      execute: async (rec) => {
+        written.push(rec);
+        return { ok: true };
+      },
     },
   };
 
@@ -264,7 +289,7 @@ await check("workflow-03: paginated ETL pipeline with validation and write", asy
     }
     ({ written: ok.length, failed: errors.length, errors })
     `,
-    tools
+    tools,
   );
 
   // id:1 ok, id:2 bad email, id:3 bad amount, id:4 ok → written=2, failed=2
@@ -284,10 +309,10 @@ await check("workflow-04: finance approval workflow with toFixed and per-item po
       description: "Return expense line items.",
       parameters: {},
       execute: async () => [
-        { id: "E1", category: "travel",    amountUsd: 450.00, vendor: "Delta" },
-        { id: "E2", category: "software",  amountUsd: 1200.50, vendor: "Acme" },
-        { id: "E3", category: "meals",     amountUsd: 85.25, vendor: "Bistro" },
-        { id: "E4", category: "equipment", amountUsd: 2400.00, vendor: "TechCo" },
+        { id: "E1", category: "travel", amountUsd: 450.0, vendor: "Delta" },
+        { id: "E2", category: "software", amountUsd: 1200.5, vendor: "Acme" },
+        { id: "E3", category: "meals", amountUsd: 85.25, vendor: "Bistro" },
+        { id: "E4", category: "equipment", amountUsd: 2400.0, vendor: "TechCo" },
       ],
     },
     requestApproval: {
@@ -298,7 +323,10 @@ await check("workflow-04: finance approval workflow with toFixed and per-item po
         approver: { type: "string" },
         reason: { type: "string" },
       },
-      execute: async (req) => { approvalRequests.push(req); return { pending: true, requestId: "AR-" + req.expenseId }; },
+      execute: async (req) => {
+        approvalRequests.push(req);
+        return { pending: true, requestId: "AR-" + req.expenseId };
+      },
     },
     submitExpenseReport: {
       description: "Submit an expense report.",
@@ -352,7 +380,7 @@ await check("workflow-04: finance approval workflow with toFixed and per-item po
       pending: needsApproval.map(n => n.approver + ":" + n.item.id),
     })
     `,
-    tools
+    tools,
   );
 
   assert.deepEqual(result.output.autoApproved, ["E1", "E3"]);
@@ -369,14 +397,15 @@ await check("workflow-05: search/RAG dedup rank top-N and format Markdown answer
     searchDocs: {
       description: "Search documentation chunks.",
       parameters: { query: { type: "string" }, limit: { type: "number" } },
-      execute: async ({ query, limit }) => [
-        { id: "d1", title: "Auth guide",      score: 0.92, content: "Use OAuth2 for auth." },
-        { id: "d2", title: "Quickstart",      score: 0.88, content: "Run npm install first." },
-        { id: "d3", title: "Auth guide",      score: 0.85, content: "Use OAuth2 for auth." }, // dup title
-        { id: "d4", title: "API reference",   score: 0.79, content: "See /api/v1 docs." },
-        { id: "d5", title: "Quickstart",      score: 0.71, content: "Run npm install first." }, // dup title
-        { id: "d6", title: "Troubleshooting", score: 0.65, content: "Check error logs." },
-      ].slice(0, limit),
+      execute: async ({ query, limit }) =>
+        [
+          { id: "d1", title: "Auth guide", score: 0.92, content: "Use OAuth2 for auth." },
+          { id: "d2", title: "Quickstart", score: 0.88, content: "Run npm install first." },
+          { id: "d3", title: "Auth guide", score: 0.85, content: "Use OAuth2 for auth." }, // dup title
+          { id: "d4", title: "API reference", score: 0.79, content: "See /api/v1 docs." },
+          { id: "d5", title: "Quickstart", score: 0.71, content: "Run npm install first." }, // dup title
+          { id: "d6", title: "Troubleshooting", score: 0.65, content: "Check error logs." },
+        ].slice(0, limit),
     },
   };
 
@@ -408,7 +437,7 @@ await check("workflow-05: search/RAG dedup rank top-N and format Markdown answer
 
     ({ topTitles: top.map(d => d.title), answerLength: answer.length, firstScore: top[0].score })
     `,
-    tools
+    tools,
   );
 
   assert.deepEqual(result.output.topTitles, ["Auth guide", "Quickstart", "API reference"]);
@@ -417,43 +446,48 @@ await check("workflow-05: search/RAG dedup rank top-N and format Markdown answer
 });
 
 // --- 6. Form / payload building with fallback on tool failure ----------------
-await check("workflow-06: form payload assembly with try/catch fallback on tool failure", async () => {
-  const submissions = [];
-  const tools = {
-    getUserProfile: {
-      description: "Fetch a user profile by ID.",
-      parameters: { userId: { type: "string" } },
-      execute: async ({ userId }) => {
-        if (userId === "u-missing") throw new Error("user not found");
-        return { userId, name: "Alice", email: "alice@test.com", orgId: "org-1" };
+await check(
+  "workflow-06: form payload assembly with try/catch fallback on tool failure",
+  async () => {
+    const submissions = [];
+    const tools = {
+      getUserProfile: {
+        description: "Fetch a user profile by ID.",
+        parameters: { userId: { type: "string" } },
+        execute: async ({ userId }) => {
+          if (userId === "u-missing") throw new Error("user not found");
+          return { userId, name: "Alice", email: "alice@test.com", orgId: "org-1" };
+        },
       },
-    },
-    getOrgSettings: {
-      description: "Fetch org settings.",
-      parameters: { orgId: { type: "string" } },
-      execute: async ({ orgId }) => ({
-        orgId,
-        plan: "pro",
-        maxSeats: 50,
-        features: ["sso", "audit-log"],
-      }),
-    },
-    submitForm: {
-      description: "Submit a registration form.",
-      parameters: {
-        userId: { type: "string" },
-        name: { type: "string" },
-        email: { type: "string" },
-        orgId: { type: "string" },
-        plan: { type: "string" },
-        hasSso: { type: "boolean" },
+      getOrgSettings: {
+        description: "Fetch org settings.",
+        parameters: { orgId: { type: "string" } },
+        execute: async ({ orgId }) => ({
+          orgId,
+          plan: "pro",
+          maxSeats: 50,
+          features: ["sso", "audit-log"],
+        }),
       },
-      execute: async (form) => { submissions.push(form); return { submittedAt: 1748649600000 }; },
-    },
-  };
+      submitForm: {
+        description: "Submit a registration form.",
+        parameters: {
+          userId: { type: "string" },
+          name: { type: "string" },
+          email: { type: "string" },
+          orgId: { type: "string" },
+          plan: { type: "string" },
+          hasSso: { type: "boolean" },
+        },
+        execute: async (form) => {
+          submissions.push(form);
+          return { submittedAt: 1748649600000 };
+        },
+      },
+    };
 
-  const result = await execute(
-    `
+    const result = await execute(
+      `
     const userId = "u-001";
 
     let profile;
@@ -486,16 +520,17 @@ await check("workflow-06: form payload assembly with try/catch fallback on tool 
     await submitForm(form);
     ({ name: form.name, plan: form.plan, hasSso: form.hasSso, submitted: true })
     `,
-    tools
-  );
+      tools,
+    );
 
-  assert.equal(result.output.name, "Alice");
-  assert.equal(result.output.plan, "pro");
-  assert.equal(result.output.hasSso, true);
-  assert.equal(result.output.submitted, true);
-  assert.equal(submissions.length, 1);
-  assert.equal(submissions[0].hasSso, true);
-});
+    assert.equal(result.output.name, "Alice");
+    assert.equal(result.output.plan, "pro");
+    assert.equal(result.output.hasSso, true);
+    assert.equal(result.output.submitted, true);
+    assert.equal(submissions.length, 1);
+    assert.equal(submissions[0].hasSso, true);
+  },
+);
 
 // --- 7. Inventory / order: check stock, decide fulfill/backorder, place orders
 await check("workflow-07: inventory check and order fulfillment with backorders", async () => {
@@ -517,7 +552,10 @@ await check("workflow-07: inventory check and order fulfillment with backorders"
         type: { type: "string" },
         warehouseId: { type: "string", optional: true },
       },
-      execute: async (o) => { orders.push(o); return { orderId: "ORD-" + o.sku, ok: true }; },
+      execute: async (o) => {
+        orders.push(o);
+        return { orderId: "ORD-" + o.sku, ok: true };
+      },
     },
   };
 
@@ -563,7 +601,7 @@ await check("workflow-07: inventory check and order fulfillment with backorders"
     }
     report.map(r => r.sku + ":" + r.status).join(",")
     `,
-    tools
+    tools,
   );
 
   assert.equal(result.output, "SKU-A:fulfilled,SKU-B:backorder,SKU-C:fulfilled,SKU-D:partial");
@@ -589,9 +627,9 @@ await check("workflow-08: churn risk classification with multi-tool enrichment",
       execute: async ({ accountId }) => {
         const stats = {
           "acc-1": { logins: 45, apiCalls: 1200, lastActiveMs: Date.UTC(2026, 4, 30) },
-          "acc-2": { logins: 2,  apiCalls: 10,   lastActiveMs: Date.UTC(2026, 3, 1) },
-          "acc-3": { logins: 30, apiCalls: 800,  lastActiveMs: Date.UTC(2026, 4, 28) },
-          "acc-4": { logins: 0,  apiCalls: 0,    lastActiveMs: Date.UTC(2026, 2, 15) },
+          "acc-2": { logins: 2, apiCalls: 10, lastActiveMs: Date.UTC(2026, 3, 1) },
+          "acc-3": { logins: 30, apiCalls: 800, lastActiveMs: Date.UTC(2026, 4, 28) },
+          "acc-4": { logins: 0, apiCalls: 0, lastActiveMs: Date.UTC(2026, 2, 15) },
         };
         return stats[accountId];
       },
@@ -603,7 +641,10 @@ await check("workflow-08: churn risk classification with multi-tool enrichment",
         riskLevel: { type: "string" },
         daysSinceActive: { type: "number" },
       },
-      execute: async (alert) => { alerts.push(alert); return { sent: true }; },
+      execute: async (alert) => {
+        alerts.push(alert);
+        return { sent: true };
+      },
     },
   };
 
@@ -630,13 +671,13 @@ await check("workflow-08: churn risk classification with multi-tool enrichment",
 
     results.map(r => r.accountId + ":" + r.riskLevel).join(",")
     `,
-    tools
+    tools,
   );
 
   assert.equal(result.output, "acc-1:low,acc-2:high,acc-3:low,acc-4:critical");
   assert.equal(alerts.length, 2);
-  assert.equal(alerts.find(a => a.accountId === "acc-2").riskLevel, "high");
-  assert.equal(alerts.find(a => a.accountId === "acc-4").riskLevel, "critical");
+  assert.equal(alerts.find((a) => a.accountId === "acc-2").riskLevel, "high");
+  assert.equal(alerts.find((a) => a.accountId === "acc-4").riskLevel, "critical");
 });
 
 // --- 9. Batch notifications: group users by region, send per-region message --
@@ -647,12 +688,12 @@ await check("workflow-09: group users by region and send batched notifications",
       description: "Return all users.",
       parameters: {},
       execute: async () => [
-        { id: "u1", name: "Alice",  region: "us", email: "alice@test.com" },
-        { id: "u2", name: "Bob",    region: "eu", email: "bob@test.com" },
-        { id: "u3", name: "Carol",  region: "us", email: "carol@test.com" },
-        { id: "u4", name: "Dave",   region: "ap", email: "dave@test.com" },
-        { id: "u5", name: "Eve",    region: "eu", email: "eve@test.com" },
-        { id: "u6", name: "Frank",  region: "us", email: "frank@test.com" },
+        { id: "u1", name: "Alice", region: "us", email: "alice@test.com" },
+        { id: "u2", name: "Bob", region: "eu", email: "bob@test.com" },
+        { id: "u3", name: "Carol", region: "us", email: "carol@test.com" },
+        { id: "u4", name: "Dave", region: "ap", email: "dave@test.com" },
+        { id: "u5", name: "Eve", region: "eu", email: "eve@test.com" },
+        { id: "u6", name: "Frank", region: "us", email: "frank@test.com" },
       ],
     },
     sendBatch: {
@@ -662,7 +703,10 @@ await check("workflow-09: group users by region and send batched notifications",
         recipients: { type: "array" },
         subject: { type: "string" },
       },
-      execute: async (batch) => { sent.push(batch); return { region: batch.region, count: batch.recipients.length }; },
+      execute: async (batch) => {
+        sent.push(batch);
+        return { region: batch.region, count: batch.recipients.length };
+      },
     },
   };
 
@@ -694,39 +738,41 @@ await check("workflow-09: group users by region and send batched notifications",
     }
     summary.join(",")
     `,
-    tools
+    tools,
   );
 
   assert.equal(result.output, "ap:1,eu:2,us:3");
   assert.equal(sent.length, 3);
-  const usBatch = sent.find(b => b.region === "us");
+  const usBatch = sent.find((b) => b.region === "us");
   assert.equal(usBatch.recipients.length, 3);
   assert.ok(usBatch.recipients.includes("alice@test.com"));
 });
 
 // --- 10. Multi-step report generation: fetch metrics → compute → format ------
-await check("workflow-10: metrics report with computed derived fields and Markdown formatting", async () => {
-  const tools = {
-    getMetrics: {
-      description: "Fetch daily metrics for a service.",
-      parameters: { service: { type: "string" }, days: { type: "number" } },
-      execute: async ({ service, days }) => {
-        const data = [];
-        for (let i = 0; i < days; i++) {
-          data.push({
-            date: "2026-05-" + String(29 + i).padStart(2, "0"),
-            requests: 10000 + i * 1500,
-            errors: 50 + i * 10,
-            p99LatencyMs: 120 + i * 5,
-          });
-        }
-        return data;
+await check(
+  "workflow-10: metrics report with computed derived fields and Markdown formatting",
+  async () => {
+    const tools = {
+      getMetrics: {
+        description: "Fetch daily metrics for a service.",
+        parameters: { service: { type: "string" }, days: { type: "number" } },
+        execute: async ({ service, days }) => {
+          const data = [];
+          for (let i = 0; i < days; i++) {
+            data.push({
+              date: "2026-05-" + String(29 + i).padStart(2, "0"),
+              requests: 10000 + i * 1500,
+              errors: 50 + i * 10,
+              p99LatencyMs: 120 + i * 5,
+            });
+          }
+          return data;
+        },
       },
-    },
-  };
+    };
 
-  const result = await execute(
-    `
+    const result = await execute(
+      `
     const metrics = await getMetrics({ service: "api-gateway", days: 3 });
 
     // Compute derived fields
@@ -755,17 +801,18 @@ await check("workflow-10: metrics report with computed derived fields and Markdo
       rowCount: enriched.length,
     })
     `,
-    tools
-  );
+      tools,
+    );
 
-  assert.equal(result.output.rowCount, 3);
-  assert.equal(result.output.totalRequests, 10000 + 11500 + 13000);
-  assert.equal(result.output.maxLatency, 130);
-  assert.ok(result.output.table.includes("2026-05-29"));
-  assert.ok(result.output.table.includes("Error Rate"));
-  // avgErrorRate: (50/10000 + 60/11500 + 70/13000) / 3 * 100
-  assert.ok(result.output.avgErrorRate > 0.4 && result.output.avgErrorRate < 0.6);
-});
+    assert.equal(result.output.rowCount, 3);
+    assert.equal(result.output.totalRequests, 10000 + 11500 + 13000);
+    assert.equal(result.output.maxLatency, 130);
+    assert.ok(result.output.table.includes("2026-05-29"));
+    assert.ok(result.output.table.includes("Error Rate"));
+    // avgErrorRate: (50/10000 + 60/11500 + 70/13000) / 3 * 100
+    assert.ok(result.output.avgErrorRate > 0.4 && result.output.avgErrorRate < 0.6);
+  },
+);
 
 // --- 11. Retry logic: retry a failing tool up to N times --------------------
 await check("workflow-11: retry loop with exponential-like backoff attempt tracking", async () => {
@@ -807,7 +854,7 @@ await check("workflow-11: retry loop with exponential-like backoff attempt track
 
     ({ data: response.data, attempts: response.attempts, lastError })
     `,
-    tools
+    tools,
   );
 
   assert.equal(result.output.data, "HELLO");
@@ -815,7 +862,7 @@ await check("workflow-11: retry loop with exponential-like backoff attempt track
   assert.equal(result.output.lastError, null);
   assert.equal(attemptCount, 3);
   // verify tool calls include 2 failures and 1 success
-  const apiCalls = result.toolCalls.filter(c => c.name === "unreliableApi");
+  const apiCalls = result.toolCalls.filter((c) => c.name === "unreliableApi");
   assert.equal(apiCalls.length, 3);
   assert.ok(apiCalls[0].error);
   assert.ok(apiCalls[1].error);
@@ -829,7 +876,7 @@ await check("workflow-12: multi-source candidate scoring with weighted aggregati
       description: "Score a resume.",
       parameters: { candidateId: { type: "string" } },
       execute: async ({ candidateId }) => {
-        const scores = { "c1": 85, "c2": 72, "c3": 91, "c4": 60 };
+        const scores = { c1: 85, c2: 72, c3: 91, c4: 60 };
         return { candidateId, score: scores[candidateId] ?? 50 };
       },
     },
@@ -837,7 +884,7 @@ await check("workflow-12: multi-source candidate scoring with weighted aggregati
       description: "Get interview assessment score.",
       parameters: { candidateId: { type: "string" } },
       execute: async ({ candidateId }) => {
-        const scores = { "c1": 78, "c2": 88, "c3": 70, "c4": 95 };
+        const scores = { c1: 78, c2: 88, c3: 70, c4: 95 };
         return { candidateId, score: scores[candidateId] ?? 50 };
       },
     },
@@ -845,7 +892,7 @@ await check("workflow-12: multi-source candidate scoring with weighted aggregati
       description: "Get technical test score.",
       parameters: { candidateId: { type: "string" } },
       execute: async ({ candidateId }) => {
-        const scores = { "c1": 90, "c2": 65, "c3": 88, "c4": 75 };
+        const scores = { c1: 90, c2: 65, c3: 88, c4: 75 };
         return { candidateId, score: scores[candidateId] ?? 50 };
       },
     },
@@ -879,7 +926,7 @@ await check("workflow-12: multi-source candidate scoring with weighted aggregati
       topScore: scored[0].final,
     })
     `,
-    tools
+    tools,
   );
 
   // c1: 0.25*85 + 0.40*78 + 0.35*90 = 21.25+31.2+31.5 = 83.95 → 84.0  pass
@@ -903,7 +950,7 @@ await check("workflow-13: config validation with field-level patching", async ()
       execute: async ({ service }) => ({
         service,
         timeout: 5000,
-        retries: null,          // should be number
+        retries: null, // should be number
         logLevel: "WARN",
         maxConnections: 200,
         featureFlags: { beta: true, experimental: null },
@@ -917,7 +964,10 @@ await check("workflow-13: config validation with field-level patching", async ()
         value: { type: "string" },
         reason: { type: "string" },
       },
-      execute: async (p) => { patches.push(p); return { patched: true }; },
+      execute: async (p) => {
+        patches.push(p);
+        return { patched: true };
+      },
     },
   };
 
@@ -952,11 +1002,11 @@ await check("workflow-13: config validation with field-level patching", async ()
 
     ({ issues, patched: patchOps.map(p => p.field) })
     `,
-    tools
+    tools,
   );
 
-  assert.ok(result.output.issues.some(i => i.includes("retries")));
-  assert.ok(result.output.issues.some(i => i.includes("maxConnections")));
+  assert.ok(result.output.issues.some((i) => i.includes("retries")));
+  assert.ok(result.output.issues.some((i) => i.includes("maxConnections")));
   assert.ok(result.output.patched.includes("retries"));
   assert.ok(result.output.patched.includes("maxConnections"));
   assert.equal(patches.length, 2);
@@ -973,7 +1023,7 @@ await check("workflow-14: e-commerce checkout with coupon, tax, and order placem
         cartId,
         items: [
           { sku: "BOOK-01", name: "Clean Code", price: 39.99, qty: 1 },
-          { sku: "BOOK-02", name: "SICP",       price: 49.99, qty: 2 },
+          { sku: "BOOK-02", name: "SICP", price: 49.99, qty: 2 },
         ],
       }),
     },
@@ -981,10 +1031,14 @@ await check("workflow-14: e-commerce checkout with coupon, tax, and order placem
       description: "Validate and return a coupon discount.",
       parameters: { code: { type: "string" }, subtotal: { type: "number" } },
       execute: async ({ code, subtotal }) => {
-        const coupons = { "SAVE10": 0.10, "SAVE20": 0.20 };
+        const coupons = { SAVE10: 0.1, SAVE20: 0.2 };
         const rate = coupons[code];
         if (!rate) throw new Error("Invalid coupon: " + code);
-        return { valid: true, discountRate: rate, discountAmt: Number((subtotal * rate).toFixed(2)) };
+        return {
+          valid: true,
+          discountRate: rate,
+          discountAmt: Number((subtotal * rate).toFixed(2)),
+        };
       },
     },
     placeOrder: {
@@ -997,7 +1051,10 @@ await check("workflow-14: e-commerce checkout with coupon, tax, and order placem
         total: { type: "number" },
         couponCode: { type: "string", optional: true },
       },
-      execute: async (o) => { orders.push(o); return { orderId: "ORD-" + Date.now(), status: "confirmed" }; },
+      execute: async (o) => {
+        orders.push(o);
+        return { orderId: "ORD-" + Date.now(), status: "confirmed" };
+      },
     },
   };
 
@@ -1039,12 +1096,12 @@ await check("workflow-14: e-commerce checkout with coupon, tax, and order placem
       status:     resp.status,
     })
     `,
-    tools
+    tools,
   );
 
   // subtotal: 39.99 + 49.99*2 = 139.97, discount: 13.997→14.00, taxable: 125.97, tax: 10.08, total: 136.05
   assert.equal(result.output.subtotal, 139.97);
-  assert.equal(result.output.discount, 14.00);
+  assert.equal(result.output.discount, 14.0);
   assert.equal(result.output.status, "confirmed");
   assert.ok(result.output.orderId.startsWith("ORD-"));
   assert.equal(orders[0].couponCode, "SAVE10");
@@ -1066,7 +1123,10 @@ await check("workflow-15: toolCalls introspection and audit log", async () => {
         resource: { type: "string" },
         actor: { type: "string" },
       },
-      execute: async (entry) => { auditLog.push(entry); return { id: "audit-1" }; },
+      execute: async (entry) => {
+        auditLog.push(entry);
+        return { id: "audit-1" };
+      },
     },
   };
 
@@ -1085,7 +1145,7 @@ await check("workflow-15: toolCalls introspection and audit log", async () => {
       auditCount: keys.length,
     })
     `,
-    tools
+    tools,
   );
 
   assert.equal(result.output.count, 3);
@@ -1093,8 +1153,8 @@ await check("workflow-15: toolCalls introspection and audit log", async () => {
   assert.equal(result.output.auditCount, 3);
   assert.equal(auditLog.length, 3);
   assert.equal(result.toolCalls.length, 6); // 3 readSecret + 3 writeAudit
-  const readCalls  = result.toolCalls.filter(c => c.name === "readSecret");
-  const auditCalls = result.toolCalls.filter(c => c.name === "writeAudit");
+  const readCalls = result.toolCalls.filter((c) => c.name === "readSecret");
+  const auditCalls = result.toolCalls.filter((c) => c.name === "writeAudit");
   assert.equal(readCalls.length, 3);
   assert.equal(auditCalls.length, 3);
 });
@@ -1106,12 +1166,12 @@ await check("workflow-16: Set dedup and frequency map from tool data", async () 
       description: "Return event stream.",
       parameters: {},
       execute: async () => [
-        { id: "e1", type: "login",   userId: "u1" },
+        { id: "e1", type: "login", userId: "u1" },
         { id: "e2", type: "purchase", userId: "u2" },
-        { id: "e3", type: "login",   userId: "u1" },
-        { id: "e4", type: "logout",  userId: "u1" },
+        { id: "e3", type: "login", userId: "u1" },
+        { id: "e4", type: "logout", userId: "u1" },
         { id: "e5", type: "purchase", userId: "u3" },
-        { id: "e6", type: "login",   userId: "u2" },
+        { id: "e6", type: "login", userId: "u2" },
         { id: "e7", type: "purchase", userId: "u1" },
       ],
     },
@@ -1147,7 +1207,7 @@ await check("workflow-16: Set dedup and frequency map from tool data", async () 
       mostCommon: Object.keys(freq).reduce((a, b) => freq[a] >= freq[b] ? a : b),
     })
     `,
-    tools
+    tools,
   );
 
   assert.deepEqual(result.output.freq, { login: 3, purchase: 3, logout: 1 });
@@ -1162,11 +1222,14 @@ await check("workflow-16: Set dedup and frequency map from tool data", async () 
 // SECTION 101+ — CONFIRMED BUGS (expected to fail; document interpreter behavior)
 // ===========================================================================
 
-await check("BUG-G: default function parameters not applied (f(x=10); f() → x is null)", async () => {
-  const r = await execute(`function f(x = 10) { return x; } f()`, {});
-  // BUG: returns null instead of 10
-  assert.equal(r.output, 10);
-});
+await check(
+  "BUG-G: default function parameters not applied (f(x=10); f() → x is null)",
+  async () => {
+    const r = await execute(`function f(x = 10) { return x; } f()`, {});
+    // BUG: returns null instead of 10
+    assert.equal(r.output, 10);
+  },
+);
 
 await check("BUG-G-arrow: default arrow param not applied (() => x=42 → null)", async () => {
   const r = await execute(`const fn = (x = 42) => x; fn()`, {});
@@ -1174,21 +1237,24 @@ await check("BUG-G-arrow: default arrow param not applied (() => x=42 → null)"
   assert.equal(r.output, 42);
 });
 
-await check("BUG-H: closure scope sharing — two closures from same factory overwrite each other", async () => {
-  // function wrap(x) { return () => x; }
-  // f1 = wrap(10), f2 = wrap(20) → f1() should be 10, but returns 20 (shared scope)
-  const r = await execute(
-    `
+await check(
+  "BUG-H: closure scope sharing — two closures from same factory overwrite each other",
+  async () => {
+    // function wrap(x) { return () => x; }
+    // f1 = wrap(10), f2 = wrap(20) → f1() should be 10, but returns 20 (shared scope)
+    const r = await execute(
+      `
     function wrap(x) { return () => x; }
     const f1 = wrap(10);
     const f2 = wrap(20);
     [f1(), f2()]
     `,
-    {}
-  );
-  // BUG: returns [20, 20] — both closures see the last-written x
-  assert.deepEqual(r.output, [10, 20]);
-});
+      {},
+    );
+    // BUG: returns [20, 20] — both closures see the last-written x
+    assert.deepEqual(r.output, [10, 20]);
+  },
+);
 
 await check("BUG-I: obj[variableKey].push(v) — mutation is discarded", async () => {
   // obj["key"] = []; const k = "key"; obj[k].push(1); obj → {key: []} not {key:[1]}
@@ -1201,7 +1267,7 @@ await check("BUG-I: obj[variableKey].push(v) — mutation is discarded", async (
     o[k].push("Bob");
     o[k]
     `,
-    {}
+    {},
   );
   // BUG: returns [] — push via variable key discards result
   assert.deepEqual(r.output, ["Alice", "Bob"]);
@@ -1216,7 +1282,7 @@ await check("BUG-J: class getter always returns null", async () => {
     }
     new Box(5).doubled
     `,
-    {}
+    {},
   );
   // FIXED (cluster C): the getter body runs on read, returning 10.
   assert.equal(r.output, 10);
@@ -1234,7 +1300,7 @@ await check("BUG-K: class setter has no effect — assigned value not stored", a
     b.v = 10;
     b._v
     `,
-    {}
+    {},
   );
   // FIXED (cluster C): the setter runs on assignment, so _v becomes 20.
   assert.equal(r.output, 20);
@@ -1245,7 +1311,7 @@ await check("BUG-L: instanceof returns false for Array and Object", async () => 
     `
     [[] instanceof Array, {} instanceof Object, new Map() instanceof Map]
     `,
-    {}
+    {},
   );
   // BUG: returns [false, false, false]
   assert.deepEqual(r.output, [true, true, true]);
@@ -1257,7 +1323,7 @@ await check("BUG-M: destructuring defaults not applied when key is missing/undef
     const { a = 10, b = 20 } = { a: 5 };
     [a, b]
     `,
-    {}
+    {},
   );
   // BUG: returns [5, null] — default for b not applied
   assert.deepEqual(r.output, [5, 20]);
@@ -1270,7 +1336,7 @@ await check("BUG-N: computed property name in object literal resolves to null", 
     const obj = { [key]: 99 };
     obj.myProp
     `,
-    {}
+    {},
   );
   // BUG: returns null instead of 99
   assert.equal(r.output, 99);
@@ -1286,7 +1352,7 @@ await check("MISSING-2-A: Promise.allSettled is not a function", async () => {
     const results = await Promise.allSettled([Promise.resolve(1), Promise.reject("err"), Promise.resolve(3)]);
     results.map(r => r.status)
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["fulfilled", "rejected", "fulfilled"]);
 });
@@ -1297,7 +1363,7 @@ await check("MISSING-2-B: Promise.race is not a function", async () => {
     const winner = await Promise.race([Promise.resolve("fast"), Promise.resolve("slow")]);
     winner
     `,
-    {}
+    {},
   );
   assert.equal(r.output, "fast");
 });
@@ -1308,7 +1374,7 @@ await check("MISSING-2-C: Object.hasOwn is not a function", async () => {
     const o = { a: 1 };
     [Object.hasOwn(o, "a"), Object.hasOwn(o, "b")]
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [true, false]);
 });
@@ -1326,7 +1392,7 @@ await check("MISSING-2-E: Array.prototype.entries() — not a function", async (
     for (const [i, v] of arr.entries()) out.push(i + ":" + v);
     out
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, ["0:a", "1:b", "2:c"]);
 });
@@ -1339,46 +1405,57 @@ await check("MISSING-2-F: Array.prototype.keys() — not a function", async () =
     for (const k of arr.keys()) keys.push(k);
     keys
     `,
-    {}
+    {},
   );
   assert.deepEqual(r.output, [0, 1, 2]);
 });
 
-await check("MISSING-2-G: Array.from({length:N}, mapFn) — mapFn param ignored (returns empty)", async () => {
-  // Array.from({length:3}, (_, i) => i) should return [0,1,2] but returns []
-  const r = await execute(`Array.from({length: 3}, (_, i) => i * 2)`, {});
-  assert.deepEqual(r.output, [0, 2, 4]);
-});
+await check(
+  "MISSING-2-G: Array.from({length:N}, mapFn) — mapFn param ignored (returns empty)",
+  async () => {
+    // Array.from({length:3}, (_, i) => i) should return [0,1,2] but returns []
+    const r = await execute(`Array.from({length: 3}, (_, i) => i * 2)`, {});
+    assert.deepEqual(r.output, [0, 2, 4]);
+  },
+);
 
-await check("MISSING-2-H: Number.prototype.toLocaleString — undefined is not a function", async () => {
-  const r = await execute(`(10000).toLocaleString()`, {});
-  assert.equal(r.output, "10,000");
-});
+await check(
+  "MISSING-2-H: Number.prototype.toLocaleString — undefined is not a function",
+  async () => {
+    const r = await execute(`(10000).toLocaleString()`, {});
+    assert.equal(r.output, "10,000");
+  },
+);
 
-await check("MISSING-2-I: Object.prototype.hasOwnProperty on instances — undefined is not a function", async () => {
-  const r = await execute(`({a:1}).hasOwnProperty("a")`, {});
-  assert.equal(r.output, true);
-});
+await check(
+  "MISSING-2-I: Object.prototype.hasOwnProperty on instances — undefined is not a function",
+  async () => {
+    const r = await execute(`({a:1}).hasOwnProperty("a")`, {});
+    assert.equal(r.output, true);
+  },
+);
 
-await check("BUG-O: ?? (nullish coalescing) in for-of body after Promise.all → invalid iterator state", async () => {
-  // Minimal repro:
-  // await Promise.all([t1(), t2()]); for (const x of arr) { const v = y ?? 0; await t3(x); }
-  // Crashes with "runtime error: invalid iterator state"
-  // Workaround: use || 0 or a ternary instead
-  const tools = {
-    fetchPair: {
-      description: "Return a pair.",
-      parameters: { id: { type: "string" } },
-      execute: async ({ id }) => ({ id, val: id.length }),
-    },
-    handleItem: {
-      description: "Handle an item.",
-      parameters: { item: { type: "string" } },
-      execute: async ({ item }) => ({ done: true }),
-    },
-  };
-  const r = await execute(
-    `
+await check(
+  "BUG-O: ?? (nullish coalescing) in for-of body after Promise.all → invalid iterator state",
+  async () => {
+    // Minimal repro:
+    // await Promise.all([t1(), t2()]); for (const x of arr) { const v = y ?? 0; await t3(x); }
+    // Crashes with "runtime error: invalid iterator state"
+    // Workaround: use || 0 or a ternary instead
+    const tools = {
+      fetchPair: {
+        description: "Return a pair.",
+        parameters: { id: { type: "string" } },
+        execute: async ({ id }) => ({ id, val: id.length }),
+      },
+      handleItem: {
+        description: "Handle an item.",
+        parameters: { item: { type: "string" } },
+        execute: async ({ item }) => ({ done: true }),
+      },
+    };
+    const r = await execute(
+      `
     await Promise.all([fetchPair({ id: "a" }), fetchPair({ id: "b" })]);
     const items = ["x", "y"];
     for (const item of items) {
@@ -1387,24 +1464,25 @@ await check("BUG-O: ?? (nullish coalescing) in for-of body after Promise.all →
     }
     "done"
     `,
-    tools
-  );
-  // BUG: throws "runtime error: invalid iterator state"
-  assert.equal(r.output, "done");
-});
+      tools,
+    );
+    // BUG: throws "runtime error: invalid iterator state"
+    assert.equal(r.output, "done");
+  },
+);
 
 // ===========================================================================
 // Summary
 // ===========================================================================
-const failed = results.filter(r => !r[1]);
-const bugs    = results.filter(r => !r[1] && r[0].startsWith("BUG-"));
-const missing = results.filter(r => !r[1] && r[0].startsWith("MISSING-"));
-const workflows = results.filter(r => !r[1] && r[0].startsWith("workflow-"));
+const failed = results.filter((r) => !r[1]);
+const bugs = results.filter((r) => !r[1] && r[0].startsWith("BUG-"));
+const missing = results.filter((r) => !r[1] && r[0].startsWith("MISSING-"));
+const workflows = results.filter((r) => !r[1] && r[0].startsWith("workflow-"));
 
 console.log(`\n${results.length - failed.length}/${results.length} passed`);
-if (workflows.length)  console.log(`  Workflow scenario failures (unexpected): ${workflows.length}`);
-if (bugs.length)       console.log(`  Confirmed interpreter bugs (expected to fail): ${bugs.length}`);
-if (missing.length)    console.log(`  Missing builtins (expected to fail): ${missing.length}`);
+if (workflows.length) console.log(`  Workflow scenario failures (unexpected): ${workflows.length}`);
+if (bugs.length) console.log(`  Confirmed interpreter bugs (expected to fail): ${bugs.length}`);
+if (missing.length) console.log(`  Missing builtins (expected to fail): ${missing.length}`);
 
 if (workflows.length) {
   console.log("\nUnexpected workflow failures:");
