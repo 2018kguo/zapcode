@@ -1,7 +1,7 @@
 {
   "name": "@2018kguo/zapcode-ai",
   "version": "1.6.2",
-  "description": "AI SDK integration for Zapcode — let LLMs write and execute TypeScript safely",
+  "description": "Run model-written TypeScript against your tools in the Zapcode sandbox: suspend/resume tool calls, durable sessions, typecheck and dry runs",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,7 +17,7 @@
     "sync-local-binding": "node scripts/sync-local-binding.mjs",
     "test:agent-scenarios": "npm run build && node tests/agent-scenarios.mjs",
     "test:e2e": "npm run sync-local-binding && npm run build && node tests/agent-scenarios.mjs && node tests/durable-sessions.mjs && node tests/tool-errors.mjs && node tests/parallel.mjs && node tests/driver.mjs && node tests/ai-session.mjs && node tests/type-check.mjs && node tests/agent-dx.mjs && node tests/tool-side-effects.mjs && node tests/stress.mjs && node tests/workflow.mjs && node tests/marshalling.mjs",
-    "test:e2e-conformance": "npm run sync-local-binding && npm run build && for f in agent-integration tool-contract session-inputs session-workflows durable-serialization ai-sdk-adapters; do echo \"# e2e-$f\"; node tests/e2e-$f.mjs; done",
+    "test:e2e-conformance": "npm run sync-local-binding && npm run build && for f in agent-integration tool-contract session-inputs session-workflows durable-serialization; do echo \"# e2e-$f\"; node tests/e2e-$f.mjs; done",
     "test:e2e-full": "npm run test:e2e && npm run test:e2e-conformance && npm run test:scenarios3 && node tests/differential.mjs",
     "test:scenarios3": "npm run sync-local-binding && npm run build && for f in scheduling support-triage etl compliance durable pricing inventory analytics knowledge statemachine; do echo \"# scenarios3-$f\"; node tests/scenarios3-$f.mjs; done",
     "test:scenarios": "npm run build && for f in data datetime text errors sessions; do echo \"# scenarios-$f\"; node tests/scenarios-$f.mjs || true; done",
@@ -29,13 +29,9 @@
     "@2018kguo/zapcode": "^1.0.0"
   },
   "peerDependencies": {
-    "ai": ">=7.0.0",
     "typescript": ">=5.0.0"
   },
   "peerDependenciesMeta": {
-    "ai": {
-      "optional": true
-    },
     "typescript": {
       "optional": true
     }
@@ -43,7 +39,6 @@
   "devDependencies": {
     "@types/node": "^26.6.5",
     "@typescript/native-preview": "^7.0.0-dev.20260611.2",
-    "ai": "^7.0.148",
     "typescript": "^6.0.3",
     "tsrs": "^0.18.0-ts7.1.0-dev.20260929"
   },
@@ -54,11 +49,10 @@
     "typescript",
     "interpreter",
     "sandbox",
-    "ai",
-    "mcp",
-    "llm",
     "tool-use",
-    "agent"
+    "agent",
+    "agents",
+    "code-mode"
   ],
   "homepage": "https://github.com/2018kguo/zapcode#readme",
   "bugs": "https://github.com/2018kguo/zapcode/issues",

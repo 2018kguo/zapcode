@@ -1,28 +1,10 @@
-# AI Agent Examples (Python)
+# AI agent example (Python)
 
-Two ways to build AI agents with Zapcode in Python.
-
-## Setup
+Claude writes TypeScript, Zapcode runs it, and each tool call suspends the VM
+so the host can run the real function and resume.
 
 ```bash
-pip install zapcode zapcode-ai anthropic
-# or: uv pip install zapcode zapcode-ai anthropic
+uv sync   # or: pip install zapcode anthropic
 export ANTHROPIC_API_KEY=sk-ant-...
-```
-
-## Run
-
-```bash
-# Recommended — zapcode-ai wrapper
-python ai_agent_zapcode_ai.py
-
-# Raw Anthropic SDK + manual snapshot/resume loop
 python ai_agent_anthropic.py
 ```
-
-## What's here
-
-| File | Description |
-|---|---|
-| `ai_agent_zapcode_ai.py` | **Recommended** — uses `zapcode-ai` wrapper with Anthropic SDK |
-| `ai_agent_anthropic.py` | Raw Anthropic SDK + manual snapshot/resume loop |

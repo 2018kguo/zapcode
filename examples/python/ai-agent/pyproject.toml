@@ -5,6 +5,5 @@ description = "Zapcode AI agent examples (Python)"
 requires-python = ">=3.10"
 dependencies = [
     "zapcode",
-    "zapcode-ai",
     "anthropic>=0.39.0",
 ]

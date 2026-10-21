@@ -3,19 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "agent": "tsx ai-agent-zapcode-ai.ts",
-    "agent:anthropic": "tsx ai-agent-anthropic.ts",
-    "agent:vercel": "tsx ai-agent-vercel-ai.ts"
+    "agent": "tsx ai-agent-anthropic.ts"
   },
   "dependencies": {
     "@2018kguo/zapcode": "file:../../../crates/zapcode-js",
-    "@2018kguo/zapcode-ai": "file:../../../packages/zapcode-ai",
-    "@ai-sdk/anthropic": "^1.1.0",
-    "@anthropic-ai/sdk": "^0.39.0",
-    "ai": "^4.1.0"
+    "@anthropic-ai/sdk": "^0.70.0"
   },
   "devDependencies": {
     "tsx": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^6.0.3"
   }
 }

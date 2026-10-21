@@ -2,8 +2,6 @@
 AI Agent with Zapcode — LOW-LEVEL approach using Anthropic SDK directly.
 
 This shows the manual snapshot/resume loop using the zapcode package.
-For most use cases, prefer zapcode-ai instead — see ai_agent_zapcode_ai.py
-for the recommended approach.
 
 The "code as tool use" pattern:
 1. Claude writes TypeScript code that calls tools (external functions)

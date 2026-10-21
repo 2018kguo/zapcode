@@ -6,14 +6,12 @@ Examples organized by language, then by topic.
 examples/
 ├── typescript/
 │   ├── basic/            Simple expressions, inputs, snapshot/resume, classes
-│   ├── ai-agent/         AI agent with Anthropic SDK, Vercel AI SDK, zapcode-ai
-│   ├── ai-bedrock/       AWS Bedrock integration
-│   └── debug-tracing/    Debug mode, autoFix, execution tracing
+│   ├── ai-agent/         Claude writes code, Zapcode runs it (Anthropic SDK)
+│   ├── workflows/        Retry, sagas, routing, sessions with execute() (offline)
+│   └── showcase/         The README demos (recorded with vhs)
 ├── python/
 │   ├── basic/            Simple expressions, inputs, snapshot/resume
-│   ├── ai-agent/         AI agent with Anthropic SDK, zapcode-ai
-│   ├── ai-bedrock/       AWS Bedrock Converse API
-│   └── debug-tracing/    Debug mode, autoFix, execution tracing
+│   └── ai-agent/         Claude writes code, Zapcode runs it (Anthropic SDK)
 ├── rust/
 │   └── basic/            Simple expressions, inputs, snapshot/resume
 └── wasm/

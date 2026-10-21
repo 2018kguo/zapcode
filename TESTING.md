@@ -122,13 +122,12 @@ cargo test --workspace                # all crates (core, js, wasm, py bindings)
 ## Tier 2 — JS end-to-end (`packages/zapcode-ai`)
 
 These import the **built** interpreter (`dist/index.js`, backed by the local
-`napi` binding) and exercise the AI-facing API exactly as an application would:
+`napi` binding) and exercise the host API exactly as an application would:
 
 - `execute(code, tools) -> { output, toolCalls }` — one-shot run.
 - `createSession({ tools }).runChunk(code, inputs)` + `.dump()` — durable session.
 - `loadSession(dump, { tools })` — resume in a fresh handle / process.
-- `zapcode({ tools }).{ system, tools, openaiTools, anthropicTools,
-  handleToolCall, custom }` — the SDK adapter surface.
+- `describeTools(tools)` — the declarations handed to a model.
 
 Each `.mjs` suite is a standalone script: a green run prints `✓`/`PASS` lines and
 a final count, and exits non-zero on the first failed assertion.
@@ -152,10 +151,6 @@ a final count, and exits non-zero on the first failed assertion.
   suspend/resume *bytes*: mid-tool-call suspension surviving multiple
   serialization hops, `Promise.all` batch suspensions, `resumeError`, and the
   documented nested-closure capture boundary.
-- **`e2e-ai-sdk-adapters.mjs`** — the `zapcode({ tools })` integration surface:
-  system-prompt generation (declare-function signatures + call shapes), the
-  OpenAI / Anthropic / Vercel tool shapes, `handleToolCall`, custom adapters via
-  `createAdapter`, and the documented L8 per-parameter-description residual.
 
 ### Existing core e2e chain (`test:e2e`)
 

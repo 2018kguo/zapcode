@@ -1,28 +1,15 @@
 /**
- * @2018kguo/zapcode-ai — High-level AI SDK integration for Zapcode.
+ * @2018kguo/zapcode-ai — run model-written TypeScript against your tools.
  *
- * Works with any AI SDK:
+ * The host loop around the Zapcode interpreter: tool calls suspend the VM,
+ * your `execute` functions run on the host, results flow back in. No AI SDK
+ * dependency — hand the model `describeTools(tools)`, take the code it writes,
+ * and pass it to `execute()`.
  *
  * ```typescript
- * // AI SDK (recommended)
- * import { zapcode } from "@2018kguo/zapcode-ai";
- * const { system, tools } = zapcode({ tools: { ... } });
- * await generateText({ model, system, tools, messages });
- *
- * // OpenAI SDK
- * import { zapcode } from "@2018kguo/zapcode-ai";
- * const { system, openaiTools, handleToolCall } = zapcode({ tools: { ... } });
- * const response = await openai.chat.completions.create({
- *   messages: [{ role: "system", content: system }, ...],
- *   tools: openaiTools,
- * });
- *
- * // Anthropic SDK
- * import { zapcode } from "@2018kguo/zapcode-ai";
- * const { system, anthropicTools, handleToolCall } = zapcode({ tools: { ... } });
- * const response = await anthropic.messages.create({
- *   system, tools: anthropicTools, messages,
- * });
+ * import { execute, describeTools } from "@2018kguo/zapcode-ai";
+ * const prompt = `Write TypeScript using these functions:\n${describeTools(tools)}`;
+ * const { output } = await execute(codeFromModel, tools);
  * ```
  */
 
@@ -34,7 +21,6 @@ import {
   type ZapcodeStep,
   type PromiseCombinator,
 } from "@2018kguo/zapcode";
-import { jsonSchema, tool, type ToolSet } from "ai";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -63,38 +49,6 @@ export interface ParamDef {
   type: "string" | "number" | "boolean" | "object" | "array";
   description?: string;
   optional?: boolean;
-}
-
-/** Configuration for the `zapcode()` wrapper. */
-export interface ZapcodeAIOptions {
-  /** Tools available to guest code. */
-  tools: Record<string, ToolDefinition>;
-  /** Extra system prompt to prepend (optional). */
-  system?: string;
-  /** Memory limit in MB (default: 32). */
-  memoryLimitMb?: number;
-  /** Execution time limit in ms (default: 10000). */
-  timeLimitMs?: number;
-  /** Custom adapters for additional AI SDKs. */
-  adapters?: ZapcodeAdapter[];
-  /**
-   * Log generated code, tool calls, and output to the console.
-   * Useful for understanding what the LLM generates.
-   */
-  debug?: boolean;
-  /**
-   * When true, execution errors are returned as tool results instead of
-   * throwing. The LLM sees the error and can self-correct on the next step.
-   * Works with `maxSteps` in the Vercel AI SDK. Default: false.
-   */
-  autoFix?: boolean;
-  /**
-   * Type-check generated code against the tool stubs before running it, so an
-   * unknown tool or a wrong argument type fails fast as a compile error
-   * (cheaper than a runtime trap). Requires the optional `typescript`
-   * dependency. Default: false.
-   */
-  typeCheck?: boolean;
 }
 
 /** A single span in the execution trace. OTel-compatible shape. */
@@ -187,87 +141,7 @@ const RESERVED_TOOL_NAMES = new Set([
   "globalThis",
   "global",
   "require",
-  "execute_code",
 ]);
-
-/** What `zapcode()` returns — adapters for every major AI SDK. */
-export interface ZapcodeAIResult {
-  /** System prompt instructing the LLM to write TypeScript. */
-  system: string;
-
-  /**
-   * AI SDK tool format.
-   * Use with `generateText({ tools })` or `streamText({ tools })`.
-   */
-  tools: ToolSet;
-
-  /**
-   * OpenAI SDK tool format.
-   * Use with `openai.chat.completions.create({ tools: openaiTools })`.
-   */
-  openaiTools: OpenAITool[];
-
-  /**
-   * Anthropic SDK tool format.
-   * Use with `anthropic.messages.create({ tools: anthropicTools })`.
-   */
-  anthropicTools: AnthropicTool[];
-
-  /**
-   * Execute code from a tool call response.
-   * Works with any SDK — just extract the `code` argument from the
-   * `execute_code` tool call and pass it here.
-   */
-  handleToolCall: (code: string) => Promise<ExecutionResult>;
-
-  /**
-   * Output from custom adapters, keyed by adapter name.
-   * Access with `result.custom["my-adapter-name"]`.
-   */
-  custom: Record<string, unknown>;
-
-  /**
-   * Get the full session trace tree (all attempts).
-   * Available when debug or autoFix is enabled.
-   * Call after generateText/streamText completes.
-   */
-  getTrace: () => TraceSpan | undefined;
-
-  /**
-   * Print the full session trace tree to the console.
-   * Available when debug or autoFix is enabled.
-   */
-  printTrace: () => void;
-}
-
-// ---------------------------------------------------------------------------
-// SDK-specific tool shapes
-// ---------------------------------------------------------------------------
-
-/** OpenAI SDK tool shape. */
-export interface OpenAITool {
-  type: "function";
-  function: {
-    name: string;
-    description: string;
-    parameters: {
-      type: "object";
-      properties: Record<string, unknown>;
-      required: string[];
-    };
-  };
-}
-
-/** Anthropic SDK tool shape. */
-export interface AnthropicTool {
-  name: string;
-  description: string;
-  input_schema: {
-    type: "object";
-    properties: Record<string, unknown>;
-    required: string[];
-  };
-}
 
 // ---------------------------------------------------------------------------
 // System prompt generation
@@ -308,8 +182,14 @@ function generateDeclaration(name: string, def: ToolDefinition): string {
   return `declare function ${name}(${params}): Promise<unknown>;`;
 }
 
-function buildSystemPrompt(tools: Record<string, ToolDefinition>, userSystem?: string): string {
-  const toolDocs = Object.entries(tools)
+/**
+ * TypeScript declarations for `tools` — one `declare function` per tool with
+ * its call shape and description — to put in a prompt so the model writes
+ * calls that type-check and validate.
+ */
+export function describeTools(tools: Record<string, ToolDefinition>): string {
+  validateToolDefinitions(tools);
+  return Object.entries(tools)
     .map(([name, def]) => {
       const signature =
         Object.keys(def.parameters).length > 1
@@ -318,49 +198,7 @@ function buildSystemPrompt(tools: Record<string, ToolDefinition>, userSystem?: s
       return `- ${generateDeclaration(name, def)}\n  Call shape: await ${signature}\n  ${def.description}`;
     })
     .join("\n");
-
-  const parts: string[] = [];
-
-  if (userSystem) {
-    parts.push(userSystem);
-  }
-
-  parts.push(`When you need to use tools or compute something, write TypeScript code and pass it to the execute_code tool.
-The code runs in a sandboxed interpreter with these functions available (use await):
-
-${toolDocs}
-
-Rules:
-- Write ONLY TypeScript code, no markdown fences, no explanation.
-- The last expression in your code is the return value.
-- You can use variables, loops, conditionals, array methods, etc.
-- All tool calls must use \`await\`.
-- Prefer the declared function signatures above exactly. For tools with more than one parameter, call them with one named object argument, e.g. \`await toolName({ key: value })\`.
-- When a tool returns a structured object, access its properties directly instead of reparsing the result as text.
-- If the user's question doesn't need tools, you can compute the answer directly.`);
-
-  return parts.join("\n\n");
 }
-
-// ---------------------------------------------------------------------------
-// Tool schema (shared across SDK formats)
-// ---------------------------------------------------------------------------
-
-const CODE_TOOL_SCHEMA = {
-  type: "object" as const,
-  properties: {
-    code: {
-      type: "string",
-      description: "TypeScript code to execute in the sandbox",
-    },
-  },
-  required: ["code"],
-};
-
-const CODE_TOOL_DESCRIPTION =
-  "Execute TypeScript code in a secure sandbox. " +
-  "The code can call the available tool functions using await. " +
-  "The last expression is the return value.";
 
 // ---------------------------------------------------------------------------
 // Trace helpers
@@ -1173,274 +1011,7 @@ async function executeCode(
 }
 
 // ---------------------------------------------------------------------------
-// Main entry point
-// ---------------------------------------------------------------------------
-
-/**
- * Create AI SDK-compatible system prompt and tools for Zapcode.
- *
- * Returns adapters for every major AI SDK:
- * - `tools` → Vercel AI SDK (`generateText`, `streamText`)
- * - `openaiTools` → OpenAI SDK (`chat.completions.create`)
- * - `anthropicTools` → Anthropic SDK (`messages.create`)
- * - `handleToolCall(code)` → Universal handler for any SDK
- *
- * @example
- * ```typescript
- * // Vercel AI SDK
- * const { system, tools } = zapcode({ tools: { getWeather: { ... } } });
- * await generateText({ model, system, tools, messages });
- *
- * // OpenAI SDK
- * const { system, openaiTools, handleToolCall } = zapcode({ tools: { ... } });
- * const res = await openai.chat.completions.create({
- *   messages: [{ role: "system", content: system }, ...],
- *   tools: openaiTools,
- * });
- * const code = res.choices[0].message.tool_calls[0].function.arguments;
- * const result = await handleToolCall(JSON.parse(code).code);
- *
- * // Anthropic SDK
- * const { system, anthropicTools, handleToolCall } = zapcode({ tools: { ... } });
- * const res = await anthropic.messages.create({
- *   system, tools: anthropicTools, messages,
- * });
- * const toolUse = res.content.find(b => b.type === "tool_use");
- * const result = await handleToolCall(toolUse.input.code);
- * ```
- */
-export function zapcode(options: ZapcodeAIOptions): ZapcodeAIResult {
-  const {
-    tools: toolDefs,
-    system: userSystem,
-    memoryLimitMb,
-    timeLimitMs,
-    adapters,
-    debug,
-    autoFix,
-    typeCheck,
-  } = options;
-  validateToolDefinitions(toolDefs);
-
-  const system = buildSystemPrompt(toolDefs, userSystem);
-
-  const execOptions = { memoryLimitMb, timeLimitMs, debug, autoFix, typeCheck };
-  const tracing = debug || autoFix;
-
-  // Session-level trace collects all attempts
-  const sessionTrace: TraceSpan | undefined = tracing
-    ? createSpan("session", { "zapcode.tools": Object.keys(toolDefs).join(", ") })
-    : undefined;
-  let attemptCount = 0;
-
-  // Universal handler
-  const handleToolCall = async (code: string): Promise<ExecutionResult> => {
-    attemptCount++;
-    const result = await executeCode(code, toolDefs, execOptions);
-
-    if (sessionTrace && result.trace) {
-      result.trace.name = `attempt_${attemptCount}`;
-      result.trace.attributes["zapcode.attempt"] = attemptCount;
-      sessionTrace.children.push(result.trace);
-    }
-
-    return result;
-  };
-
-  const handleExecuteCodeInput = async (args: unknown): Promise<ExecutionResult> => {
-    if (!isPlainObject(args) || typeof args.code !== "string") {
-      const actual = !isPlainObject(args) ? jsTypeName(args) : jsTypeName(args.code);
-      const message = `Invalid execute_code input: expected object with code: string, got ${actual}.`;
-      if (!autoFix) {
-        throw new Error(message);
-      }
-
-      const trace = createSpan("attempt_0", { "zapcode.code": "" });
-      trace.attributes["zapcode.error"] = message;
-      endSpan(trace, "error");
-      if (sessionTrace) {
-        sessionTrace.children.push(trace);
-      }
-
-      return {
-        code: "",
-        output: null,
-        stdout: "",
-        stderr: "",
-        toolCalls: [],
-        error: `Execution failed: ${message}. Please fix your code and try again.`,
-        report: {
-          completed: false,
-          durationMs: 0,
-          toolCallCount: 0,
-          error: { message },
-        },
-        trace,
-      };
-    }
-
-    return handleToolCall(args.code);
-  };
-
-  // AI SDK format — use tool() + jsonSchema() for proper integration
-  const tools: ToolSet = {
-    execute_code: tool({
-      description: CODE_TOOL_DESCRIPTION,
-      inputSchema: jsonSchema(CODE_TOOL_SCHEMA),
-      execute: handleExecuteCodeInput,
-    }),
-  };
-
-  // OpenAI SDK format
-  const openaiTools: OpenAITool[] = [
-    {
-      type: "function",
-      function: {
-        name: "execute_code",
-        description: CODE_TOOL_DESCRIPTION,
-        parameters: CODE_TOOL_SCHEMA,
-      },
-    },
-  ];
-
-  // Anthropic SDK format
-  const anthropicTools: AnthropicTool[] = [
-    {
-      name: "execute_code",
-      description: CODE_TOOL_DESCRIPTION,
-      input_schema: CODE_TOOL_SCHEMA,
-    },
-  ];
-
-  // Run custom adapters
-  const custom: Record<string, unknown> = {};
-  if (adapters) {
-    const adapterContext: AdapterContext = {
-      system,
-      toolName: "execute_code",
-      toolDescription: CODE_TOOL_DESCRIPTION,
-      toolSchema: CODE_TOOL_SCHEMA,
-      handleToolCall,
-    };
-    for (const adapter of adapters) {
-      custom[adapter.name] = adapter.adapt(adapterContext);
-    }
-  }
-
-  const getTrace = (): TraceSpan | undefined => {
-    if (!sessionTrace) return undefined;
-    endSpan(sessionTrace, sessionTrace.children.some((c) => c.status === "ok") ? "ok" : "error");
-    return sessionTrace;
-  };
-
-  const printSessionTrace = (): void => {
-    const trace = getTrace();
-    if (trace) {
-      console.log(`\n─── Zapcode Trace ───`);
-      printTrace(trace);
-      console.log(`─────────────────────\n`);
-    }
-  };
-
-  return {
-    system,
-    tools,
-    openaiTools,
-    anthropicTools,
-    handleToolCall,
-    custom,
-    getTrace,
-    printTrace: printSessionTrace,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Custom adapter support
-// ---------------------------------------------------------------------------
-
-/**
- * Adapter interface for integrating Zapcode with any AI SDK.
- *
- * Implement this to add support for a new SDK. Your adapter receives
- * the system prompt, tool description/schema, and a `handleToolCall`
- * function, and returns whatever shape your SDK needs.
- *
- * @example
- * ```typescript
- * import { zapcode, createAdapter, ZapcodeAdapter } from "@2018kguo/zapcode-ai";
- *
- * // Example: adapter for a hypothetical SDK
- * const myAdapter: ZapcodeAdapter<MySDKConfig> = {
- *   name: "my-sdk",
- *   adapt({ system, toolDescription, toolSchema, handleToolCall }) {
- *     return {
- *       systemMessage: system,
- *       actions: [{
- *         id: "execute_code",
- *         desc: toolDescription,
- *         schema: toolSchema,
- *         run: async (input) => handleToolCall(input.code),
- *       }],
- *     };
- *   },
- * };
- *
- * const { system, tools, custom } = zapcode({
- *   tools: { ... },
- *   adapters: [myAdapter],
- * });
- *
- * const myConfig = custom["my-sdk"]; // typed as MySDKConfig
- * ```
- */
-export interface ZapcodeAdapter<TOutput = unknown> {
-  /** Unique name for this adapter (used as key in `custom` output). */
-  name: string;
-  /** Transform Zapcode's tool definition into your SDK's format. */
-  adapt(context: AdapterContext): TOutput;
-}
-
-/** Context passed to adapters. */
-export interface AdapterContext {
-  /** The generated system prompt. */
-  system: string;
-  /** Tool name (always "execute_code"). */
-  toolName: string;
-  /** Human-readable tool description. */
-  toolDescription: string;
-  /** JSON Schema for the tool parameters. */
-  toolSchema: {
-    type: "object";
-    properties: Record<string, unknown>;
-    required: string[];
-  };
-  /** Execute code in the sandbox. Pass the `code` string from the tool call. */
-  handleToolCall: (code: string) => Promise<ExecutionResult>;
-}
-
-/**
- * Helper to create a typed adapter.
- *
- * @example
- * ```typescript
- * const langchainAdapter = createAdapter("langchain", (ctx) => {
- *   return new DynamicStructuredTool({
- *     name: ctx.toolName,
- *     description: ctx.toolDescription,
- *     func: async ({ code }) => JSON.stringify(await ctx.handleToolCall(code)),
- *   });
- * });
- * ```
- */
-export function createAdapter<TOutput>(
-  name: string,
-  adapt: (context: AdapterContext) => TOutput,
-): ZapcodeAdapter<TOutput> {
-  return { name, adapt };
-}
-
-// ---------------------------------------------------------------------------
-// Convenience: standalone execution without AI SDK
+// execute — run code against tools to completion
 // ---------------------------------------------------------------------------
 
 /**

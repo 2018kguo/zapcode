@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execute, zapcode } from "../dist/index.js";
+import { execute, describeTools } from "../dist/index.js";
 
 const NOW_MS = Date.UTC(2026, 4, 31);
 
@@ -62,13 +62,12 @@ async function expectToolError(code, tools, expectedMessage) {
 }
 
 {
-  const { system } = zapcode({ tools: createRoutingTools([]) });
+  const system = describeTools(createRoutingTools([]));
   assert.match(
     system,
     /declare function escalateTo\(input: \{ assignee: string; dueAtMs: number; reason: string; metadata\?: object \}\): Promise<unknown>;/,
   );
   assert.match(system, /Call shape: await escalateTo\(\{ assignee: string, dueAtMs: number/);
-  assert.match(system, /Prefer the declared function signatures above exactly/);
 }
 
 {
@@ -476,15 +475,6 @@ await expectExecutionError(
 }
 
 {
-  const { tools } = zapcode({ tools: createRoutingTools([]), autoFix: true });
-  for (const input of [null, {}, { code: 123 }, []]) {
-    const result = await tools.execute_code.execute(input);
-    assert.equal(result.output, null);
-    assert.match(result.error, /Invalid execute_code input: expected object with code: string/);
-  }
-}
-
-{
   for (const name of [
     "console",
     "Math",
@@ -493,18 +483,15 @@ await expectExecutionError(
     "require",
     "process",
     "globalThis",
-    "execute_code",
     "x-y",
   ]) {
     assert.throws(
       () =>
-        zapcode({
-          tools: {
-            [name]: {
-              description: "bad tool",
-              parameters: {},
-              execute: async () => null,
-            },
+        describeTools({
+          [name]: {
+            description: "bad tool",
+            parameters: {},
+            execute: async () => null,
           },
         }),
       /Invalid tool name/,

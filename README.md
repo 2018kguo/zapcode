@@ -46,7 +46,7 @@ what's needed to run it in production agent loops:
 | **Semantics** | Eager promises, arrays and objects copied on write-back, UTF-8 string indexing | Reference semantics (heap + handles), real **microtask queue** and `await` suspension, UTF-16 strings, BigInt, block scoping + `const`, ECMA key order |
 | **Built-ins** | Core subset; regex parsed but not executed | Linear-time **regex engine**, Map/Set/WeakMap/WeakSet with iterators, Symbol registry, getters/setters, `defineProperty`, private `#fields`, generators + `yield*`, tagged templates, ES2023 array methods, `Symbol.toPrimitive` |
 | **Promises** | `.then`, `Promise.all` | `new Promise(executor)`, `race`/`any`/`allSettled` with real host timing, `AggregateError`, unhandled-rejection tracking, deterministic `setTimeout` |
-| **Agent API** | `zapcode()` adapters | Plus `execute`, durable `createSession`/`loadSession`, `prepare` (compile once), `typecheck`, `dryRun`, `forkSnapshot`, structured run reports, tool errors as real `Error`s, stdout/stderr split |
+| **Host API** | `zapcode()` AI SDK adapters | No SDK adapters (like Monty); `execute`, `describeTools`, durable `createSession`/`loadSession`, `prepare` (compile once), `typecheck`, `dryRun`, `forkSnapshot`, structured run reports, tool errors as real `Error`s, stdout/stderr split |
 | **Verification** | Unit tests + security suite | 2,360+ Rust tests, a **differential harness** checking 352 programs against Node, a differential fuzzer, and 92 adversarial security tests |
 | **Hardening** | | Guest-reachable host crashes fixed, bounded recursion everywhere, forged-snapshot rejection, live heap ceiling with in-run compaction |
 
@@ -87,21 +87,25 @@ r.report;     // { completed, durationMs, toolCallCount, error? }
 The **last expression is the output**. A tool that throws rejects the guest's `await` with a real
 `Error`, so `try/catch` and retry code behave as in Node.
 
-### Plug into an LLM
+### Using it with a model
 
-`zapcode({ tools })` returns a system prompt plus a single `execute_code` tool in every common format:
+Zapcode has no SDK dependency, the way Pydantic's Monty doesn't. Give the model your tools'
+TypeScript declarations, let it write code, and run what it returns:
 
 ```ts
-import { zapcode } from "@2018kguo/zapcode-ai";
-import { generateText } from "ai";
+import { describeTools, execute } from "@2018kguo/zapcode-ai";
 
-const { system, tools, anthropicTools, openaiTools, handleToolCall } = zapcode({ tools: myTools, autoFix: true });
-await generateText({ model, system, tools, messages });      // Vercel AI SDK
-// or pass anthropicTools / openaiTools to those SDKs and route the call to handleToolCall(code)
+const system = `Answer by writing TypeScript. Available functions (use await):
+${describeTools(tools)}
+The last expression is the result.`;
+
+const code = await yourModel(system, question);        // any SDK, any provider
+const r = await execute(code, tools, { autoFix: true }); // errors come back as r.report.error
 ```
 
-With `autoFix: true`, runtime errors come back to the model as a tool result so it can fix its own code.
-See [`examples/typescript/ai-agent`](examples/typescript/ai-agent) for complete Anthropic, OpenAI and AI SDK loops.
+With `autoFix: true`, a failed run returns a structured error instead of throwing, so you can hand it
+back to the model. [`examples/typescript/ai-agent`](examples/typescript/ai-agent) is a complete Claude
+loop on the low-level snapshot API.
 
 ## Features
 

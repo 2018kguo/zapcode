@@ -5,7 +5,7 @@
  *   npm run build && node tests/scenarios3-scheduling.mjs
  */
 import assert from "node:assert/strict";
-import { execute, zapcode } from "../dist/index.js";
+import { execute, describeTools } from "../dist/index.js";
 
 const NOW_MS = Date.parse("2026-06-01T12:00:00.000Z");
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -100,7 +100,7 @@ function routeCode(userDateExpression, extras = "") {
 console.log("scenarios3 scheduling e2e");
 
 await test("system prompt exposes named-object scheduling signatures", async () => {
-  const { system } = zapcode({ tools: createSchedulingTools([]) });
+  const system = describeTools(createSchedulingTools([]));
   assert.match(
     system,
     /declare function parseScheduleDate\(input: \{ date: string; timezone\?: string \}\): Promise<unknown>;/,

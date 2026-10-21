@@ -20,7 +20,7 @@
  *   node tests/scenarios3-knowledge.mjs
  */
 import assert from "node:assert/strict";
-import { execute, zapcode } from "../dist/index.js";
+import { execute, describeTools } from "../dist/index.js";
 
 let passed = 0;
 async function test(name, fn) {
@@ -115,7 +115,7 @@ function createKnowledgeTools(state = {}, failSources = new Set()) {
 }
 
 await test("system prompt exposes named-object signatures and call shapes for KB tools", async () => {
-  const { system } = zapcode({ tools: createKnowledgeTools() });
+  const system = describeTools(createKnowledgeTools());
   assert.match(
     system,
     /declare function retrieveSource\(input: \{ source: string; query: string; limit\?: number \}\): Promise<unknown>;/,

@@ -6,7 +6,7 @@ Runnable demos of the orchestration shapes you'd actually build with
 run deterministically in the Zapcode sandbox.
 
 This example is **offline** — it uses mock tools and asserts every result, so it
-runs with no API key. The same code is what `zapcode({ tools })` feeds to a
+runs with no API key. The same code is what `execute(code, tools)` receives from a
 model; to watch a model generate it, see [`../ai-agent`](../ai-agent).
 
 ## Run

@@ -7,8 +7,8 @@
  * no filesystem; the only outside effects are the tools you register.
  *
  * This example is OFFLINE — it uses mock tools and asserts the results, so it
- * runs with no API key. The same code is what `zapcode({ tools })` would feed
- * to a model. To see a model actually generate this code, see ../ai-agent.
+ * runs with no API key. The same code is what `execute(code, tools)` would receive
+ * from a model. To see a model actually generate this code, see ../ai-agent.
  *
  * Prerequisites: npm install
  * Run with: npm start

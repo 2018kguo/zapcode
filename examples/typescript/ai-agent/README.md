@@ -1,31 +1,15 @@
-# AI Agent Examples (TypeScript)
+# AI agent example (TypeScript)
 
-Three ways to build AI agents with Zapcode, from high-level to low-level.
-
-## Setup
+Claude writes TypeScript, Zapcode runs it, and each tool call suspends the VM
+so the host can run the real function and resume. Uses only the core
+`@2018kguo/zapcode` package and the Anthropic SDK.
 
 ```bash
 npm install
 export ANTHROPIC_API_KEY=sk-ant-...
-```
-
-## Run
-
-```bash
-# Recommended — zapcode-ai wrapper
 npm run agent
-
-# Vercel AI SDK with streamText
-npm run agent:vercel
-
-# Raw Anthropic SDK + manual snapshot/resume loop
-npm run agent:anthropic
 ```
 
-## What's here
-
-| File                     | Description                                                              |
-| ------------------------ | ------------------------------------------------------------------------ |
-| `ai-agent-zapcode-ai.ts` | **Recommended** — uses `@2018kguo/zapcode-ai` wrapper with Vercel AI SDK |
-| `ai-agent-vercel-ai.ts`  | Vercel AI SDK with `generateText` and `streamText`                       |
-| `ai-agent-anthropic.ts`  | Raw Anthropic SDK + manual snapshot/resume loop                          |
+For the higher-level loop (tool validation, parallel batches, sessions), see
+`execute()` in [`packages/zapcode-ai`](../../../packages/zapcode-ai) and the
+[workflows example](../workflows).

@@ -15,7 +15,7 @@
  *   node tests/scenarios3-pricing.mjs
  */
 import assert from "node:assert/strict";
-import { execute, zapcode } from "../dist/index.js";
+import { execute, describeTools } from "../dist/index.js";
 
 const BILLING_NOW_MS = Date.parse("2026-06-01T00:00:00.000Z");
 
@@ -69,7 +69,7 @@ function createPricingTools(state) {
 }
 
 await test("system prompt renders pricing tool signatures", async () => {
-  const { system } = zapcode({ tools: createPricingTools({ saved: [] }) });
+  const system = describeTools(createPricingTools({ saved: [] }));
   assert.match(
     system,
     /declare function saveInvoice\(input: \{ invoiceId: string; lineItems: array; totals: object; currency\?: string \}\): Promise<unknown>;/,

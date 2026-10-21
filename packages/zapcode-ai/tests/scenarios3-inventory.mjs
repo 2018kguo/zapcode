@@ -25,7 +25,7 @@
  *   node tests/scenarios3-inventory.mjs
  */
 import assert from "node:assert/strict";
-import { execute, zapcode } from "../dist/index.js";
+import { execute, describeTools } from "../dist/index.js";
 
 let passed = 0;
 async function test(name, fn) {
@@ -181,7 +181,7 @@ const result = await commitAllocations({ allocations, backorders });
 
 await test("system prompt exposes named-object inventory tool signatures", async () => {
   const state = { stockFetches: [], orderFetches: [], commits: [] };
-  const { system } = zapcode({ tools: createInventoryTools(state) });
+  const system = describeTools(createInventoryTools(state));
   assert.match(
     system,
     /declare function commitAllocations\(input: \{ allocations: array; backorders: array; dryRun\?: boolean \}\): Promise<unknown>;/,

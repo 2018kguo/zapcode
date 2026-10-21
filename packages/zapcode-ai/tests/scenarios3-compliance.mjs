@@ -8,7 +8,7 @@
  * Run: npm run build && node tests/scenarios3-compliance.mjs
  */
 import assert from "node:assert/strict";
-import { execute, zapcode } from "../dist/index.js";
+import { execute, describeTools } from "../dist/index.js";
 
 let passed = 0;
 async function check(name, fn) {
@@ -135,7 +135,7 @@ function createComplianceTools({ summaries = [], escalations = [] } = {}) {
 console.log("scenarios3 compliance e2e");
 
 await check("system prompt emits named object signatures for compliance tools", async () => {
-  const { system } = zapcode({ tools: createComplianceTools() });
+  const system = describeTools(createComplianceTools());
   assert.match(
     system,
     /declare function normalizeParty\(input: \{ rawName: string; role: string \}\): Promise<unknown>;/,

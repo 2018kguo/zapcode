@@ -15,7 +15,7 @@
  *   node tests/scenarios3-analytics.mjs
  */
 import assert from "node:assert/strict";
-import { execute, zapcode } from "../dist/index.js";
+import { execute, describeTools } from "../dist/index.js";
 
 let passed = 0;
 async function test(name, fn) {
@@ -135,7 +135,7 @@ function createAnalyticsTools(state = {}) {
 // 1. System-prompt assertion.
 // ────────────────────────────────────────────────────────────────────────────
 await test("system prompt exposes named-object analytics tool signatures", async () => {
-  const { system } = zapcode({ tools: createAnalyticsTools().tools });
+  const system = describeTools(createAnalyticsTools().tools);
   assert.match(system, /declare function fetchEvents\(window\?: string\): Promise<unknown>;/);
   assert.match(
     system,

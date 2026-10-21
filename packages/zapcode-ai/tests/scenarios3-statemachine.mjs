@@ -31,7 +31,7 @@
  * top-level step functions. Both behaviors are asserted explicitly below.
  */
 import assert from "node:assert/strict";
-import { createSession, execute, loadSession, zapcode } from "../dist/index.js";
+import { createSession, execute, loadSession, describeTools } from "../dist/index.js";
 
 let passed = 0;
 async function test(name, fn) {
@@ -236,11 +236,11 @@ await test("recursive task-tree expansion produces deterministic depth-first ord
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 5. System-prompt assertion via zapcode({ tools }).
+// 5. System-prompt assertion via describeTools(tools).
 // ─────────────────────────────────────────────────────────────────────────────
 await test("zapcode system prompt documents the workflow tools and their call shape", async () => {
   const events = [];
-  const { system } = zapcode({ tools: createWorkflowTools(events) });
+  const system = describeTools(createWorkflowTools(events));
   assert.ok(typeof system === "string" && system.length > 0);
   assert.ok(system.includes("recordStep"));
   assert.ok(system.includes("finalizeWorkflow"));

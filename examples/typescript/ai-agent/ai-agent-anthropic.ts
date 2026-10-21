@@ -2,8 +2,8 @@
  * AI Agent with Zapcode — LOW-LEVEL approach using Anthropic SDK directly.
  *
  * This shows the manual snapshot/resume loop using @2018kguo/zapcode.
- * For most use cases, prefer @2018kguo/zapcode-ai instead — see ai-agent-zapcode-ai.ts
- * or ai-agent-vercel-ai.ts for the recommended approach.
+ * For tool validation, parallel batches and sessions, use execute() from
+ * @2018kguo/zapcode-ai.
  *
  * This example shows the "code as tool use" pattern:
  * 1. Claude writes TypeScript code that calls tools (external functions)
