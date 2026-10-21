@@ -199,7 +199,8 @@ fn test_trailing_object_after_semicolon() {
 #[test]
 fn test_if_block_with_object_arg() {
     let result = eval_ts("if (true) { Promise.resolve({ a: 1 }); }").unwrap();
-    assert_eq!(result, Value::Undefined);
+    // Completion value of the block (a Promise object), as with `eval` in Node.
+    assert!(matches!(result, Value::Object(_)));
 }
 
 #[test]
@@ -244,11 +245,11 @@ fn test_for_of_block_with_object_arg() {
 #[test]
 fn test_if_block_with_await_and_object_arg() {
     let result = eval_ts("if (true) { await Promise.resolve({ a: 1 }); }").unwrap();
-    assert_eq!(result, Value::Undefined);
+    assert!(matches!(result, Value::Object(_)));
 }
 
 #[test]
 fn test_if_block_with_user_function_and_object_arg() {
     let result = eval_ts("function f(x){ return x; }\nif (true) { f({ a: 1 }); }").unwrap();
-    assert_eq!(result, Value::Undefined);
+    assert!(matches!(result, Value::Object(_)));
 }
