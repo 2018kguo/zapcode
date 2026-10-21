@@ -673,7 +673,7 @@ fn is_valid_identifier(name: &str) -> bool {
 }
 
 fn ensure_serializable_globals(
-    globals: &HashMap<String, Value>,
+    globals: &rustc_hash::FxHashMap<String, Value>,
     heap: &crate::heap::Heap,
 ) -> Result<()> {
     let builtin_names: HashSet<&str> = Vm::BUILTIN_GLOBAL_NAMES.iter().copied().collect();

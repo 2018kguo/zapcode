@@ -1,5 +1,4 @@
 use crate::heap::ObjectMap;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use indexmap::IndexMap;
@@ -104,7 +103,7 @@ pub fn is_internal_marker_key(key: &str) -> bool {
 
 /// Register built-in global objects and functions, allocating their backing
 /// objects in `heap`.
-pub fn register_globals(globals: &mut HashMap<String, Value>, heap: &mut Heap) {
+pub fn register_globals(globals: &mut rustc_hash::FxHashMap<String, Value>, heap: &mut Heap) {
     // Register known globals as objects — method calls are intercepted by the VM.
     let empty = heap.alloc_object(IndexMap::default());
     globals.insert("console".to_string(), Value::Object(empty));

@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -377,7 +377,7 @@ impl VmSnapshot {
     }
 
     pub(crate) fn restore_vm(self) -> Result<Vm> {
-        let user_globals: HashMap<String, Value> = self.globals.into_iter().collect();
+        let user_globals: rustc_hash::FxHashMap<String, Value> = self.globals.into_iter().collect();
         let ext_set: HashSet<String> = self.external_functions.into_iter().collect();
 
         // A template-elided heap splices this build's template back in front

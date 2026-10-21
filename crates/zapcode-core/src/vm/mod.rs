@@ -1,5 +1,5 @@
 use crate::heap::ObjectMap;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::mem::size_of;
 use std::sync::Arc;
 
@@ -379,7 +379,7 @@ pub struct Vm {
     pub(crate) programs: Vec<Arc<CompiledProgram>>,
     pub(crate) stack: Vec<Value>,
     pub(crate) frames: Vec<CallFrame>,
-    pub(crate) globals: HashMap<String, Value>,
+    pub(crate) globals: rustc_hash::FxHashMap<String, Value>,
     /// Arena of shared upvalue cells, indexed by id. A captured variable lives
     /// here once boxed; every closure and frame referencing it shares the id, so
     /// the sharing survives serialization (ids are reconstructed on load).
@@ -517,11 +517,11 @@ pub struct Vm {
 /// fresh-heap VM starts as a clone of this template, so its layout (slot
 /// order and handles) is identical across VMs and across processes of the
 /// same build — which is what lets snapshots elide the prefix.
-pub(crate) fn builtin_template() -> &'static (HashMap<String, Value>, Heap) {
-    static TEMPLATE: std::sync::OnceLock<(HashMap<String, Value>, Heap)> =
+pub(crate) fn builtin_template() -> &'static (rustc_hash::FxHashMap<String, Value>, Heap) {
+    static TEMPLATE: std::sync::OnceLock<(rustc_hash::FxHashMap<String, Value>, Heap)> =
         std::sync::OnceLock::new();
     TEMPLATE.get_or_init(|| {
-        let mut globals = HashMap::new();
+        let mut globals = rustc_hash::FxHashMap::default();
         let mut heap = Heap::new();
         builtins::register_globals(&mut globals, &mut heap);
         // Shared prefix: each VM's copy of the template heap is an Arc bump.
@@ -667,7 +667,7 @@ impl Vm {
             let (g, h) = builtin_template();
             (g.clone(), h.clone(), h.len())
         } else {
-            let mut globals = HashMap::new();
+            let mut globals = rustc_hash::FxHashMap::default();
             let mut heap = heap;
             builtins::register_globals(&mut globals, &mut heap);
             (globals, heap, 0)
@@ -767,7 +767,7 @@ impl Vm {
         programs: Vec<Arc<CompiledProgram>>,
         stack: Vec<Value>,
         frames: Vec<CallFrame>,
-        user_globals: HashMap<String, Value>,
+        user_globals: rustc_hash::FxHashMap<String, Value>,
         try_stack: Vec<TryInfo>,
         continuations: Vec<Continuation>,
         stdout: String,
@@ -795,7 +795,7 @@ impl Vm {
             if builtin_base == template_heap.len() && heap.len() >= builtin_base {
                 (template_globals.clone(), heap, builtin_base)
             } else {
-                let mut globals = HashMap::new();
+                let mut globals = rustc_hash::FxHashMap::default();
                 let mut heap = heap;
                 builtins::register_globals(&mut globals, &mut heap);
                 (globals, heap, 0)
