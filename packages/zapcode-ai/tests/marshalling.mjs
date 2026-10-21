@@ -20,6 +20,12 @@ const tool = execute_ => ({ description: "", parameters: {}, execute: execute_ }
 
 console.log("host-boundary marshalling");
 
+await test("L0: returned objects keep their key order (not sorted)", async () => {
+  const r = await execute(`({ zeta: 1, alpha: { y: 1, b: 2 }, mid: 3 })`, {});
+  assert.deepEqual(Object.keys(r.output), ["zeta", "alpha", "mid"]);
+  assert.deepEqual(Object.keys(r.output.alpha), ["y", "b"]);
+});
+
 await test("L1: BigInt return marshals to a number (no process abort)", async () => {
   const r = await execute(`const x = await f(); typeof x + ':' + x`, { f: tool(async () => 10n) });
   assert.equal(r.output, "number:10");
