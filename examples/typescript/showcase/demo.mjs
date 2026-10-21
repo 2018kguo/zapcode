@@ -9,10 +9,11 @@
  * printed is measured around the actual zapcode call. DEMO_PACE=<ms> only adds
  * pauses *between* printed sections so a recording is readable.
  */
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { createInterface } from "node:readline";
 import { readFileSync, rmSync } from "node:fs";
 import { runInNewContext } from "node:vm";
-import { styleText as st } from "node:util";
+import { styleText as st, stripVTControlCharacters } from "node:util";
 import {
   Zapcode,
   ZapcodeSnapshotHandle,
@@ -92,45 +93,172 @@ const tool = (name, description, parameters, latency, impl, returns) => ({
 });
 
 const demos = {
+  // README hero: code on the left with the running line marked, the run's
+  // step history on the right, and the processes that carried it underneath.
+  // Each phase is a real child process (examples/typescript/durable-agent)
+  // that reports what it does as JSON events.
   async agent() {
-    title(
-      "⚡",
-      "An LLM writes code. Zapcode runs it, pauses it, and resumes it anywhere.",
-      "A Rust bytecode VM in your process: suspend at any tool call, persist ~1 KB, survive crashes.",
-    );
-    label("model-written TypeScript");
-    code(dedent(PROGRAM), [
+    const lines = dedent(PROGRAM).split("\n");
+    const toolNames = [
       "getOrder",
       "getCustomer",
       "getRefundPolicy",
       "requestApproval",
       "issueRefund",
       "notifyCustomer",
-    ]);
-    await pause(4);
-    process.stdout.write("\x1b[2J\x1b[H");
+    ];
+    const lineOf = (name) => lines.findIndex((l) => l.includes(name + "("));
+    const ui = { caption: "", sub: "", active: [], tone: "cyan", steps: [], procs: [] };
+    const W = 68;
+    const vis = (s) => stripVTControlCharacters(s).length;
+    const ICON = {
+      running: st("yellow", "●"),
+      done: st("green", "✓"),
+      waiting: st("yellow", "⏸"),
+      killed: st("red", "✗"),
+      rerun: st("yellow", "↻"),
+    };
+
+    const render = () => {
+      const left = [st("gray", "agent-written code"), ""].concat(
+        lines.map((l, i) => {
+          const on = ui.active.includes(i);
+          return `${on ? st(ui.tone, "▶") : " "} ${st("gray", String(i + 1).padStart(2))}  ${on ? st("bold", highlight(l, toolNames)) : highlight(l, toolNames)}`;
+        }),
+      );
+      const right = [st("gray", "step history"), ""].concat(
+        ui.steps.map(
+          (s) =>
+            `${ICON[s.status]} ${st("cyan", s.name.padEnd(16))} ${st(s.status === "killed" ? "red" : "gray", s.note ?? "")}`,
+        ),
+      );
+      let f = "\x1b[H\x1b[2J\n";
+      f += `  ${st(["bold", "yellow"], ui.caption)}\n  ${st("gray", ui.sub)}\n\n`;
+      for (let i = 0; i < Math.max(left.length, right.length); i++) {
+        const l = left[i] ?? "";
+        f += `  ${l}${" ".repeat(Math.max(1, W - vis(l)))}${st("gray", "│")}  ${right[i] ?? ""}\n`;
+      }
+      const procs = ui.procs.map(
+        (p) =>
+          st(p.color, `process ${p.n} `) + st("gray", `pid ${p.pid} · `) + st(p.color, p.label),
+      );
+      f += "\n  " + procs.join(st("gray", "  ──▶  ")) + "\n";
+      out(f);
+    };
+    const step = (name) => ui.steps.find((s) => s.name === name);
+    const scene = async (caption, sub, k = 1.5) => {
+      Object.assign(ui, { caption, sub });
+      render();
+      await pause(k);
+    };
+
     const agent = new URL("../durable-agent/agent.mjs", import.meta.url).pathname;
     rmSync(new URL("../durable-agent/run.json", import.meta.url), { force: true });
-    const steps = [
-      ["runs until it needs a human, saves a checkpoint, exits", ["start", "A-17"], {}],
-      [
-        "hours later, a new process resumes with the approval… and dies mid-tool",
-        ["approve", "alice"],
-        { CRASH_AT: "notifyCustomer" },
-      ],
-      ["a third process recovers from the journal", ["resume"], {}],
-    ];
-    for (const [i, [what, args, env]] of steps.entries()) {
-      out();
-      label(`${st("yellow", `${i + 1}`)} ${what}`);
-      spawnSync(process.execPath, [agent, ...args], {
-        stdio: "inherit",
-        env: { ...process.env, ...env, FORCE_COLOR: "1" },
+    const run = async (args, env, on) => {
+      const child = spawn(process.execPath, [agent, ...args], {
+        env: { ...process.env, ...env, EVENTS: "1" },
+        stdio: ["ignore", "pipe", "inherit"],
       });
-      await pause(2);
-    }
-    out();
-    ok(`3 processes · 1 approval · ${st(["bold", "yellow"], "0 finished tool calls repeated")}`);
+      const closed = new Promise((r) => child.on("close", r));
+      for await (const line of createInterface({ input: child.stdout })) await on(JSON.parse(line));
+      await closed;
+    };
+    // Shared handlers for tool activity in any process.
+    const tools = async (e) => {
+      if (e.type === "call") {
+        for (const c of e.calls) {
+          const s = step(c.name);
+          if (s) Object.assign(s, { status: "rerun", note: "re-running…", rerun: true });
+          else ui.steps.push({ name: c.name, status: "running", note: "running…" });
+        }
+        Object.assign(ui, { active: e.calls.map((c) => lineOf(c.name)), tone: "cyan" });
+        render();
+        await pause(0.6);
+      } else if (e.type === "result") {
+        for (const n of e.names) {
+          const s = step(n);
+          Object.assign(s, {
+            status: "done",
+            note: `${e.ms} ms${s.rerun ? " · re-ran after crash" : ""}`,
+          });
+        }
+        render();
+        await pause(0.5);
+      }
+    };
+
+    // 1 · run until a human is needed
+    await scene(
+      "①  The agent runs its code. Each tool call is a checkpoint.",
+      "Zapcode executes it in-process and pauses at every await.",
+      2.5,
+    );
+    await run(["start", "A-17"], {}, async (e) => {
+      if (e.type === "start")
+        ui.procs.push({ n: 1, pid: e.pid, label: "running", color: "yellow" });
+      await tools(e);
+      if (e.type === "wait") {
+        ui.steps.push({ name: e.name, status: "waiting", note: "waiting for a human" });
+        Object.assign(ui, { active: [lineOf(e.name)], tone: "yellow" });
+        const kb = `${(e.bytes / 1024).toFixed(1)} KB`;
+        Object.assign(ui.procs[0], { label: `paused, ${kb} saved`, color: "green" });
+        await scene(
+          `It needs approval, so it saves a ${kb} snapshot and the process exits.`,
+          "Nothing stays in memory. The snapshot can sit in a database for days.",
+          3.5,
+        );
+      }
+    });
+
+    // 2 · a different process resumes with the answer, then crashes
+    await run(["approve", "alice"], { CRASH_AT: "notifyCustomer" }, async (e) => {
+      if (e.type === "start") {
+        ui.procs.push({ n: 2, pid: e.pid, label: "running", color: "yellow" });
+        await scene(
+          "②  Hours later Alice approves. A new process loads the snapshot.",
+          "The program continues from the exact line it paused on.",
+          1.5,
+        );
+      }
+      if (e.type === "answer") {
+        Object.assign(step(e.name), { status: "done", note: `approved by ${e.value.by}` });
+        render();
+        await pause(1);
+      }
+      await tools(e);
+      if (e.type === "crash") {
+        Object.assign(step(e.name), { status: "killed", note: "process killed mid-call" });
+        Object.assign(ui, { tone: "red" });
+        Object.assign(ui.procs.at(-1), { label: "crashed", color: "red" });
+        await scene(
+          "💥 The process dies while notifying the customer.",
+          "The refund already went through. It must not be issued twice.",
+          3,
+        );
+      }
+    });
+
+    // 3 · recover
+    await run(["resume"], {}, async (e) => {
+      if (e.type === "start") {
+        ui.procs.push({ n: 3, pid: e.pid, label: "running", color: "yellow" });
+        await scene(
+          "③  A third process recovers from the last snapshot.",
+          "Finished steps are not replayed. Only the interrupted call runs again.",
+          2,
+        );
+      }
+      await tools(e);
+      if (e.type === "done") {
+        Object.assign(ui.procs.at(-1), { label: "done", color: "green" });
+        Object.assign(ui, { active: [lines.length - 1], tone: "green" });
+        await scene(
+          `✔ Done: ${JSON.stringify(e.output)}`,
+          "3 processes, 1 approval, 1 crash. The refund was issued exactly once.",
+          4,
+        );
+      }
+    });
   },
 
   async parallel() {

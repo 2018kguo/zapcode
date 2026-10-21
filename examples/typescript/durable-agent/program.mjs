@@ -8,18 +8,11 @@ const [customer, policy] = await Promise.all([
 ]);
 const amount = Math.min(order.total, policy.maxRefund);
 
-let decision = { approved: true, by: "auto" };
 if (amount > 100) {
-  decision = await requestApproval({ orderId, amount, customer: customer.name });
+  const ok = await requestApproval({ orderId, amount });
+  if (!ok.approved) throw new Error(\`denied by \${ok.by}\`);
 }
-
-let result;
-if (decision.approved) {
-  const refund = await issueRefund({ orderId, amount, idempotencyKey: orderId });
-  await notifyCustomer({ email: customer.email, text: \`Refunded $\${amount}\` });
-  result = { status: "refunded", amount, refundId: refund.id, approvedBy: decision.by };
-} else {
-  result = { status: "declined", by: decision.by };
-}
-result;
+const refund = await issueRefund({ orderId, amount });
+await notifyCustomer({ email: customer.email, amount });
+({ refundId: refund.id, amount });
 `;

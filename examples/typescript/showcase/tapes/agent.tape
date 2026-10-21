@@ -1,7 +1,8 @@
 Output ../../../assets/demos/agent.gif
-Set Height 720
 Source tapes/settings.tape
+Set Width 1400
+Set Height 600
 Type "node demo.mjs agent"
 Sleep 400ms
 Enter
-Sleep 16s
+Sleep 26s

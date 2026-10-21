@@ -121,7 +121,7 @@ then resume.
 let state = new Zapcode(program, { inputs: ["orderId"], externalFunctions }).start({ orderId });
 while (!state.completed) {
   const journal = { snapshot: state.snapshot, call: { name: state.functionName, args: state.args } };
-  await db.save(runId, journal);                       // ~1.4 KB; survives restarts and deploys
+  await db.save(runId, journal);                       // ~1.3 KB; survives restarts and deploys
   if (journal.call.name === "requestApproval") return; // park the run; a human resumes it later
 
   const result = await tools[journal.call.name](...journal.call.args);

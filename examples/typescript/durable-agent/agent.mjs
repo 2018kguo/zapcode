@@ -2,14 +2,17 @@
 /**
  * A durable refund agent: suspend, persist, crash, resume.
  *
- *   node agent.mjs start A-17                         # runs until it needs a human, then exits
- *   CRASH_AT=notifyCustomer node agent.mjs approve alice   # resumes, then the process dies mid-tool
- *   node agent.mjs resume                            # picks up after the last finished tool
+ *   node agent.mjs start A-17                              # runs until it needs a human, then exits
+ *   CRASH_AT=notifyCustomer node agent.mjs approve alice   # resumes, then dies mid-tool
+ *   node agent.mjs resume                                  # recovers from the last checkpoint
  *
  * Every suspension is written to ./run.json before and after its tool runs (a
- * tiny write-ahead journal). A finished tool's result is replayed from the
- * journal, never re-executed; only a call that was in flight when the process
- * died runs again, so give side-effecting tools an idempotency key.
+ * tiny write-ahead journal). The snapshot already contains everything the
+ * program did so far, so recovery never replays earlier steps; only a call that
+ * was in flight when the process died runs again. Give side-effecting tools an
+ * idempotency key (here, the order id).
+ *
+ * EVENTS=1 prints one JSON event per line instead (the README demo renders those).
  */
 import { existsSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { styleText as st } from "node:util";
@@ -17,7 +20,6 @@ import { Zapcode, ZapcodeSnapshotHandle } from "@2018kguo/zapcode";
 import { PROGRAM } from "./program.mjs";
 
 const JOURNAL = new URL("./run.json", import.meta.url);
-const log = (s) => process.stdout.write(`  ${s}\n`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Host-side tools (mocked; the latency is real).
@@ -26,104 +28,107 @@ const tools = {
     await sleep(150),
     { id, customerId: "c-9", sku: "desk", total: 420 }
   ),
-  getCustomer: async ({ id }) => (await sleep(300), { id, name: "Ada", email: "ada@example.com" }),
+  getCustomer: async ({ id }) => (await sleep(300), { id, email: "ada@example.com" }),
   getRefundPolicy: async () => (await sleep(300), { maxRefund: 500 }),
-  issueRefund: async ({ idempotencyKey }) => (await sleep(200), { id: `rf_${idempotencyKey}` }),
-  notifyCustomer: async () => (await sleep(200), { sent: true }),
+  issueRefund: async ({ orderId }) => (await sleep(250), { id: `rf_${orderId}` }),
+  notifyCustomer: async () => (await sleep(250), { sent: true }),
+};
+
+const fmt = (calls) =>
+  calls.map((c) => st("cyan", c.name) + st("gray", JSON.stringify(c.args[0]))).join(", ");
+const pretty = {
+  start: (e) => st("gray", `process #${e.pid}: ${e.cmd}`),
+  call: (e) => `${st("cyan", "→")} ${fmt(e.calls)}`,
+  result: () => null,
+  wait: (e) =>
+    `${st("yellow", "⏸")} waiting on ${fmt([e])} · ${(e.bytes / 1024).toFixed(1)} KB saved to run.json, exiting`,
+  answer: (e) => `${st("green", "←")} ${st("cyan", e.name)} ${st("gray", JSON.stringify(e.value))}`,
+  crash: (e) => st(["bold", "red"], `💥 process killed while ${e.name} was in flight`),
+  recover: (e) =>
+    st(
+      "gray",
+      `loaded run.json · re-running in-flight ${e.names.join(", ")}; earlier steps are not replayed`,
+    ),
+  failed: (e) => `${st("red", "✘")} ${e.error}`,
+  done: (e) => `${st("green", "✔")} done ${st("green", JSON.stringify(e.output))}`,
+  info: (e) => e.text,
+};
+const emit = (e) => {
+  if (process.env.EVENTS === "1") return void process.stdout.write(JSON.stringify(e) + "\n");
+  const line = pretty[e.type](e);
+  if (line) process.stdout.write(`  ${line}\n`);
 };
 
 const save = (j) => writeFileSync(JOURNAL, JSON.stringify(j));
 const load = () => JSON.parse(readFileSync(JOURNAL, "utf8"));
 const callsOf = (s) =>
   s.kind === "suspended_many" ? s.calls : [{ name: s.functionName, args: s.args }];
+const resume = (j, results) => {
+  const handle = ZapcodeSnapshotHandle.load(Buffer.from(j.snapshot, "base64"));
+  return j.kind === "suspended_many" ? handle.resumeMany(results) : handle.resume(results[0]);
+};
 
-async function runTool({ name, args }) {
-  log(`${st("cyan", "→")} ${st("cyan", name)}${st("gray", JSON.stringify(args[0]))}`);
-  if (process.env.CRASH_AT === name) {
-    log(st(["bold", "red"], `💥 process killed while ${name} was in flight`));
+async function runTools(calls) {
+  emit({ type: "call", calls });
+  const t = Date.now();
+  if (process.env.CRASH_AT && calls.some((c) => c.name === process.env.CRASH_AT)) {
+    await sleep(150);
+    emit({ type: "crash", name: process.env.CRASH_AT });
     process.exit(137);
   }
-  return tools[name](...args);
+  const results = await Promise.all(calls.map((c) => tools[c.name](...c.args))); // a batch runs concurrently
+  emit({ type: "result", names: calls.map((c) => c.name), ms: Date.now() - t });
+  return results;
 }
 
 /** Drive the VM forward, journaling every step. Stops at completion or an approval. */
-async function drive(state, journal) {
+async function drive(state) {
   while (!state.completed) {
     const calls = callsOf(state);
-    journal = {
-      ...journal,
+    const j = {
       snapshot: state.snapshot.toString("base64"),
       kind: state.kind,
       calls,
       results: null,
     };
-    save(journal);
-
+    save(j);
     if (calls[0].name === "requestApproval") {
-      const kb = (state.snapshot.length / 1024).toFixed(1);
-      log(
-        `${st("yellow", "⏸")} waiting on ${st("cyan", "requestApproval")}${st("gray", JSON.stringify(calls[0].args[0]))}`,
-      );
-      log(
-        st(
-          "gray",
-          `   checkpoint saved: ${kb} KB in run.json · process exits, nothing stays in memory`,
-        ),
-      );
-      return;
+      return emit({ type: "wait", ...calls[0], bytes: state.snapshot.length });
     }
-
-    const results = await Promise.all(calls.map(runTool)); // a Promise.all batch runs concurrently
-    save({ ...journal, results }); // journal the results before resuming
-    state = resume(journal, results);
+    const results = await runTools(calls);
+    save({ ...j, results }); // journal the results before resuming
+    state = resume(j, results);
   }
-  log(`${st("green", "✔")} done ${st("green", JSON.stringify(state.output))}`);
   rmSync(JOURNAL);
+  emit({ type: "done", output: state.output });
 }
 
-const resume = (journal, results) => {
-  const handle = ZapcodeSnapshotHandle.load(Buffer.from(journal.snapshot, "base64"));
-  return journal.kind === "suspended_many" ? handle.resumeMany(results) : handle.resume(results[0]);
-};
-
 const [cmd = "start", arg] = process.argv.slice(2);
-log(st("gray", `process #${process.pid}: ${cmd}`));
+emit({ type: "start", pid: process.pid, cmd });
 
 if (cmd === "start") {
   const vm = new Zapcode(PROGRAM, {
     inputs: ["orderId"],
     externalFunctions: [...Object.keys(tools), "requestApproval"],
   });
-  await drive(vm.start({ orderId: arg ?? "A-17" }), { startedAt: Date.now() });
+  await drive(vm.start({ orderId: arg ?? "A-17" }));
 } else if (!existsSync(JOURNAL)) {
-  log("no run in progress; start one with `node agent.mjs start A-17`");
+  emit({ type: "info", text: "no run in progress; start one with `node agent.mjs start A-17`" });
 } else if (cmd === "approve" || cmd === "deny") {
-  const j = load();
-  const decision =
-    cmd === "approve"
-      ? { approved: true, by: arg ?? "alice" }
-      : { approved: false, by: arg ?? "alice" };
-  log(
-    `${st("green", "←")} ${st("cyan", "requestApproval")} ${st("gray", JSON.stringify(decision))}`,
-  );
-  await drive(resume(j, [decision]), j);
-} else if (cmd === "resume") {
-  // Recover from a crash: replay journaled results, re-run only the in-flight call.
-  const j = load();
-  if (j.calls[0].name === "requestApproval" && !j.results) {
-    log("still waiting for a human: `node agent.mjs approve <name>` or `deny <name>`");
-    process.exit(0);
+  const value = { approved: cmd === "approve", by: arg ?? "alice" };
+  emit({ type: "answer", name: "requestApproval", value });
+  try {
+    await drive(resume(load(), [value]));
+  } catch (err) {
+    rmSync(JOURNAL); // the guest threw: the run is over
+    emit({ type: "failed", error: err.message.replace(/^runtime error: /, "") });
   }
-  if (j.results)
-    log(st("gray", `replaying ${j.calls.map((c) => c.name).join(", ")} from the journal`));
-  else
-    log(
-      st(
-        "gray",
-        `re-running in-flight ${j.calls.map((c) => c.name).join(", ")} (finished tools are not re-run)`,
-      ),
-    );
-  const results = j.results ?? (await Promise.all(j.calls.map(runTool)));
-  save({ ...j, results });
-  await drive(resume(j, results), j);
+} else if (cmd === "resume") {
+  const j = load();
+  if (j.calls[0].name === "requestApproval") {
+    emit({ type: "info", text: "still waiting for a human: `node agent.mjs approve <name>`" });
+  } else {
+    emit({ type: "recover", names: j.calls.map((c) => c.name) });
+    await drive(resume(j, j.results ?? (await runTools(j.calls))));
+  }
 }
