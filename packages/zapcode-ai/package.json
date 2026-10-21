@@ -1,5 +1,5 @@
 {
-  "name": "@arcainc/zapcode-ai",
+  "name": "@2018kguo/zapcode-ai",
   "version": "1.6.2",
   "description": "AI SDK integration for Zapcode — let LLMs write and execute TypeScript safely",
   "type": "module",
@@ -26,7 +26,7 @@
     "test:fuzz": "npm run sync-local-binding && npm run build && node tests/fuzz-differential.mjs"
   },
   "dependencies": {
-    "@arcainc/zapcode": "^1.0.0"
+    "@2018kguo/zapcode": "^1.0.0"
   },
   "peerDependencies": {
     "ai": ">=7.0.0-beta.0",
@@ -59,16 +59,13 @@
     "tool-use",
     "agent"
   ],
-  "homepage": "https://github.com/arcainc/zapcode#readme",
-  "bugs": "https://github.com/arcainc/zapcode/issues",
+  "homepage": "https://github.com/2018kguo/zapcode#readme",
+  "bugs": "https://github.com/2018kguo/zapcode/issues",
   "license": "MIT",
-  "author": "Arca",
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
-  },
+  "author": "Kevin Guo",
   "repository": {
     "type": "git",
-    "url": "https://github.com/arcainc/zapcode.git",
+    "url": "https://github.com/2018kguo/zapcode.git",
     "directory": "packages/zapcode-ai"
   }
 }

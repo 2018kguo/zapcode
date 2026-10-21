@@ -1,16 +1,16 @@
 /**
- * @arcainc/zapcode-ai — High-level AI SDK integration for Zapcode.
+ * @2018kguo/zapcode-ai — High-level AI SDK integration for Zapcode.
  *
  * Works with any AI SDK:
  *
  * ```typescript
  * // AI SDK (recommended)
- * import { zapcode } from "@arcainc/zapcode-ai";
+ * import { zapcode } from "@2018kguo/zapcode-ai";
  * const { system, tools } = zapcode({ tools: { ... } });
  * await generateText({ model, system, tools, messages });
  *
  * // OpenAI SDK
- * import { zapcode } from "@arcainc/zapcode-ai";
+ * import { zapcode } from "@2018kguo/zapcode-ai";
  * const { system, openaiTools, handleToolCall } = zapcode({ tools: { ... } });
  * const response = await openai.chat.completions.create({
  *   messages: [{ role: "system", content: system }, ...],
@@ -18,7 +18,7 @@
  * });
  *
  * // Anthropic SDK
- * import { zapcode } from "@arcainc/zapcode-ai";
+ * import { zapcode } from "@2018kguo/zapcode-ai";
  * const { system, anthropicTools, handleToolCall } = zapcode({ tools: { ... } });
  * const response = await anthropic.messages.create({
  *   system, tools: anthropicTools, messages,
@@ -34,7 +34,7 @@ import {
   ZapcodeDriver,
   type ZapcodeStep,
   type PromiseCombinator,
-} from "@arcainc/zapcode";
+} from "@2018kguo/zapcode";
 import { jsonSchema, tool, type ToolSet } from "ai";
 
 // ---------------------------------------------------------------------------
@@ -1342,7 +1342,7 @@ export function zapcode(options: ZapcodeAIOptions): ZapcodeAIResult {
  *
  * @example
  * ```typescript
- * import { zapcode, createAdapter, ZapcodeAdapter } from "@arcainc/zapcode-ai";
+ * import { zapcode, createAdapter, ZapcodeAdapter } from "@2018kguo/zapcode-ai";
  *
  * // Example: adapter for a hypothetical SDK
  * const myAdapter: ZapcodeAdapter<MySDKConfig> = {
@@ -1426,7 +1426,7 @@ export function createAdapter<TOutput>(
  *
  * @example
  * ```typescript
- * import { execute } from "@arcainc/zapcode-ai";
+ * import { execute } from "@2018kguo/zapcode-ai";
  *
  * const result = await execute(
  *   `const w = await getWeather("Tokyo"); w.temp`,

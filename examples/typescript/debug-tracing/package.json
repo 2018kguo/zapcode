@@ -8,8 +8,8 @@
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "^2.0.0",
     "@aws-sdk/credential-providers": "^3.0.0",
-    "@arcainc/zapcode": "file:../../../crates/zapcode-js",
-    "@arcainc/zapcode-ai": "file:../../../packages/zapcode-ai",
+    "@2018kguo/zapcode": "file:../../../crates/zapcode-js",
+    "@2018kguo/zapcode-ai": "file:../../../packages/zapcode-ai",
     "ai": "^4.0.0"
   },
   "devDependencies": {

@@ -9,7 +9,7 @@ import {
   Zapcode,
   ZapcodeSessionHandle,
   ZapcodeSnapshotHandle,
-} from "@arcainc/zapcode";
+} from "@2018kguo/zapcode";
 
 // --- 1. Simple expression ---
 const simple = new Zapcode("1 + 2 * 3");

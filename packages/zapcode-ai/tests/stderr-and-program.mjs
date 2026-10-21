@@ -10,7 +10,7 @@
  * stdout (see crates/zapcode-core/tests/stderr_split.rs for the same split).
  */
 import assert from "node:assert/strict";
-import { Zapcode, ZapcodeProgramHandle } from "@arcainc/zapcode";
+import { Zapcode, ZapcodeProgramHandle } from "@2018kguo/zapcode";
 import { execute } from "../dist/index.js";
 
 let passed = 0;

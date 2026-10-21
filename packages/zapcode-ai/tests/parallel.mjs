@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { execute } from "../dist/index.js";
-import { ZapcodeSessionHandle } from "@arcainc/zapcode";
+import { ZapcodeSessionHandle } from "@2018kguo/zapcode";
 
 let passed = 0;
 async function test(name, fn) {

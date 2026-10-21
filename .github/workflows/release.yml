@@ -15,10 +15,9 @@ on:
 
 permissions:
   contents: write
-  packages: write
 
 # Serialize publishes: a manual dispatch and the release-please call must never
-# run concurrently (they raced and collided on the GitHub Packages publish).
+# run concurrently (they raced and collided on publish).
 concurrency:
   group: release-publish
   cancel-in-progress: false
@@ -29,8 +28,7 @@ env:
 
 jobs:
   # ── Publish to crates.io ────────────────────────────────────────────
-  # Disabled on the arcainc fork: this org does not own the `zapcode-core`
-  # name on crates.io. Re-enable + set CARGO_REGISTRY_TOKEN to publish.
+  # Disabled: the `zapcode-core` crate name belongs to upstream. Re-enable + set CARGO_REGISTRY_TOKEN to publish.
   publish-crate:
     name: Publish crates.io
     if: false
@@ -112,8 +110,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://npm.pkg.github.com
-          scope: "@arcainc"
+          registry-url: https://registry.npmjs.org
+          scope: "@2018kguo"
       - name: Copy README
         run: cp README.md crates/zapcode-js/README.md
       - name: Install dependencies
@@ -140,38 +138,34 @@ jobs:
             if [ -f "$dir/package.json" ]; then
               echo "Publishing $(basename $dir)..."
               cd "$dir"
-              npm publish --tag latest || true
+              npm publish --access public --tag latest || true
               cd ../..
             fi
           done
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish main package
         if: ${{ !inputs.dry_run }}
         working-directory: crates/zapcode-js
-        run: npm publish --tag latest || echo "Already published, skipping"
+        run: npm publish --access public --tag latest || echo "Already published, skipping"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Build zapcode-ai
         working-directory: packages/zapcode-ai
         run: |
           npm install
           npm run build
-        # Needs auth: `npm install` reads the now-private @arcainc/zapcode
-        # dependency from GitHub Packages (otherwise E401 Unauthorized).
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Copy README to zapcode-ai
         run: cp README.md packages/zapcode-ai/README.md
       - name: Publish zapcode-ai
         if: ${{ !inputs.dry_run }}
         working-directory: packages/zapcode-ai
-        run: npm publish --tag latest || echo "Already published, skipping"
+        run: npm publish --access public --tag latest || echo "Already published, skipping"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   # ── Build & publish PyPI (per-platform) ──────────────────────────────
-  # Disabled on the arcainc fork: this org does not own the PyPI names.
+  # Disabled: the `zapcode` PyPI names belong to upstream.
   # Re-enable build-pypi (and the publish-pypi chain) + set PYPI_TOKEN to ship.
   build-pypi:
     name: Build PyPI (${{ matrix.os }}-${{ matrix.target }})

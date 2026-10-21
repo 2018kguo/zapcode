@@ -12,7 +12,7 @@ that was used to read a `SECRET` env var out of the host.
 ## 1. Threat model
 
 The sandbox runs guest code that we treat as fully adversarial. The host is a long-lived Node
-process (via the `@arcainc/zapcode` napi addon used by `packages/zapcode-ai`), so the bar is:
+process (via the `@2018kguo/zapcode` napi addon used by `packages/zapcode-ai`), so the bar is:
 
 > **A guest program must never be able to crash, hang, escape, or read host state out of the
 > sandbox. Every adverse outcome must be a *catchable* error or a *fired resource limit*, never
@@ -54,8 +54,8 @@ malicious-snapshot**, not memory-corruption RCE.
 ## 3. Confirmed-and-fixed findings
 
 All fixes turn a would-be host abort / bypass into a **catchable error or a fired limit**. Fixed
-in commit `79c417c` ("security: harden recursive value walkers, parse-depth, builtin allocs,
-snapshot load") plus the earlier `f605aba` (bounded ToPrimitive). Tests live in
+in commit `a448a2f` ("security: harden recursive value walkers, parse-depth, builtin allocs,
+snapshot load") plus the earlier `1c5ab63` (bounded ToPrimitive). Tests live in
 `crates/zapcode-core/tests/security.rs` (91 tests), `tests/wire_format.rs`, and
 `packages/zapcode-ai/tests/marshalling.mjs`.
 
@@ -80,7 +80,7 @@ structures. The recursive value walkers had no cycle guard and would overflow th
 - `parser/mod.rs::check_nesting_depth` — a string/comment/regex-aware bracket pre-scan rejects
   nesting beyond `MAX_NESTING_DEPTH = 64` with a `ParseError` *before* oxc's recursive descent
   can overflow the stack at parse time. Brackets inside string literals do not count.
-- ToPrimitive recursion (`f605aba`) — a self-referential coercion hook
+- ToPrimitive recursion (`1c5ab63`) — a self-referential coercion hook
   (`toString(){ return ""+this }`) recursed past the old 200-deep guard and aborted the test
   binary; the guard is now 8 (each level nests a full guest-call loop on the native stack) and
   surfaces a catchable `RuntimeError("ToPrimitive recursion limit exceeded")`.

@@ -1,5 +1,5 @@
 {
-    "name": "@arcainc/zapcode",
+    "name": "@2018kguo/zapcode",
     "version": "1.6.2",
     "description": "A minimal, secure TypeScript interpreter for AI agents — Node.js bindings",
     "main": "index.js",
@@ -22,16 +22,13 @@
         "snapshot",
         "secure"
     ],
-    "homepage": "https://github.com/arcainc/zapcode#readme",
-    "bugs": "https://github.com/arcainc/zapcode/issues",
+    "homepage": "https://github.com/2018kguo/zapcode#readme",
+    "bugs": "https://github.com/2018kguo/zapcode/issues",
     "license": "MIT",
-    "author": "Arca",
-    "publishConfig": {
-        "registry": "https://npm.pkg.github.com"
-    },
+    "author": "Kevin Guo",
     "repository": {
         "type": "git",
-        "url": "https://github.com/arcainc/zapcode.git",
+        "url": "https://github.com/2018kguo/zapcode.git",
         "directory": "crates/zapcode-js"
     },
     "engines": {
@@ -54,7 +51,7 @@
             "x86_64-pc-windows-msvc",
             "aarch64-pc-windows-msvc"
         ],
-        "packageName": "@arcainc/zapcode"
+        "packageName": "@2018kguo/zapcode"
     },
     "scripts": {
         "build": "napi build --release --platform --js index.js --dts napi.generated.d.ts && node -e \"require('fs').rmSync('napi.generated.d.ts',{force:true})\"",

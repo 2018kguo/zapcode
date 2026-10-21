@@ -8,8 +8,8 @@
     "agent:vercel": "tsx ai-agent-vercel-ai.ts"
   },
   "dependencies": {
-    "@arcainc/zapcode": "file:../../../crates/zapcode-js",
-    "@arcainc/zapcode-ai": "file:../../../packages/zapcode-ai",
+    "@2018kguo/zapcode": "file:../../../crates/zapcode-js",
+    "@2018kguo/zapcode-ai": "file:../../../packages/zapcode-ai",
     "@anthropic-ai/sdk": "^0.39.0",
     "@ai-sdk/anthropic": "^1.1.0",
     "ai": "^4.1.0"

@@ -4,7 +4,7 @@
  * package's node_modules so e2e tests run against local Rust changes instead
  * of the published npm binary.
  *
- * `index.js` in @arcainc/zapcode prefers a `.node` sitting next to it
+ * `index.js` in @2018kguo/zapcode prefers a `.node` sitting next to it
  * (the "development" path), so we copy the freshly built artifacts there.
  */
 import { execSync } from "node:child_process";
@@ -16,7 +16,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const aiPkg = join(here, "..");
 const repoRoot = join(aiPkg, "..", "..");
 const jsCrate = join(repoRoot, "crates", "zapcode-js");
-const dest = join(aiPkg, "node_modules", "@arcainc", "zapcode");
+const dest = join(aiPkg, "node_modules", "@2018kguo", "zapcode");
 
 if (!existsSync(dest)) {
   throw new Error(

@@ -282,7 +282,7 @@ sweep probes every commonly-used method BY NAME):
 Three stale pins promoted to Node-truth tests (`in` prototype membership ×2,
 class generator methods).
 
-**Round 8 (branch `arca/conformance-fixes`) — cluster wrap-up + reflection / RegExp / coercion-builtin edges.**
+**Round 8 (branch `conformance-fixes`) — cluster wrap-up + reflection / RegExp / coercion-builtin edges.**
 
 This round confirms the earlier-landed clusters are GREEN-by-construction (asserting
 real Node, not pinned divergences) and closes a batch of remaining reflection /
@@ -356,7 +356,7 @@ regex backreferences / lookaround. Plus the tool-boundary / session residuals (L
 errors-as-strings, L8 per-param descriptions, F4 NaN/Infinity→null output, P1 live
 generator, P2 chunk scope), which are boundary-marshalling / persistence limits.
 
-**Round 6 (branch `arca/heap-handles-rewrite`) — deferred-five final disposition + O4 security-regression fix:**
+**Round 6 (branch `heap-handles-rewrite`) — deferred-five final disposition + O4 security-regression fix:**
 
 This round finishes the "deferred five" (G4 / O4 / G9 / N9 / N5) and, critically,
 *repairs a GREEN-suite regression* that Round 5 had left in (and mis-labelled as
@@ -461,7 +461,7 @@ here). 634 core tests pass (0 failed), `cargo build --workspace` is clean (0
 warnings), and the JS `test:scenarios3` (77 checks) + `test:e2e` (all suites incl.
 `stress`/`parallel`/`marshalling`) are green with the native binding rebuilt.
 
-**Round 5 (branch `arca/heap-handles-rewrite`) — N5 bare tool-call as a deferred Promise:**
+**Round 5 (branch `heap-handles-rewrite`) — N5 bare tool-call as a deferred Promise:**
 - **N5 — FIXED (general case).** A bare (un-awaited) tool-call expression now
   evaluates to a real *deferred* Promise object instead of an eagerly-resolved
   value. `const p = tool(); typeof p === "object"` and the host call is **not**
@@ -504,7 +504,7 @@ warnings), and the JS `test:scenarios3` (77 checks) + `test:e2e` (all suites inc
     suspension were switched to `await tool()` (same suspension, correct N5
     semantics).
 
-**Round 4 (branch `arca/heap-handles-rewrite`) — Promise combinators + `super.method` + MED/LOW edges:**
+**Round 4 (branch `heap-handles-rewrite`) — Promise combinators + `super.method` + MED/LOW edges:**
 - **C3 `super.method()` / `super.prop` — FIXED.** Class methods now track their
   defining class on the frame, so `super.g()` dispatches to the parent method with
   the subclass instance as `this` (reads `this`-fields set after `super()`), chains
@@ -581,7 +581,7 @@ warnings), and the JS `test:scenarios3` (77 checks) + `test:e2e` (all suites inc
   The full suite — including `security`, `stress_for_await.rs`, `async_await`,
   `generators`, and all `stress_*` — is now green.
 
-**Round 3 (branch `arca/heap-handles-rewrite`) — the heap-with-handles rewrite:**
+**Round 3 (branch `heap-handles-rewrite`) — the heap-with-handles rewrite:**
 - **A (reference semantics) — FIXED.** `Value::Array`/`Object` now carry a `Handle`
   into a VM-owned `Heap`; cloning a value shares the slot, so aliasing,
   mutate-through-parameter, Map-of-arrays bucket pushes, identity `===`, and
@@ -594,7 +594,7 @@ warnings), and the JS `test:scenarios3` (77 checks) + `test:e2e` (all suites inc
 
 
 
-**Round 2 (branch `arca/heap-handles-rewrite`) — Tier A complete + most of Tier B:**
+**Round 2 (branch `heap-handles-rewrite`) — Tier A complete + most of Tier B:**
 - **J4** nested `for…of`; **D1/D2** function hoisting; **C4** caught runtime
   errors are real `Error` objects; **B1** trailing-block completion values;
   **E1/E2** optional-chaining short-circuit (calls + trailing members).
@@ -642,7 +642,7 @@ H6/H10. The notes below are the original findings (unchanged).
 
 
 Compiled from two subagent stress passes against `packages/zapcode-ai/dist/index.js`
-(the built interpreter on branch `arca/hardening-evals`). Every entry was verified by
+(the built interpreter on branch `hardening-evals`). Every entry was verified by
 running the **identical** snippet through both `zapcode.execute(code, {})` and real
 Node, and confirming the outputs differ. Repros are the exact code string passed to
 `execute`; "Expected" is real Node, "Actual" is zapcode.

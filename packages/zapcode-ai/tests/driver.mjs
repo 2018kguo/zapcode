@@ -5,7 +5,7 @@
  * including the `dump()` escape hatch for cross-process durability.
  */
 import assert from "node:assert/strict";
-import { ZapcodeDriver, ZapcodeSnapshotHandle } from "@arcainc/zapcode";
+import { ZapcodeDriver, ZapcodeSnapshotHandle } from "@2018kguo/zapcode";
 
 let passed = 0;
 function test(name, fn) {

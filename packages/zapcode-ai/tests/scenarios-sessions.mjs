@@ -12,7 +12,7 @@
  */
 import assert from "node:assert/strict";
 import { createSession, loadSession } from "../dist/index.js";
-import { ZapcodeSessionHandle } from "@arcainc/zapcode";
+import { ZapcodeSessionHandle } from "@2018kguo/zapcode";
 
 const results = [];
 async function check(name, fn) {

@@ -10,7 +10,7 @@ import {
   Zapcode,
   ZapcodeSnapshotHandle,
   ZapcodeSessionHandle,
-} from "@arcainc/zapcode";
+} from "@2018kguo/zapcode";
 
 let passed = 0;
 async function test(name, fn) {

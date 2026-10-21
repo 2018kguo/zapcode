@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://github.com/TheUncharted/zapcode/actions"><img src="https://img.shields.io/github/actions/workflow/status/TheUncharted/zapcode/ci.yml?branch=master&label=CI" alt="CI"></a>
   <a href="https://crates.io/crates/zapcode-core"><img src="https://img.shields.io/crates/v/zapcode-core" alt="crates.io"></a>
-  <a href="https://www.npmjs.com/package/@arcainc/zapcode"><img src="https://img.shields.io/npm/v/@arcainc/zapcode" alt="npm"></a>
+  <a href="https://www.npmjs.com/package/@2018kguo/zapcode"><img src="https://img.shields.io/npm/v/@2018kguo/zapcode" alt="npm"></a>
   <a href="https://pypi.org/project/zapcode/"><img src="https://img.shields.io/pypi/v/zapcode" alt="PyPI"></a>
   <a href="https://github.com/TheUncharted/zapcode/blob/master/LICENSE"><img src="https://img.shields.io/github/license/TheUncharted/zapcode" alt="License"></a>
 </p>
@@ -87,7 +87,7 @@ cargo bench   # run benchmarks yourself
 
 **TypeScript / JavaScript**
 ```bash
-npm install @arcainc/zapcode        # npm / yarn / pnpm / bun
+npm install @2018kguo/zapcode        # npm / yarn / pnpm / bun
 ```
 
 **Python**
@@ -112,7 +112,7 @@ wasm-pack build crates/zapcode-wasm --target web
 ### TypeScript / JavaScript
 
 ```typescript
-import { Zapcode, ZapcodeSnapshotHandle } from '@arcainc/zapcode';
+import { Zapcode, ZapcodeSnapshotHandle } from '@2018kguo/zapcode';
 
 // Simple expression
 const b = new Zapcode('1 + 2 * 3');
@@ -252,16 +252,16 @@ See [`examples/wasm/basic/index.html`](examples/wasm/basic/index.html) for a ful
 
 ## AI Agent Usage
 
-### Vercel AI SDK (@arcainc/zapcode-ai)
+### Vercel AI SDK (@2018kguo/zapcode-ai)
 
 ```bash
-npm install @arcainc/zapcode-ai ai @ai-sdk/anthropic  # or @ai-sdk/amazon-bedrock, @ai-sdk/openai
+npm install @2018kguo/zapcode-ai ai @ai-sdk/anthropic  # or @ai-sdk/amazon-bedrock, @ai-sdk/openai
 ```
 
 The recommended way — one call gives you `{ system, tools }` that plug directly into `generateText` / `streamText`:
 
 ```typescript
-import { zapcode } from "@arcainc/zapcode-ai";
+import { zapcode } from "@2018kguo/zapcode-ai";
 import { generateText } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 
@@ -310,7 +310,7 @@ See [`examples/typescript/ai-agent/ai-agent-zapcode-ai.ts`](examples/typescript/
 
 ```typescript
 import Anthropic from "@anthropic-ai/sdk";
-import { Zapcode, ZapcodeSnapshotHandle } from "@arcainc/zapcode";
+import { Zapcode, ZapcodeSnapshotHandle } from "@2018kguo/zapcode";
 
 const tools = {
   getWeather: async (city: string) => {
@@ -409,7 +409,7 @@ b.handle_tool_call(code)  # → Universal handler
 Build a custom adapter for any AI SDK without forking Zapcode:
 
 ```typescript
-import { zapcode, createAdapter } from "@arcainc/zapcode-ai";
+import { zapcode, createAdapter } from "@2018kguo/zapcode-ai";
 
 const myAdapter = createAdapter("my-sdk", (ctx) => {
   return {
@@ -458,12 +458,12 @@ The adapter receives an `AdapterContext` with everything needed: system prompt, 
 The point of code mode is that the model writes **real control flow** — loops, conditionals,
 retries, error handling, data transforms — with tool calls woven through it. The model
 supplies the judgment; the sandbox supplies deterministic execution. These run with
-`execute(code, tools)` from `@arcainc/zapcode-ai` (the same code an LLM emits through the
+`execute(code, tools)` from `@2018kguo/zapcode-ai` (the same code an LLM emits through the
 `zapcode({ tools })` wrapper above). The **last expression** is the output — there's no
 top-level `return`.
 
 ```typescript
-import { execute, createSession, loadSession, prepare, dryRun, typecheck, forkSnapshot } from "@arcainc/zapcode-ai";
+import { execute, createSession, loadSession, prepare, dryRun, typecheck, forkSnapshot } from "@2018kguo/zapcode-ai";
 ```
 
 A tool is `{ description, parameters, returns?, execute }`. Guest code calls it with a
