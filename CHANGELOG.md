@@ -1,5 +1,47 @@
 # Changelog
 
+## [2.0.0](https://github.com/2018kguo/zapcode/compare/v1.6.2...v2.0.0) (2026-10-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* @2018kguo/zapcode-ai is now @2018kguo/zapcode; the native addon moved to @2018kguo/zapcode-native.
+* zapcode(), createAdapter and the adapter types are gone; use describeTools + execute.
+
+### Features
+
+* ES2025 Set methods and Intl.NumberFormat / toLocaleString options ([1d788dd](https://github.com/2018kguo/zapcode/commit/1d788dd75a892c5f64cdd3bec1cc0e72de88a7bc))
+* Node-style console.log and Date string formatting ([2b0acbe](https://github.com/2018kguo/zapcode/commit/2b0acbe3415c186a2bf3128a581f574ea71fd357))
+* **zapcode-ai:** tsrs typecheck engine; TypeScript 6, ai 7 stable ([1dfec2c](https://github.com/2018kguo/zapcode/commit/1dfec2c1a939bc598e3298a8dea970d5615e53a7))
+
+
+### Bug Fixes
+
+* **ci:** github-release needed the removed publish-pypi-ai job ([434c45f](https://github.com/2018kguo/zapcode/commit/434c45f206aba5506de9a16597b588dce19a1176))
+* **compiler:** pop inner for…of iterators and switch values on break/continue ([c0853c7](https://github.com/2018kguo/zapcode/commit/c0853c73cc9d98ed930a281b7af95d9b08292b7e))
+* **js:** keep object key order across the napi boundary ([e97dad0](https://github.com/2018kguo/zapcode/commit/e97dad02b8cd90d37845d42a88506de0840378d8))
+* **parser:** add bounds guards to trailing paren stripping in wrap_trailing_object ([7d3c8a9](https://github.com/2018kguo/zapcode/commit/7d3c8a9e783b9867de0d36e8c34a00fa47e98dda))
+* **parser:** handle keyword+paren+block constructs in wrap_trailing_object ([dff68c7](https://github.com/2018kguo/zapcode/commit/dff68c7eea8e37760bc9d58fb3441150e767cee8))
+* **parser:** parse guest code with the module goal so top-level for-await works ([9e7074f](https://github.com/2018kguo/zapcode/commit/9e7074f2a8060ec019a8b474ea4ce6557b32cf92))
+* undeclared names throw ReferenceError; hoist var declarations ([48c2e1f](https://github.com/2018kguo/zapcode/commit/48c2e1fc70d1f2676f112cf692367f592dfa0007))
+
+
+### Performance Improvements
+
+* borrow objects on property reads; FxHash object maps ([af1371f](https://github.com/2018kguo/zapcode/commit/af1371fd84aef2cbf9987f219a9cae7d4ac0f13e))
+* FxHash for the globals map ([63077ae](https://github.com/2018kguo/zapcode/commit/63077aed8f5bc43e35f007add97443dc24d4657f))
+* O(1) Set/Map ops, O(1) ASCII string indexing; fix f === f ([e773a16](https://github.com/2018kguo/zapcode/commit/e773a169d297a200c902a8b155433044dd064a8e))
+* O(n log n) sort, O(1) push, allocation limit counts allocations ([19720c1](https://github.com/2018kguo/zapcode/commit/19720c1d533efd372a4d4f5082427e74dfc84fb8))
+* share the builtin heap template copy-on-write ([2ca6b0d](https://github.com/2018kguo/zapcode/commit/2ca6b0d15a9009be7e648a1600eba09ae02d3ff1))
+* shrink Value from 168 to 32 bytes ([44d25eb](https://github.com/2018kguo/zapcode/commit/44d25eb5f06f604e4de9bbc51677ea005cdc0371))
+* stop copying params and rebuilding env on every call ([c48f378](https://github.com/2018kguo/zapcode/commit/c48f3781ac40823702a64a86653ac1c756ec76e1))
+
+
+### Code Refactoring
+
+* drop the AI SDK adapters; standalone like Monty ([fc40aed](https://github.com/2018kguo/zapcode/commit/fc40aed547a3cc9b822da32f48abadbe8aa51b36))
+* one npm package, @2018kguo/zapcode (like @pydantic/monty) ([2cac42e](https://github.com/2018kguo/zapcode/commit/2cac42ec7f0ac6b28acc39ac074142ba0eecc443))
+
 ## [1.6.2](https://github.com/2018kguo/zapcode/compare/v1.6.1...v1.6.2) (2026-06-14)
 
 
