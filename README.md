@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/demos/agent.gif" alt="An LLM-written script calling tools inside Zapcode" width="860">
+  <img src="assets/demos/agent.gif" alt="An LLM-written refund agent suspends for approval, crashes mid-tool, and resumes across three processes" width="860">
 </p>
 
 > This is a heavily extended fork of [TheUncharted/zapcode](https://github.com/TheUncharted/zapcode).
@@ -109,12 +109,10 @@ loop on the low-level snapshot API.
 
 ## Durable execution, end to end
 
-[`examples/typescript/durable-agent`](examples/typescript/durable-agent/agent.mjs) is a refund agent in
-about 100 lines. It runs until it needs a human, saves its state to a file and exits. A second
-process resumes it with the approval and gets killed mid-tool. A third process finishes the run
-without repeating any tool that already ran.
-
-<img src="assets/demos/durable-agent.gif" alt="An agent suspends for approval, crashes, and resumes in three separate processes" width="860">
+The demo at the top is [`examples/typescript/durable-agent`](examples/typescript/durable-agent/agent.mjs),
+which you can run yourself. The agent runs until it needs a human, saves its state to a file and
+exits. A second process resumes it with the approval and gets killed mid-tool. A third process
+finishes the run without repeating any tool that already finished.
 
 The host loop behind it is a write-ahead journal: save the suspension, run the tool, save the result,
 then resume.

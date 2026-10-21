@@ -10,7 +10,7 @@
  * pauses *between* printed sections so a recording is readable.
  */
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { styleText as st } from "node:util";
 import {
@@ -22,6 +22,7 @@ import {
   dryRun,
   forkSnapshot,
 } from "@2018kguo/zapcode";
+import { PROGRAM } from "../durable-agent/program.mjs";
 
 const PACE = Number(process.env.DEMO_PACE ?? 0);
 const pause = (k = 1) => new Promise((r) => setTimeout(r, PACE * k));
@@ -94,61 +95,42 @@ const demos = {
   async agent() {
     title(
       "⚡",
-      "An LLM writes code. Zapcode runs it.",
-      "No container, no V8 isolate: a Rust bytecode VM in your process.",
+      "An LLM writes code. Zapcode runs it, pauses it, and resumes it anywhere.",
+      "A Rust bytecode VM in your process: suspend at any tool call, persist ~1 KB, survive crashes.",
     );
-    const tools = {
-      getWeather: tool(
-        "getWeather",
-        "Current weather",
-        { city: { type: "string" } },
-        250,
-        ({ city }) => ({
-          city,
-          tempC: { Tokyo: 18, Paris: 11, Austin: 29 }[city],
-          sky: { Tokyo: "clear", Paris: "rain", Austin: "sun" }[city],
-        }),
-        "{ city: string; tempC: number; sky: string }",
-      ),
-      searchFlights: tool(
-        "searchFlights",
-        "Cheapest flights",
-        { to: { type: "string" } },
-        300,
-        ({ to }) => ({ to, usd: { Tokyo: 912, Paris: 640, Austin: 210 }[to] }),
-      ),
-    };
-    const src = dedent(`
-      // "Where should I fly this weekend? Warm and cheap."
-      const cities = ["Tokyo", "Paris", "Austin"];
-      const options = [];
-      for (const city of cities) {
-        const w = await getWeather({ city });
-        if (w.sky === "rain") continue;           // real control flow
-        const f = await searchFlights({ to: city });
-        options.push({ city, tempC: w.tempC, usd: f.usd });
-      }
-      options.sort((a, b) => a.usd - b.usd)[0];
-    `);
     label("model-written TypeScript");
-    code(src, Object.keys(tools));
-    await pause(2);
-    label("host resolves each tool call as the VM suspends");
-    T0.t = now();
-    const r = await execute(src, tools);
-    out();
-    ok(`output ${show(r.output)}`);
-    note(`${r.toolCalls.length} tool calls · one model turn instead of ${r.toolCalls.length}`);
-    await pause(1);
-    let best = Infinity;
-    for (let i = 0; i < 2000; i++) {
-      const t = now();
-      new Zapcode("1 + 2 * 3").run();
-      best = Math.min(best, since(t));
+    code(dedent(PROGRAM), [
+      "getOrder",
+      "getCustomer",
+      "getRefundPolicy",
+      "requestApproval",
+      "issueRefund",
+      "notifyCustomer",
+    ]);
+    await pause(4);
+    process.stdout.write("\x1b[2J\x1b[H");
+    const agent = new URL("../durable-agent/agent.mjs", import.meta.url).pathname;
+    rmSync(new URL("../durable-agent/run.json", import.meta.url), { force: true });
+    const steps = [
+      ["runs until it needs a human, saves a checkpoint, exits", ["start", "A-17"], {}],
+      [
+        "hours later, a new process resumes with the approval… and dies mid-tool",
+        ["approve", "alice"],
+        { CRASH_AT: "notifyCustomer" },
+      ],
+      ["a third process recovers from the journal", ["resume"], {}],
+    ];
+    for (const [i, [what, args, env]] of steps.entries()) {
+      out();
+      label(`${st("yellow", `${i + 1}`)} ${what}`);
+      spawnSync(process.execPath, [agent, ...args], {
+        stdio: "inherit",
+        env: { ...process.env, ...env, FORCE_COLOR: "1" },
+      });
+      await pause(2);
     }
-    ok(
-      `cold start through the Node binding (parse → compile → run ${st("gray", "1 + 2 * 3")}): ${st(["bold", "yellow"], fmtUs(best))}`,
-    );
+    out();
+    ok(`3 processes · 1 approval · ${st(["bold", "yellow"], "0 finished tool calls repeated")}`);
   },
 
   async parallel() {
