@@ -33,3 +33,6 @@ examples/*/Cargo.lock
 
 # Secrets
 .env
+
+# Extra cargo target dirs (e.g. baseline builds)
+/target-*/
