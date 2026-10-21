@@ -160,9 +160,10 @@ pub(crate) struct CallFrame {
     /// Free-variable bindings for a closure frame: name -> cell id. A name found
     /// here shadows the global of the same name (LoadGlobal/StoreGlobal consult
     /// it first), connecting captured names to their shared cells.
-    /// `BTreeMap` for the same determinism reason as `boxed`.
+    /// Shared with the closure (names are unique), so entering a frame doesn't
+    /// copy it; serializes exactly like the former name-sorted map of pairs.
     #[serde(default)]
-    pub(crate) env: BTreeMap<String, u64>,
+    pub(crate) env: Arc<[(String, u64)]>,
     /// Set on an async function body frame the first time it detaches at an
     /// `await` (microtask-design Stage 3): the pending result promise the
     /// caller received at detach time. A frame with this set has NO caller
@@ -2774,7 +2775,7 @@ impl Vm {
         for fi in (0..self.frames.len()).rev() {
             let frame = &self.frames[fi];
             // Cells this frame already references (it is itself a closure body).
-            for (name, cell) in &frame.env {
+            for (name, cell) in frame.env.iter() {
                 if seen.insert(name.clone()) {
                     inherited.push((name.clone(), *cell));
                 }
@@ -2809,7 +2810,7 @@ impl Vm {
                 function_id: func_idx,
             },
             captured,
-            env,
+            env: env.into(),
         }
     }
 
@@ -2868,6 +2869,15 @@ impl Vm {
 
     fn current_program(&self) -> &CompiledProgram {
         self.program(self.current_frame().program_index)
+    }
+
+    /// The shared cell a captured free variable `name` resolves to in the current frame.
+    fn env_cell(&self, name: &str) -> Option<u64> {
+        self.current_frame()
+            .env
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|&(_, c)| c)
     }
 
     fn current_function(&self, func_ref: FunctionRef) -> &crate::compiler::CompiledFunction {
@@ -3045,11 +3055,24 @@ impl Vm {
             }
         }
 
-        let func = self.current_function(closure.func_ref);
-        let params = func.params.clone();
-        let local_count = func.local_count;
-        let needs_arguments = func.needs_arguments;
-        let locals = Self::bind_params(&params, args, local_count, needs_arguments, &mut self.heap);
+        // Hold the program by Arc (a refcount bump) so the params can be
+        // borrowed while binding mutates the heap, instead of deep-copying them.
+        let program = Arc::clone(
+            self.programs
+                .get(closure.func_ref.program_id)
+                .expect("internal error: invalid program index"),
+        );
+        let func = program
+            .functions
+            .get(closure.func_ref.function_id)
+            .expect("internal error: invalid function reference");
+        let locals = Self::bind_params(
+            &func.params,
+            args,
+            func.local_count,
+            func.needs_arguments,
+            &mut self.heap,
+        );
 
         // If this is a method call (has this_value from a receiver), transfer
         // the receiver source so we can write back mutations on return.
@@ -3062,7 +3085,7 @@ impl Vm {
 
         // Captured-by-reference variables: the frame's env maps each name to its
         // shared cell so LoadGlobal/StoreGlobal in the body see and mutate it.
-        let env: BTreeMap<String, u64> = closure.env.iter().cloned().collect();
+        let env = closure.env.clone();
 
         // Consume the one-shot field-initializer flag (set by `call_field_init`).
         let is_field_init = std::mem::take(&mut self.next_frame_is_field_init);
@@ -3102,7 +3125,7 @@ impl Vm {
             this_value: None,
             receiver_source: None,
             boxed: BTreeMap::new(),
-            env: BTreeMap::new(),
+            env: Arc::default(),
             is_field_init: false,
             async_result: None,
             is_constructor: false,
@@ -5336,7 +5359,7 @@ impl Vm {
                     }
                 }
                 let stack_base = self.stack.len();
-                let env: BTreeMap<String, u64> = gen_obj.env.iter().cloned().collect();
+                let env = gen_obj.env.clone();
                 self.frames.push(CallFrame {
                     program_index: func_ref.program_id,
                     func_index: Some(func_ref.function_id),
@@ -5361,7 +5384,7 @@ impl Vm {
                 }
                 self.push(arg)?;
                 self.restore_generator_try_frames(gen_obj.id, self.frames.len(), stack_base);
-                let env: BTreeMap<String, u64> = gen_obj.env.iter().cloned().collect();
+                let env = gen_obj.env.clone();
                 self.frames.push(CallFrame {
                     program_index: func_ref.program_id,
                     func_index: Some(func_ref.function_id),
@@ -5507,7 +5530,7 @@ impl Vm {
                     }
                 }
                 let stack_base = self.stack.len();
-                let env: BTreeMap<String, u64> = gen_obj.env.iter().cloned().collect();
+                let env = gen_obj.env.clone();
                 self.frames.push(CallFrame {
                     program_index: func_ref.program_id,
                     func_index: Some(func_ref.function_id),
@@ -5532,7 +5555,7 @@ impl Vm {
                 // The `.next(arg)` value becomes the yield expression's value.
                 self.push(arg)?;
                 self.restore_generator_try_frames(gen_obj.id, caller_frame_depth, stack_base);
-                let env: BTreeMap<String, u64> = gen_obj.env.iter().cloned().collect();
+                let env = gen_obj.env.clone();
                 self.frames.push(CallFrame {
                     program_index: func_ref.program_id,
                     func_index: Some(func_ref.function_id),
@@ -5959,7 +5982,7 @@ impl Vm {
                 let soft = matches!(instr, Instruction::LoadGlobalOrUndefined(_));
                 // A captured free variable resolves to its shared cell via the
                 // current frame's env overlay before falling back to true globals.
-                if let Some(&cell) = self.current_frame().env.get(name.as_ref()) {
+                if let Some(cell) = self.env_cell(name.as_ref()) {
                     let val = self
                         .cells
                         .get(cell as usize)
@@ -6009,7 +6032,7 @@ impl Vm {
             Instruction::StoreGlobal(name) => {
                 let val = self.pop()?;
                 // Route writes to a captured variable through its shared cell.
-                if let Some(&cell) = self.current_frame().env.get(name.as_ref()) {
+                if let Some(cell) = self.env_cell(name.as_ref()) {
                     if let Some(slot_ref) = self.cells.get_mut(cell as usize) {
                         *slot_ref = val;
                     }
