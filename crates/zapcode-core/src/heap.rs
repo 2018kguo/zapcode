@@ -29,9 +29,43 @@ pub enum HeapSlot {
 }
 
 /// A flat arena of array/object slots. Owned by the VM and carried in snapshots.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+///
+/// Handles index `base ++ slots`. `base` is a shared, read-only prefix (the
+/// builtin-globals template), so creating a VM is an `Arc` bump instead of a
+/// deep copy of every builtin object; the first mutable access to a prefix
+/// slot copies the prefix into `slots` once ([`Self::materialize`]).
+#[derive(Debug, Clone, Default)]
 pub struct Heap {
+    base: Arc<Vec<HeapSlot>>,
     slots: Vec<HeapSlot>,
+}
+
+/// Wire shape: one sequence of all slots, as before the shared prefix existed.
+#[derive(Serialize, Deserialize)]
+struct HeapRepr<S> {
+    slots: S,
+}
+
+impl Serialize for Heap {
+    fn serialize<Ser: serde::Serializer>(&self, serializer: Ser) -> Result<Ser::Ok, Ser::Error> {
+        struct All<'a>(&'a Heap);
+        impl Serialize for All<'_> {
+            fn serialize<Ser: serde::Serializer>(&self, s: Ser) -> Result<Ser::Ok, Ser::Error> {
+                s.collect_seq(self.0.base.iter().chain(self.0.slots.iter()))
+            }
+        }
+        HeapRepr { slots: All(self) }.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Heap {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let repr = HeapRepr::<Vec<HeapSlot>>::deserialize(deserializer)?;
+        Ok(Heap {
+            base: Arc::default(),
+            slots: repr.slots,
+        })
+    }
 }
 
 impl Heap {
@@ -40,11 +74,49 @@ impl Heap {
     }
 
     pub fn len(&self) -> usize {
-        self.slots.len()
+        self.base.len() + self.slots.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.slots.is_empty()
+        self.len() == 0
+    }
+
+    /// This heap with its slots moved into the shared prefix, so clones of it
+    /// share them (used for the builtin template).
+    pub(crate) fn into_shared(mut self) -> Heap {
+        self.materialize();
+        Heap {
+            base: Arc::new(self.slots),
+            slots: Vec::new(),
+        }
+    }
+
+    /// Copy the shared prefix into `slots` (once) before anything mutates it
+    /// or needs a single contiguous slot vector.
+    fn materialize(&mut self) {
+        if !self.base.is_empty() {
+            let mut all = Vec::with_capacity(self.len());
+            all.extend(self.base.iter().cloned());
+            all.append(&mut self.slots);
+            self.slots = all;
+            self.base = Arc::default();
+        }
+    }
+
+    fn slot(&self, handle: Handle) -> Option<&HeapSlot> {
+        let i = handle as usize;
+        match i.checked_sub(self.base.len()) {
+            None => self.base.get(i),
+            Some(j) => self.slots.get(j),
+        }
+    }
+
+    fn slot_mut(&mut self, handle: Handle) -> Option<&mut HeapSlot> {
+        if (handle as usize) < self.base.len() {
+            self.materialize();
+        }
+        let i = handle as usize - self.base.len();
+        self.slots.get_mut(i)
     }
 
     /// Estimated live byte footprint of the arena: element/entry counts ×
@@ -53,8 +125,9 @@ impl Heap {
     /// in-run compaction (see `docs/in-run-memory-design.md`).
     pub(crate) fn byte_estimate(&self) -> usize {
         let vsz = std::mem::size_of::<Value>();
-        self.slots
+        self.base
             .iter()
+            .chain(self.slots.iter())
             .map(|slot| match slot {
                 HeapSlot::Array(items) => items.len().saturating_mul(vsz),
                 HeapSlot::Object(map) => map.len().saturating_mul(vsz),
@@ -64,21 +137,21 @@ impl Heap {
 
     /// Allocate an array slot, returning its handle. (Wrap in `Value::Array`.)
     pub fn alloc_array(&mut self, items: Vec<Value>) -> Handle {
-        let handle = self.slots.len() as Handle;
+        let handle = self.len() as Handle;
         self.slots.push(HeapSlot::Array(items));
         handle
     }
 
     /// Allocate an object slot, returning its handle. (Wrap in `Value::Object`.)
     pub fn alloc_object(&mut self, fields: ObjectMap) -> Handle {
-        let handle = self.slots.len() as Handle;
+        let handle = self.len() as Handle;
         self.slots.push(HeapSlot::Object(fields));
         handle
     }
 
     /// Borrow the array at `handle` (empty slice if the handle isn't an array).
     pub fn array(&self, handle: Handle) -> &[Value] {
-        match self.slots.get(handle as usize) {
+        match self.slot(handle) {
             Some(HeapSlot::Array(a)) => a,
             _ => &[],
         }
@@ -91,7 +164,7 @@ impl Heap {
     }
 
     pub fn array_mut(&mut self, handle: Handle) -> Option<&mut Vec<Value>> {
-        match self.slots.get_mut(handle as usize) {
+        match self.slot_mut(handle) {
             Some(HeapSlot::Array(a)) => Some(a),
             _ => None,
         }
@@ -99,14 +172,14 @@ impl Heap {
 
     /// Replace the contents of an array slot in place (handle stays valid).
     pub fn set_array(&mut self, handle: Handle, items: Vec<Value>) {
-        if let Some(slot) = self.slots.get_mut(handle as usize) {
+        if let Some(slot) = self.slot_mut(handle) {
             *slot = HeapSlot::Array(items);
         }
     }
 
     /// Borrow the object at `handle`.
     pub fn object(&self, handle: Handle) -> Option<&ObjectMap> {
-        match self.slots.get(handle as usize) {
+        match self.slot(handle) {
             Some(HeapSlot::Object(o)) => Some(o),
             _ => None,
         }
@@ -118,7 +191,7 @@ impl Heap {
     }
 
     pub fn object_mut(&mut self, handle: Handle) -> Option<&mut ObjectMap> {
-        match self.slots.get_mut(handle as usize) {
+        match self.slot_mut(handle) {
             Some(HeapSlot::Object(o)) => Some(o),
             _ => None,
         }
@@ -126,14 +199,14 @@ impl Heap {
 
     /// Replace the contents of an object slot in place.
     pub fn set_object(&mut self, handle: Handle, fields: ObjectMap) {
-        if let Some(slot) = self.slots.get_mut(handle as usize) {
+        if let Some(slot) = self.slot_mut(handle) {
             *slot = HeapSlot::Object(fields);
         }
     }
 
     /// True if the handle refers to an array slot.
     pub fn is_array(&self, handle: Handle) -> bool {
-        matches!(self.slots.get(handle as usize), Some(HeapSlot::Array(_)))
+        matches!(self.slot(handle), Some(HeapSlot::Array(_)))
     }
 
     /// Append every slot from `other` into this heap, rebasing the handles those
@@ -145,8 +218,9 @@ impl Heap {
     /// Used at the host boundary: a binding builds compound inputs / resume
     /// values into a standalone heap (handles `0..n`), then merges that heap into
     /// the live VM heap which already holds builtin and user slots.
-    pub fn absorb(&mut self, other: Heap) -> Handle {
-        let offset = self.slots.len() as Handle;
+    pub fn absorb(&mut self, mut other: Heap) -> Handle {
+        let offset = self.len() as Handle;
+        other.materialize();
         for slot in other.slots {
             let rebased = match slot {
                 HeapSlot::Array(items) => HeapSlot::Array(
@@ -253,6 +327,7 @@ impl Heap {
     /// reinserting in iteration order keeps the exact same key sequence, so no
     /// observable behavior changes — only the keys' `Arc` identity.
     pub(crate) fn reintern_keys(&mut self, interner: &mut crate::intern::KeyInterner) {
+        self.materialize();
         for slot in &mut self.slots {
             if let HeapSlot::Object(map) = slot {
                 // Drain in order into a fresh map, interning each key. The cost
@@ -274,7 +349,14 @@ impl Heap {
     /// against the template before eliding it.
     pub(crate) fn prefix(&self, n: usize) -> Heap {
         Heap {
-            slots: self.slots[..n.min(self.slots.len())].to_vec(),
+            base: Arc::default(),
+            slots: self
+                .base
+                .iter()
+                .chain(self.slots.iter())
+                .take(n)
+                .cloned()
+                .collect(),
         }
     }
 
@@ -282,16 +364,40 @@ impl Heap {
     /// builtin-template prefix).
     pub(crate) fn tail_from(&self, n: usize) -> Heap {
         Heap {
-            slots: self.slots[n.min(self.slots.len())..].to_vec(),
+            base: Arc::default(),
+            slots: self
+                .base
+                .iter()
+                .chain(self.slots.iter())
+                .skip(n)
+                .cloned()
+                .collect(),
         }
     }
 
     /// Rebuild a full heap from the builtin template plus a serialized tail
     /// (the inverse of `tail_from` after a template-elided snapshot load).
     pub(crate) fn with_template_prefix(template: &Heap, tail: Heap) -> Heap {
-        let mut slots = template.slots.clone();
+        // Share the template's prefix (an Arc bump) when it is fully shared.
+        let mut tail = tail;
+        tail.materialize();
+        if template.slots.is_empty() {
+            return Heap {
+                base: Arc::clone(&template.base),
+                slots: tail.slots,
+            };
+        }
+        let mut slots: Vec<HeapSlot> = template
+            .base
+            .iter()
+            .chain(template.slots.iter())
+            .cloned()
+            .collect();
         slots.extend(tail.slots);
-        Heap { slots }
+        Heap {
+            base: Arc::default(),
+            slots,
+        }
     }
 }
 
@@ -312,6 +418,7 @@ impl Heap {
         keep_prefix: usize,
         roots: &[Handle],
     ) -> Vec<Handle> {
+        self.materialize();
         let n = self.slots.len();
         let mut live = vec![false; n];
         let mut queue: Vec<usize> = Vec::new();

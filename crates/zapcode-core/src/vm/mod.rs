@@ -524,7 +524,8 @@ pub(crate) fn builtin_template() -> &'static (HashMap<String, Value>, Heap) {
         let mut globals = HashMap::new();
         let mut heap = Heap::new();
         builtins::register_globals(&mut globals, &mut heap);
-        (globals, heap)
+        // Shared prefix: each VM's copy of the template heap is an Arc bump.
+        (globals, heap.into_shared())
     })
 }
 

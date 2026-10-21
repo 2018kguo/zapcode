@@ -96,3 +96,15 @@ fn resume_still_works_after_sorting() {
         VmState::SuspendedMany { .. } => panic!("unexpected batch suspension"),
     }
 }
+
+#[test]
+fn mutating_a_builtin_does_not_leak_into_the_next_vm() {
+    // VMs share the builtin template's heap slots copy-on-write.
+    use zapcode_core::vm::eval_ts;
+    let first = eval_ts("Math.leak = 42; JSON.extra = 1; Math.leak + JSON.extra").unwrap();
+    assert_eq!(format!("{first:?}"), "Int(43)");
+    let second =
+        eval_ts("Object.keys(Math).includes('leak') || Object.keys(JSON).includes('extra')")
+            .unwrap();
+    assert_eq!(format!("{second:?}"), "Bool(false)");
+}
