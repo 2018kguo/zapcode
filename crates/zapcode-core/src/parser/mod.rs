@@ -33,7 +33,9 @@ pub fn parse(source: &str) -> Result<Program> {
     let source = wrap_trailing_object(source);
 
     let allocator = Allocator::default();
-    let source_type = SourceType::tsx();
+    // Module goal: guest code is strict and may use top-level `await` and
+    // `for await` (the unambiguous goal rejects the latter).
+    let source_type = SourceType::tsx().with_module(true);
     let ret = Parser::new(&allocator, &source, source_type).parse();
 
     if !ret.errors.is_empty() {

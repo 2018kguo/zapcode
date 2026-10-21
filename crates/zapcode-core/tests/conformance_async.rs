@@ -1145,3 +1145,12 @@ fn unconsumed_map_rejection_still_fails_the_run() {
     );
     assert!(err.contains("Unhandled promise rejection"), "got: {err}");
 }
+
+#[test]
+fn for_await_at_top_level() {
+    // The program parses with the module goal, so top-level `for await` works.
+    assert_eq!(
+        run_str("const g = async function*() { yield 1; yield 2 }; const out = []; for await (const x of g()) out.push(x); out.join()"),
+        "1,2"
+    );
+}
