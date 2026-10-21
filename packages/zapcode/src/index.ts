@@ -1,13 +1,13 @@
 /**
- * @2018kguo/zapcode-ai — run model-written TypeScript against your tools.
+ * @2018kguo/zapcode — run model-written TypeScript against your tools.
  *
- * The host loop around the Zapcode interpreter: tool calls suspend the VM,
+ * The interpreter (re-exported from the native addon) plus its host loop: tool calls suspend the VM,
  * your `execute` functions run on the host, results flow back in. No AI SDK
  * dependency — hand the model `describeTools(tools)`, take the code it writes,
  * and pass it to `execute()`.
  *
  * ```typescript
- * import { execute, describeTools } from "@2018kguo/zapcode-ai";
+ * import { execute, describeTools } from "@2018kguo/zapcode";
  * const prompt = `Write TypeScript using these functions:\n${describeTools(tools)}`;
  * const { output } = await execute(codeFromModel, tools);
  * ```
@@ -20,7 +20,17 @@ import {
   ZapcodeDriver,
   type ZapcodeStep,
   type PromiseCombinator,
-} from "@2018kguo/zapcode";
+} from "@2018kguo/zapcode-native";
+
+// The low-level interpreter (Zapcode, snapshots, sessions) from the same import.
+export {
+  Zapcode,
+  ZapcodeSnapshotHandle,
+  ZapcodeSessionHandle,
+  ZapcodeProgramHandle,
+  ZapcodeDriver,
+} from "@2018kguo/zapcode-native";
+export type * from "@2018kguo/zapcode-native";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -1022,7 +1032,7 @@ async function executeCode(
  *
  * @example
  * ```typescript
- * import { execute } from "@2018kguo/zapcode-ai";
+ * import { execute } from "@2018kguo/zapcode";
  *
  * const result = await execute(
  *   `const w = await getWeather("Tokyo"); w.temp`,

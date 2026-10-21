@@ -7,7 +7,7 @@
 > Global policy: **memory ranks above small speed wins** (snapshots are the
 > persisted artifact; many VMs run concurrently). Every perf change states
 > its memory delta. Correctness beats both: the differential gate
-> (`packages/zapcode-ai/tests/differential.mjs`) and the 104-binary suite
+> (`packages/zapcode/tests/differential.mjs`) and the 104-binary suite
 > must stay green, and any serialized-layout change bumps the wire version.
 
 ## 1. Speed

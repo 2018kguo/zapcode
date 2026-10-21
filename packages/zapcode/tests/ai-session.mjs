@@ -1,5 +1,5 @@
 /**
- * e2e: the zapcode-ai durable session bridge. An agent defines a workflow in
+ * e2e: the zapcode durable session bridge. An agent defines a workflow in
  * one chunk; it runs (with tool calls, errors, and parallel batches) in later
  * chunks; and the whole VM state survives a dump/load boundary — the
  * "define now, run later across a Temporal activity" path. Real TypeScript.

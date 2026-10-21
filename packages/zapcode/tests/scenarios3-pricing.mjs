@@ -1,5 +1,5 @@
 /**
- * Realistic pricing / invoicing / billing agent scenarios for zapcode-ai.
+ * Realistic pricing / invoicing / billing agent scenarios for zapcode.
  *
  * Stresses number-heavy reductions (reduce with object accumulators, Math.round
  * cents rounding, Math.min/max/abs), chained map -> filter -> reduce pipelines,
@@ -11,7 +11,7 @@
  * Determinism: no Date.now()/Math.random(); the "billing clock" is injected via a
  * tool returning a fixed epoch value. All numeric assertions are exact.
  *
- * Run from packages/zapcode-ai:
+ * Run from packages/zapcode:
  *   node tests/scenarios3-pricing.mjs
  */
 import assert from "node:assert/strict";

@@ -150,16 +150,16 @@ jobs:
         run: npm publish --access public --tag latest || echo "Already published, skipping"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Build zapcode-ai
-        working-directory: packages/zapcode-ai
+      - name: Build zapcode
+        working-directory: packages/zapcode
         run: |
           npm install
           npm run build
-      - name: Copy README to zapcode-ai
-        run: cp README.md packages/zapcode-ai/README.md
-      - name: Publish zapcode-ai
+      - name: Copy README to zapcode
+        run: cp README.md packages/zapcode/README.md
+      - name: Publish zapcode
         if: ${{ !inputs.dry_run }}
-        working-directory: packages/zapcode-ai
+        working-directory: packages/zapcode
         run: npm publish --access public --tag latest || echo "Already published, skipping"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

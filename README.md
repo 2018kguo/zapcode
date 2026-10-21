@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="https://github.com/2018kguo/zapcode/actions"><img src="https://img.shields.io/github/actions/workflow/status/2018kguo/zapcode/ci.yml?branch=master&label=CI" alt="CI"></a>
-  <a href="https://www.npmjs.com/package/@2018kguo/zapcode-ai"><img src="https://img.shields.io/npm/v/@2018kguo/zapcode-ai?label=npm" alt="npm"></a>
+  <a href="https://www.npmjs.com/package/@2018kguo/zapcode"><img src="https://img.shields.io/npm/v/@2018kguo/zapcode?label=npm" alt="npm"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/2018kguo/zapcode" alt="MIT"></a>
   <img src="https://img.shields.io/badge/unsafe-0-brightgreen" alt="zero unsafe">
 </p>
@@ -53,17 +53,16 @@ what's needed to run it in production agent loops:
 ## Install
 
 ```bash
-npm install @2018kguo/zapcode-ai    # high-level agent API (pulls in the native addon)
-npm install @2018kguo/zapcode       # just the interpreter
+npm install @2018kguo/zapcode
 ```
 
-Prebuilt binaries cover macOS, Linux (glibc + musl) and Windows on x64/arm64. Rust, Python and
+One package: the interpreter plus the host loop (`execute`, sessions, snapshots). Prebuilt binaries cover macOS, Linux (glibc + musl) and Windows on x64/arm64. Rust, Python and
 WebAssembly bindings build from source (`crates/zapcode-core`, `crates/zapcode-py`, `crates/zapcode-wasm`).
 
 ## Quick start
 
 ```ts
-import { execute } from "@2018kguo/zapcode-ai";
+import { execute } from "@2018kguo/zapcode";
 
 const tools = {
   getWeather: {
@@ -93,7 +92,7 @@ Zapcode has no SDK dependency, the way Pydantic's Monty doesn't. Give the model 
 TypeScript declarations, let it write code, and run what it returns:
 
 ```ts
-import { describeTools, execute } from "@2018kguo/zapcode-ai";
+import { describeTools, execute } from "@2018kguo/zapcode";
 
 const system = `Answer by writing TypeScript. Available functions (use await):
 ${describeTools(tools)}
@@ -247,7 +246,7 @@ walker, and snapshot loading that refuses forged limits and decompression bombs.
 
 ```bash
 cargo test -p zapcode-core                          # Rust suite
-cd packages/zapcode-ai && npm run test:e2e-full     # binding, sessions, Node differential
+cd packages/zapcode && npm run test:e2e-full     # binding, sessions, Node differential
 cd examples/typescript/showcase && node demo.mjs agent   # the demos above (re-record with `vhs tapes/agent.tape`)
 ```
 

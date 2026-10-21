@@ -1,7 +1,7 @@
 {
-    "name": "@2018kguo/zapcode",
+    "name": "@2018kguo/zapcode-native",
     "version": "1.6.2",
-    "description": "A minimal, secure TypeScript interpreter for AI agents — Node.js bindings",
+    "description": "Native addon behind @2018kguo/zapcode (install that package instead)",
     "main": "index.js",
     "module": "index.js",
     "types": "index.d.ts",
@@ -51,7 +51,7 @@
             "x86_64-pc-windows-msvc",
             "aarch64-pc-windows-msvc"
         ],
-        "packageName": "@2018kguo/zapcode"
+        "packageName": "@2018kguo/zapcode-native"
     },
     "scripts": {
         "build": "napi build --release --platform --js index.js --dts napi.generated.d.ts && node -e \"require('fs').rmSync('napi.generated.d.ts',{force:true})\"",

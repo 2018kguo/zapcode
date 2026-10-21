@@ -16,7 +16,7 @@
  *   - Array.sort() returns a sorted copy but does not mutate -> use the return value.
  *   - Concurrent tool calls may resolve in any host order -> sort before asserting.
  *
- * Run from packages/zapcode-ai:
+ * Run from packages/zapcode:
  *   node tests/scenarios3-knowledge.mjs
  */
 import assert from "node:assert/strict";

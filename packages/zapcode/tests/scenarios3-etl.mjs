@@ -1,5 +1,5 @@
 /**
- * Realistic ETL/data-cleaning agent workflow scenarios for zapcode-ai.
+ * Realistic ETL/data-cleaning agent workflow scenarios for zapcode.
  *
  * Covers CSV-ish object arrays, dedupe with Map/Set, regex/string cleanup,
  * invalid external tool arguments, object rest/destructuring, and stable

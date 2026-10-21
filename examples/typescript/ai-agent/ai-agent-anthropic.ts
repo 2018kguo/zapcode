@@ -3,7 +3,7 @@
  *
  * This shows the manual snapshot/resume loop using @2018kguo/zapcode.
  * For tool validation, parallel batches and sessions, use execute() from
- * @2018kguo/zapcode-ai.
+ * @2018kguo/zapcode.
  *
  * This example shows the "code as tool use" pattern:
  * 1. Claude writes TypeScript code that calls tools (external functions)

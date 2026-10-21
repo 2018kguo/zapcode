@@ -2,7 +2,7 @@
  * Smoke test for two ergonomics additions:
  *   1. stdout / stderr split — console.error/warn land in `stderr`, never in
  *      `stdout`; console.log/info/debug stay on `stdout`. Checked through both
- *      the raw napi binding and the zapcode-ai `execute()` wrapper.
+ *      the raw napi binding and the zapcode `execute()` wrapper.
  *   2. prepare-once `ZapcodeProgramHandle` — compile once, run many; dump/load
  *      round-trips the compiled bytecode through a Buffer.
  *
@@ -10,7 +10,7 @@
  * stdout (see crates/zapcode-core/tests/stderr_split.rs for the same split).
  */
 import assert from "node:assert/strict";
-import { Zapcode, ZapcodeProgramHandle } from "@2018kguo/zapcode";
+import { Zapcode, ZapcodeProgramHandle } from "@2018kguo/zapcode-native";
 import { execute } from "../dist/index.js";
 
 let passed = 0;
@@ -43,7 +43,7 @@ await test("console.error/warn -> stderr, log/info/debug -> stdout (binding)", (
   assert.ok(!res.stdout.includes("err-"), "stderr must not leak into stdout");
 });
 
-// 1b. Same split surfaced through the zapcode-ai execute() wrapper.
+// 1b. Same split surfaced through the zapcode execute() wrapper.
 await test("ExecutionResult carries a separate stderr stream", async () => {
   const result = await execute(`console.log("hello"); console.error("oops"); "done"`, {});
   assert.equal(result.output, "done");

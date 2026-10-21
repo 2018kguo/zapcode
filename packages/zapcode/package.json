@@ -1,7 +1,7 @@
 {
-  "name": "@2018kguo/zapcode-ai",
+  "name": "@2018kguo/zapcode",
   "version": "1.6.2",
-  "description": "Run model-written TypeScript against your tools in the Zapcode sandbox: suspend/resume tool calls, durable sessions, typecheck and dry runs",
+  "description": "Sandboxed TypeScript interpreter for running model-written code: suspend/resume tool calls, durable snapshots and sessions, typecheck and dry runs",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "sync-local-binding": "node scripts/sync-local-binding.mjs",
+    "sync-local-binding": "npm run build -w @2018kguo/zapcode-native",
     "test:agent-scenarios": "npm run build && node tests/agent-scenarios.mjs",
     "test:e2e": "npm run sync-local-binding && npm run build && node tests/agent-scenarios.mjs && node tests/durable-sessions.mjs && node tests/tool-errors.mjs && node tests/parallel.mjs && node tests/driver.mjs && node tests/ai-session.mjs && node tests/type-check.mjs && node tests/agent-dx.mjs && node tests/tool-side-effects.mjs && node tests/stress.mjs && node tests/workflow.mjs && node tests/marshalling.mjs",
     "test:e2e-conformance": "npm run sync-local-binding && npm run build && for f in agent-integration tool-contract session-inputs session-workflows durable-serialization; do echo \"# e2e-$f\"; node tests/e2e-$f.mjs; done",
@@ -26,7 +26,7 @@
     "test:fuzz": "npm run sync-local-binding && npm run build && node tests/fuzz-differential.mjs"
   },
   "dependencies": {
-    "@2018kguo/zapcode": "^1.0.0"
+    "@2018kguo/zapcode-native": "1.6.2"
   },
   "peerDependencies": {
     "typescript": ">=5.0.0"
@@ -61,6 +61,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/2018kguo/zapcode.git",
-    "directory": "packages/zapcode-ai"
+    "directory": "packages/zapcode"
   }
 }

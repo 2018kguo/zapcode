@@ -6,7 +6,7 @@
     "agent": "tsx ai-agent-anthropic.ts"
   },
   "dependencies": {
-    "@2018kguo/zapcode": "file:../../../crates/zapcode-js",
+    "@2018kguo/zapcode": "*",
     "@anthropic-ai/sdk": "^0.70.0"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 /**
  * Realistic warehouse inventory / order-fulfillment / allocation agent scenarios
- * for zapcode-ai.
+ * for zapcode.
  *
  * Stresses agent-authored control flow that survives the interpreter subset:
  *   - switch statements (with intentional fallthrough) for SKU handling classes
@@ -21,7 +21,7 @@
  *     comparator (priority*100 + seq) sorts correctly, so priority-first ordering
  *     is expressed that way.
  *
- * Run from packages/zapcode-ai:
+ * Run from packages/zapcode:
  *   node tests/scenarios3-inventory.mjs
  */
 import assert from "node:assert/strict";

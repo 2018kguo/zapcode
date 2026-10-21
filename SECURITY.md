@@ -12,7 +12,7 @@ that was used to read a `SECRET` env var out of the host.
 ## 1. Threat model
 
 The sandbox runs guest code that we treat as fully adversarial. The host is a long-lived Node
-process (via the `@2018kguo/zapcode` napi addon used by `packages/zapcode-ai`), so the bar is:
+process (via the `@2018kguo/zapcode-native` napi addon used by `packages/zapcode`), so the bar is:
 
 > **A guest program must never be able to crash, hang, escape, or read host state out of the
 > sandbox. Every adverse outcome must be a *catchable* error or a *fired resource limit*, never
@@ -57,7 +57,7 @@ All fixes turn a would-be host abort / bypass into a **catchable error or a fire
 in commit `a448a2f` ("security: harden recursive value walkers, parse-depth, builtin allocs,
 snapshot load") plus the earlier `1c5ab63` (bounded ToPrimitive). Tests live in
 `crates/zapcode-core/tests/security.rs` (91 tests), `tests/wire_format.rs`, and
-`packages/zapcode-ai/tests/marshalling.mjs`.
+`packages/zapcode/tests/marshalling.mjs`.
 
 ### (a) Native-stack-overflow / panic DoS — FIXED
 

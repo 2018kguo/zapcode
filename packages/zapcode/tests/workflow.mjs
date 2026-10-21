@@ -7,7 +7,7 @@
  */
 import assert from "node:assert/strict";
 import { createSession, loadSession } from "../dist/index.js";
-import { ZapcodeSessionHandle } from "@2018kguo/zapcode";
+import { ZapcodeSessionHandle } from "@2018kguo/zapcode-native";
 
 let passed = 0;
 async function test(name, fn) {

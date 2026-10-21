@@ -1,7 +1,7 @@
 # Known gaps
 
 Where Zapcode still differs from Node. Every item here was checked against Node; anything not
-listed should match it (the differential harness in `packages/zapcode-ai/tests/differential.mjs`
+listed should match it (the differential harness in `packages/zapcode/tests/differential.mjs`
 is the source of truth). Historical stress-pass notes live in [`docs/history/`](docs/history).
 
 ## Language

@@ -12,7 +12,7 @@ There are two test tiers, run with two toolchains:
 | Tier | Toolchain | Location | What it covers |
 |---|---|---|---|
 | **Rust conformance + core** | `cargo test` | `crates/zapcode-core/tests/*.rs` | Language semantics against the VM directly |
-| **JS end-to-end** | `node` | `packages/zapcode-ai/tests/*.mjs` | The AI-SDK API surface, tool boundary, durable sessions, agent scenarios |
+| **JS end-to-end** | `node` | `packages/zapcode/tests/*.mjs` | The AI-SDK API surface, tool boundary, durable sessions, agent scenarios |
 
 > **Correctness policy.** Every assertion targets *real Node / real-JS* behavior.
 > Where the interpreter has a **known, documented divergence** (see
@@ -119,7 +119,7 @@ cargo test --workspace                # all crates (core, js, wasm, py bindings)
 
 ---
 
-## Tier 2 — JS end-to-end (`packages/zapcode-ai`)
+## Tier 2 — JS end-to-end (`packages/zapcode`)
 
 These import the **built** interpreter (`dist/index.js`, backed by the local
 `napi` binding) and exercise the host API exactly as an application would:
@@ -172,7 +172,7 @@ End-to-end *agent scenarios* that read like product workflows:
 ### Running it
 
 ```bash
-cd packages/zapcode-ai
+cd packages/zapcode
 npm install                     # first time only
 
 npm run test:e2e               # original integration chain
@@ -198,7 +198,7 @@ published binary.
 cargo test -p zapcode-core
 
 # Tier 2
-cd packages/zapcode-ai && npm run test:e2e-full
+cd packages/zapcode && npm run test:e2e-full
 ```
 
 Both must be fully green. As of this writing the gate is:

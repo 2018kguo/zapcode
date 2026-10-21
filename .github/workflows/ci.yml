@@ -35,7 +35,7 @@ jobs:
           node-version: 22
       - name: JS lint and format (oxlint, oxfmt)
         run: |
-          npm install --no-audit --no-fund
+          npm install --no-audit --no-fund --ignore-scripts
           npm run lint
           npm run fmt:check
 
@@ -71,17 +71,19 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: npm-${{ runner.os }}-${{ hashFiles('crates/zapcode-js/package.json', 'examples/typescript/basic/package.json') }}
-      - name: Build JS bindings
-        working-directory: crates/zapcode-js
+          key: npm-${{ runner.os }}-${{ hashFiles('**/package.json') }}
+      - name: Install workspace
+        run: npm install --no-audit --no-fund
+      - name: Build native addon and package
         run: |
-          npm install
-          npm run build
+          npm run build -w @2018kguo/zapcode-native
+          npm run build -w @2018kguo/zapcode
       - name: Run basic example
         working-directory: examples/typescript/basic
-        run: |
-          npm install
-          npx tsx main.ts
+        run: npx tsx main.ts
+      - name: Package e2e suites
+        working-directory: packages/zapcode
+        run: npm run test:e2e
 
   # ── Python bindings — build + e2e ───────────────────────────────────
   e2e-python:

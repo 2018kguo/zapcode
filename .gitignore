@@ -25,7 +25,7 @@ __pycache__/
 
 # Generated copies (CI creates these)
 crates/zapcode-py/README.md
-packages/zapcode-ai/README.md
+packages/zapcode/README.md
 examples/*/Cargo.lock
 
 # Claude Code

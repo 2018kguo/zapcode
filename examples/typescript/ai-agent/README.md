@@ -11,5 +11,5 @@ npm run agent
 ```
 
 For the higher-level loop (tool validation, parallel batches, sessions), see
-`execute()` in [`packages/zapcode-ai`](../../../packages/zapcode-ai) and the
+`execute()` in [`packages/zapcode`](../../../packages/zapcode) and the
 [workflows example](../workflows).

@@ -1,6 +1,6 @@
 /**
  * Independent E2E pass for agent-authored CRM/support triage workflows.
- * Runs realistic TypeScript snippets through the zapcode-ai execute harness.
+ * Runs realistic TypeScript snippets through the zapcode execute harness.
  */
 import assert from "node:assert/strict";
 import { execute } from "../dist/index.js";

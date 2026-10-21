@@ -6,8 +6,13 @@ const { readFileSync } = require('fs')
 let nativeBinding = null
 // Which artifact actually loaded. The WASI fallback chain overwrites it with
 // the flavor it resolved; the late native retry below leaves it alone because
-// it only runs while no WASI candidate has been loaded.
+// it only runs while no WASI candidate has been loaded. The take-over check
+// after the load-failure block can also set it.
 let __napiLoadedBindingTarget = 'native'
+// What this loader's own `requireNative()` calls returned. The check after
+// the load-failure block compares it with `nativeBinding` to tell a binding
+// this loader loaded from one that code outside it put in its place.
+let __napiRequiredNativeBinding = null
 const loadErrors = []
 
 const isMusl = () => {
@@ -87,8 +92,8 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@2018kguo/zapcode-android-arm64')
-        const bindingPackageVersion = require('@2018kguo/zapcode-android-arm64/package.json').version
+        const binding = require('@2018kguo/zapcode-native-android-arm64')
+        const bindingPackageVersion = require('@2018kguo/zapcode-native-android-arm64/package.json').version
         if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -103,8 +108,8 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@2018kguo/zapcode-android-arm-eabi')
-        const bindingPackageVersion = require('@2018kguo/zapcode-android-arm-eabi/package.json').version
+        const binding = require('@2018kguo/zapcode-native-android-arm-eabi')
+        const bindingPackageVersion = require('@2018kguo/zapcode-native-android-arm-eabi/package.json').version
         if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -124,8 +129,8 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@2018kguo/zapcode-win32-x64-gnu')
-          const bindingPackageVersion = require('@2018kguo/zapcode-win32-x64-gnu/package.json').version
+          const binding = require('@2018kguo/zapcode-native-win32-x64-gnu')
+          const bindingPackageVersion = require('@2018kguo/zapcode-native-win32-x64-gnu/package.json').version
           if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -140,8 +145,8 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@2018kguo/zapcode-win32-x64-msvc')
-          const bindingPackageVersion = require('@2018kguo/zapcode-win32-x64-msvc/package.json').version
+          const binding = require('@2018kguo/zapcode-native-win32-x64-msvc')
+          const bindingPackageVersion = require('@2018kguo/zapcode-native-win32-x64-msvc/package.json').version
           if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -157,8 +162,8 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@2018kguo/zapcode-win32-ia32-msvc')
-        const bindingPackageVersion = require('@2018kguo/zapcode-win32-ia32-msvc/package.json').version
+        const binding = require('@2018kguo/zapcode-native-win32-ia32-msvc')
+        const bindingPackageVersion = require('@2018kguo/zapcode-native-win32-ia32-msvc/package.json').version
         if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -173,8 +178,8 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@2018kguo/zapcode-win32-arm64-msvc')
-        const bindingPackageVersion = require('@2018kguo/zapcode-win32-arm64-msvc/package.json').version
+        const binding = require('@2018kguo/zapcode-native-win32-arm64-msvc')
+        const bindingPackageVersion = require('@2018kguo/zapcode-native-win32-arm64-msvc/package.json').version
         if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -192,8 +197,8 @@ function requireNative() {
       loadErrors.push(e)
     }
     try {
-      const binding = require('@2018kguo/zapcode-darwin-universal')
-      const bindingPackageVersion = require('@2018kguo/zapcode-darwin-universal/package.json').version
+      const binding = require('@2018kguo/zapcode-native-darwin-universal')
+      const bindingPackageVersion = require('@2018kguo/zapcode-native-darwin-universal/package.json').version
       if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
         throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
       }
@@ -208,8 +213,8 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@2018kguo/zapcode-darwin-x64')
-        const bindingPackageVersion = require('@2018kguo/zapcode-darwin-x64/package.json').version
+        const binding = require('@2018kguo/zapcode-native-darwin-x64')
+        const bindingPackageVersion = require('@2018kguo/zapcode-native-darwin-x64/package.json').version
         if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -224,8 +229,8 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@2018kguo/zapcode-darwin-arm64')
-        const bindingPackageVersion = require('@2018kguo/zapcode-darwin-arm64/package.json').version
+        const binding = require('@2018kguo/zapcode-native-darwin-arm64')
+        const bindingPackageVersion = require('@2018kguo/zapcode-native-darwin-arm64/package.json').version
         if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -244,8 +249,8 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@2018kguo/zapcode-freebsd-x64')
-        const bindingPackageVersion = require('@2018kguo/zapcode-freebsd-x64/package.json').version
+        const binding = require('@2018kguo/zapcode-native-freebsd-x64')
+        const bindingPackageVersion = require('@2018kguo/zapcode-native-freebsd-x64/package.json').version
         if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -260,8 +265,24 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@2018kguo/zapcode-freebsd-arm64')
-        const bindingPackageVersion = require('@2018kguo/zapcode-freebsd-arm64/package.json').version
+        const binding = require('@2018kguo/zapcode-native-freebsd-arm64')
+        const bindingPackageVersion = require('@2018kguo/zapcode-native-freebsd-arm64/package.json').version
+        if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        }
+        return binding
+      } catch (e) {
+        loadErrors.push(e)
+      }
+    } else if (process.arch === 'ppc64') {
+      try {
+        return require('./zapcode.freebsd-ppc64.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      try {
+        const binding = require('@2018kguo/zapcode-native-freebsd-ppc64')
+        const bindingPackageVersion = require('@2018kguo/zapcode-native-freebsd-ppc64/package.json').version
         if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -281,8 +302,8 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@2018kguo/zapcode-linux-x64-musl')
-          const bindingPackageVersion = require('@2018kguo/zapcode-linux-x64-musl/package.json').version
+          const binding = require('@2018kguo/zapcode-native-linux-x64-musl')
+          const bindingPackageVersion = require('@2018kguo/zapcode-native-linux-x64-musl/package.json').version
           if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -297,8 +318,8 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@2018kguo/zapcode-linux-x64-gnu')
-          const bindingPackageVersion = require('@2018kguo/zapcode-linux-x64-gnu/package.json').version
+          const binding = require('@2018kguo/zapcode-native-linux-x64-gnu')
+          const bindingPackageVersion = require('@2018kguo/zapcode-native-linux-x64-gnu/package.json').version
           if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -315,8 +336,8 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@2018kguo/zapcode-linux-arm64-musl')
-          const bindingPackageVersion = require('@2018kguo/zapcode-linux-arm64-musl/package.json').version
+          const binding = require('@2018kguo/zapcode-native-linux-arm64-musl')
+          const bindingPackageVersion = require('@2018kguo/zapcode-native-linux-arm64-musl/package.json').version
           if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -331,8 +352,8 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@2018kguo/zapcode-linux-arm64-gnu')
-          const bindingPackageVersion = require('@2018kguo/zapcode-linux-arm64-gnu/package.json').version
+          const binding = require('@2018kguo/zapcode-native-linux-arm64-gnu')
+          const bindingPackageVersion = require('@2018kguo/zapcode-native-linux-arm64-gnu/package.json').version
           if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -349,8 +370,8 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@2018kguo/zapcode-linux-arm-musleabihf')
-          const bindingPackageVersion = require('@2018kguo/zapcode-linux-arm-musleabihf/package.json').version
+          const binding = require('@2018kguo/zapcode-native-linux-arm-musleabihf')
+          const bindingPackageVersion = require('@2018kguo/zapcode-native-linux-arm-musleabihf/package.json').version
           if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -365,8 +386,8 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@2018kguo/zapcode-linux-arm-gnueabihf')
-          const bindingPackageVersion = require('@2018kguo/zapcode-linux-arm-gnueabihf/package.json').version
+          const binding = require('@2018kguo/zapcode-native-linux-arm-gnueabihf')
+          const bindingPackageVersion = require('@2018kguo/zapcode-native-linux-arm-gnueabihf/package.json').version
           if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -383,8 +404,8 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@2018kguo/zapcode-linux-loong64-musl')
-          const bindingPackageVersion = require('@2018kguo/zapcode-linux-loong64-musl/package.json').version
+          const binding = require('@2018kguo/zapcode-native-linux-loong64-musl')
+          const bindingPackageVersion = require('@2018kguo/zapcode-native-linux-loong64-musl/package.json').version
           if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -399,8 +420,8 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@2018kguo/zapcode-linux-loong64-gnu')
-          const bindingPackageVersion = require('@2018kguo/zapcode-linux-loong64-gnu/package.json').version
+          const binding = require('@2018kguo/zapcode-native-linux-loong64-gnu')
+          const bindingPackageVersion = require('@2018kguo/zapcode-native-linux-loong64-gnu/package.json').version
           if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -417,8 +438,8 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@2018kguo/zapcode-linux-riscv64-musl')
-          const bindingPackageVersion = require('@2018kguo/zapcode-linux-riscv64-musl/package.json').version
+          const binding = require('@2018kguo/zapcode-native-linux-riscv64-musl')
+          const bindingPackageVersion = require('@2018kguo/zapcode-native-linux-riscv64-musl/package.json').version
           if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -433,8 +454,8 @@ function requireNative() {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@2018kguo/zapcode-linux-riscv64-gnu')
-          const bindingPackageVersion = require('@2018kguo/zapcode-linux-riscv64-gnu/package.json').version
+          const binding = require('@2018kguo/zapcode-native-linux-riscv64-gnu')
+          const bindingPackageVersion = require('@2018kguo/zapcode-native-linux-riscv64-gnu/package.json').version
           if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -450,8 +471,8 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@2018kguo/zapcode-linux-ppc64-gnu')
-        const bindingPackageVersion = require('@2018kguo/zapcode-linux-ppc64-gnu/package.json').version
+        const binding = require('@2018kguo/zapcode-native-linux-ppc64-gnu')
+        const bindingPackageVersion = require('@2018kguo/zapcode-native-linux-ppc64-gnu/package.json').version
         if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -466,8 +487,8 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@2018kguo/zapcode-linux-s390x-gnu')
-        const bindingPackageVersion = require('@2018kguo/zapcode-linux-s390x-gnu/package.json').version
+        const binding = require('@2018kguo/zapcode-native-linux-s390x-gnu')
+        const bindingPackageVersion = require('@2018kguo/zapcode-native-linux-s390x-gnu/package.json').version
         if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -486,8 +507,8 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@2018kguo/zapcode-openharmony-arm64')
-        const bindingPackageVersion = require('@2018kguo/zapcode-openharmony-arm64/package.json').version
+        const binding = require('@2018kguo/zapcode-native-openharmony-arm64')
+        const bindingPackageVersion = require('@2018kguo/zapcode-native-openharmony-arm64/package.json').version
         if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -502,8 +523,8 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@2018kguo/zapcode-openharmony-x64')
-        const bindingPackageVersion = require('@2018kguo/zapcode-openharmony-x64/package.json').version
+        const binding = require('@2018kguo/zapcode-native-openharmony-x64')
+        const bindingPackageVersion = require('@2018kguo/zapcode-native-openharmony-x64/package.json').version
         if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -518,8 +539,8 @@ function requireNative() {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@2018kguo/zapcode-openharmony-arm')
-        const bindingPackageVersion = require('@2018kguo/zapcode-openharmony-arm/package.json').version
+        const binding = require('@2018kguo/zapcode-native-openharmony-arm')
+        const bindingPackageVersion = require('@2018kguo/zapcode-native-openharmony-arm/package.json').version
         if (bindingPackageVersion !== '1.6.2' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -585,6 +606,7 @@ const forceWasi =
 
 if (!forceWasi) {
   nativeBinding = requireNative()
+  __napiRequiredNativeBinding = nativeBinding
 }
 
 if (!nativeBinding || forceWasi) {
@@ -656,16 +678,16 @@ if (!nativeBinding || forceWasi) {
     let candidateError = null
     let candidateFailed = false
     try {
-      candidateError = __napiWasiResolveCandidate('@2018kguo/zapcode-wasm32-wasi', true, undefined)
+      candidateError = __napiWasiResolveCandidate('@2018kguo/zapcode-native-wasm32-wasi', true, undefined)
       candidateFailed = candidateError !== null
       if (!candidateFailed) {
         if (process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          const bindingPackageVersion = require('@2018kguo/zapcode-wasm32-wasi/package.json').version
+          const bindingPackageVersion = require('@2018kguo/zapcode-native-wasm32-wasi/package.json').version
           if (bindingPackageVersion !== '1.6.2') {
             throw new Error(`WASI binding package version mismatch, expected 1.6.2 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
         }
-        wasiBinding = require('@2018kguo/zapcode-wasm32-wasi')
+        wasiBinding = require('@2018kguo/zapcode-native-wasm32-wasi')
         nativeBinding = wasiBinding
         __napiLoadedBindingTarget = 'wasm32-wasi'
         wasiBindingLoaded = true
@@ -686,6 +708,7 @@ if (!nativeBinding || forceWasi) {
     !__napiWasiFlavorRequested
   ) {
     nativeBinding = requireNative()
+    __napiRequiredNativeBinding = nativeBinding
   }
   if ((forceWasiError || __napiWasiFlavorRequested) && !wasiBindingLoaded) {
     const error = new Error(
@@ -711,6 +734,40 @@ if (!nativeBinding) {
     throw error
   }
   throw new Error(`Failed to load native binding`)
+}
+
+// A package can patch its own fallback in front of the load-failure check
+// above, e.g. a WebContainer download through `napi-postinstall/fallback`.
+// That fallback swaps `nativeBinding` for a generated WASI loader, which has
+// already stamped its own flavor, while the target above still says 'native'.
+// Take that flavor over, or the CommonJS stamp throws a conflict and the ESM
+// export reports the wrong artifact. Three limits keep the conflict check:
+// - only a binding this loader did not load itself, so a native addon whose
+//   `#[napi(module_exports)]` hook claims the name is still rejected;
+// - only an own data property, read through its descriptor, so no addon
+//   getter runs here, and it must read back the same, as the stamp reads it;
+// - only a flavor in `__napiWasiFlavors`, the ones this loader's own WASI
+//   chain can report ('wasm32-wasi' for a package without a WASI target).
+// This is metadata and never fails a load: a throwing Proxy trap keeps 'native'.
+if (
+  __napiLoadedBindingTarget === 'native' &&
+  nativeBinding !== __napiRequiredNativeBinding
+) {
+  try {
+    const __napiBindingTargetDescriptor = Object.getOwnPropertyDescriptor(
+      nativeBinding,
+      '__napiBindingTarget',
+    )
+    if (
+      __napiBindingTargetDescriptor &&
+      __napiWasiFlavors.indexOf(__napiBindingTargetDescriptor.value) !== -1 &&
+      nativeBinding.__napiBindingTarget === __napiBindingTargetDescriptor.value
+    ) {
+      __napiLoadedBindingTarget = __napiBindingTargetDescriptor.value
+    }
+  } catch {
+    // keep 'native'
+  }
 }
 
 function __napiStampBindingTarget(exportsObject, target) {

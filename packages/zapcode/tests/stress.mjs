@@ -1,12 +1,12 @@
 /**
  * e2e stress tests — real TypeScript through the sandbox, probing durability,
  * parallel batching, error handling, and language breadth under load. Mixes the
- * high-level zapcode-ai API with the raw binding (to drive serialization on
+ * high-level zapcode API with the raw binding (to drive serialization on
  * every hop, like a Temporal workflow would).
  */
 import assert from "node:assert/strict";
 import { execute } from "../dist/index.js";
-import { Zapcode, ZapcodeSnapshotHandle, ZapcodeSessionHandle } from "@2018kguo/zapcode";
+import { Zapcode, ZapcodeSnapshotHandle, ZapcodeSessionHandle } from "@2018kguo/zapcode-native";
 
 let passed = 0;
 async function test(name, fn) {

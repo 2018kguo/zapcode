@@ -13,8 +13,15 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { styleText as st } from "node:util";
-import { Zapcode, ZapcodeSnapshotHandle } from "@2018kguo/zapcode";
-import { execute, createSession, loadSession, dryRun, forkSnapshot } from "@2018kguo/zapcode-ai";
+import {
+  Zapcode,
+  ZapcodeSnapshotHandle,
+  execute,
+  createSession,
+  loadSession,
+  dryRun,
+  forkSnapshot,
+} from "@2018kguo/zapcode";
 
 const PACE = Number(process.env.DEMO_PACE ?? 0);
 const pause = (k = 1) => new Promise((r) => setTimeout(r, PACE * k));

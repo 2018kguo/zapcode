@@ -11,7 +11,7 @@
  * Every tool-call `.input` shape is asserted to be EXACTLY correct so a leaked
  * `null`/`[object Object]` key or a corrupted shape fails loudly.
  *
- * Run from packages/zapcode-ai:
+ * Run from packages/zapcode:
  *   node tests/scenarios3-analytics.mjs
  */
 import assert from "node:assert/strict";

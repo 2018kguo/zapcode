@@ -1,6 +1,6 @@
 /**
  * e2e: realistic durable agent workflows across chunks and dump/load
- * boundaries. These scenarios exercise the zapcode-ai session bridge, so tool
+ * boundaries. These scenarios exercise the zapcode session bridge, so tool
  * results/errors are resumed through the wrapper's validation and resume loop.
  */
 import assert from "node:assert/strict";

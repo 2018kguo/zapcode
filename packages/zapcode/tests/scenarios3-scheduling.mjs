@@ -1,7 +1,7 @@
 /**
  * Realistic scheduling/escalation E2E pass for agent-authored code.
  *
- * Run from packages/zapcode-ai:
+ * Run from packages/zapcode:
  *   npm run build && node tests/scenarios3-scheduling.mjs
  */
 import assert from "node:assert/strict";
