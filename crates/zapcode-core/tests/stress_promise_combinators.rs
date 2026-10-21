@@ -121,7 +121,7 @@ fn resume_combinator(state: VmState, outcomes: &[Out]) -> VmState {
 
 fn alloc_object(heap: &mut zapcode_core::heap::Heap, fields: Vec<(&str, Value)>) -> Value {
     use std::sync::Arc;
-    let mut map = indexmap::IndexMap::new();
+    let mut map = zapcode_core::heap::ObjectMap::default();
     for (k, v) in fields {
         map.insert(Arc::from(k), v);
     }

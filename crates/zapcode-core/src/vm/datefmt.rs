@@ -3,9 +3,7 @@
 //! no ICU data, so locale output is always en-US and the `timeZone` option is
 //! ignored. Expected strings in the tests are Node's.
 
-use std::sync::Arc;
-
-use indexmap::IndexMap;
+use crate::heap::ObjectMap;
 
 use super::civil_from_days;
 use crate::heap::Heap;
@@ -65,7 +63,7 @@ fn fields(millis: i64) -> Fields {
 pub(crate) fn format_date(
     millis: i64,
     method: &str,
-    opts: Option<&IndexMap<Arc<str>, Value>>,
+    opts: Option<&ObjectMap>,
     heap: &Heap,
 ) -> Option<String> {
     let f = fields(millis);
@@ -128,7 +126,7 @@ struct Opts {
 }
 
 impl Opts {
-    fn new(map: Option<&IndexMap<Arc<str>, Value>>, heap: &Heap) -> Self {
+    fn new(map: Option<&ObjectMap>, heap: &Heap) -> Self {
         let get = |k: &str| {
             map.and_then(|m| m.get(k))
                 .filter(|v| !matches!(v, Value::Undefined))

@@ -619,7 +619,6 @@ fn session_rejects_generators_and_builtin_methods_in_persisted_state() {
 /// `run_chunk_with_input_heap` path that the language bindings call.
 #[test]
 fn session_array_input_rebases_over_existing_heap() {
-    use indexmap::IndexMap;
     use std::sync::Arc;
     use zapcode_core::heap::Heap;
 
@@ -646,7 +645,7 @@ fn session_array_input_rebases_over_existing_heap() {
     // standalone heap; its handles must rebase past the persisted `base` slot.
     let mut input_heap = Heap::new();
     let items = input_heap.alloc_array(vec![Value::Int(1), Value::Int(2), Value::Int(3)]);
-    let mut fields = IndexMap::new();
+    let mut fields = zapcode_core::heap::ObjectMap::default();
     fields.insert(Arc::from("items"), Value::Array(items));
     let cfg = input_heap.alloc_object(fields);
 

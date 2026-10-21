@@ -42,7 +42,7 @@ fn js_to_value(js: &JsValue, heap: &mut Heap) -> Result<Value, JsError> {
     } else if js.is_object() {
         let obj = Object::from(js.clone());
         let entries = Object::entries(&obj);
-        let mut map = indexmap::IndexMap::new();
+        let mut map = indexmap::IndexMap::default();
         for i in 0..entries.length() {
             let pair = Array::from(&entries.get(i));
             let key = pair

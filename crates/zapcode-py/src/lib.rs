@@ -40,7 +40,7 @@ fn py_to_value(obj: &Bound<'_, PyAny>, heap: &mut Heap) -> PyResult<Value> {
         }
         Ok(Value::Array(heap.alloc_array(items)))
     } else if let Ok(dict) = obj.cast::<PyDict>() {
-        let mut map = indexmap::IndexMap::new();
+        let mut map = indexmap::IndexMap::default();
         for (k, v) in dict.iter() {
             let key: String = k.extract()?;
             let val = py_to_value(&v, heap)?;

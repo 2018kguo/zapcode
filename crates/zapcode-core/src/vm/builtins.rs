@@ -1,3 +1,4 @@
+use crate::heap::ObjectMap;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -105,9 +106,9 @@ pub fn is_internal_marker_key(key: &str) -> bool {
 /// objects in `heap`.
 pub fn register_globals(globals: &mut HashMap<String, Value>, heap: &mut Heap) {
     // Register known globals as objects — method calls are intercepted by the VM.
-    let empty = heap.alloc_object(IndexMap::new());
+    let empty = heap.alloc_object(IndexMap::default());
     globals.insert("console".to_string(), Value::Object(empty));
-    let empty = heap.alloc_object(IndexMap::new());
+    let empty = heap.alloc_object(IndexMap::default());
     globals.insert("JSON".to_string(), Value::Object(empty));
     globals.insert("Object".to_string(), builtin_constructor("Object", heap));
     globals.insert("Array".to_string(), builtin_constructor("Array", heap));
@@ -126,7 +127,7 @@ pub fn register_globals(globals: &mut HashMap<String, Value>, heap: &mut Heap) {
         builtin_constructor("Function", heap),
     );
     globals.insert("Date".to_string(), {
-        let mut d = IndexMap::new();
+        let mut d = IndexMap::default();
         d.insert(
             Arc::from("__builtin_constructor__"),
             Value::String(JsString::from("Date")),
@@ -183,7 +184,7 @@ pub fn register_globals(globals: &mut HashMap<String, Value>, heap: &mut Heap) {
     }
 
     // Math gets its constants as real properties
-    let mut math = IndexMap::new();
+    let mut math = IndexMap::default();
     math.insert(Arc::from("PI"), Value::Float(std::f64::consts::PI));
     math.insert(Arc::from("E"), Value::Float(std::f64::consts::E));
     math.insert(Arc::from("LN2"), Value::Float(std::f64::consts::LN_2));
@@ -198,7 +199,7 @@ pub fn register_globals(globals: &mut HashMap<String, Value>, heap: &mut Heap) {
     globals.insert("Math".to_string(), Value::Object(heap.alloc_object(math)));
 
     // `Intl` namespace: only `NumberFormat` (en-US output, see NumberFormatOpts).
-    let mut intl = IndexMap::new();
+    let mut intl = IndexMap::default();
     intl.insert(
         Arc::from("NumberFormat"),
         builtin_constructor("Intl.NumberFormat", heap),
@@ -208,7 +209,7 @@ pub fn register_globals(globals: &mut HashMap<String, Value>, heap: &mut Heap) {
 
 /// A `{ __global_fn__: target }` marker object (a callable static), heap-allocated.
 fn global_fn_marker(target: &str, heap: &mut Heap) -> Value {
-    let mut s = IndexMap::new();
+    let mut s = IndexMap::default();
     s.insert(
         Arc::from("__global_fn__"),
         Value::String(JsString::from(target)),
@@ -217,7 +218,7 @@ fn global_fn_marker(target: &str, heap: &mut Heap) -> Value {
 }
 
 fn builtin_constructor(name: &str, heap: &mut Heap) -> Value {
-    let mut obj = IndexMap::new();
+    let mut obj = IndexMap::default();
     obj.insert(
         Arc::from("__builtin_constructor__"),
         Value::String(JsString::from(name)),
@@ -230,7 +231,7 @@ fn builtin_constructor(name: &str, heap: &mut Heap) -> Value {
 /// in the VM's Call instruction) and carry static properties (e.g.
 /// `Number.MAX_SAFE_INTEGER`).
 fn global_fn(name: &str, heap: &mut Heap) -> Value {
-    let mut obj = IndexMap::new();
+    let mut obj = IndexMap::default();
     obj.insert(
         Arc::from("__global_fn__"),
         Value::String(JsString::from(name)),
@@ -242,7 +243,7 @@ fn global_fn(name: &str, heap: &mut Heap) -> Value {
         // whose stringification is a stable sentinel key. A computed key
         // `{ [Symbol.iterator]() {} }` stores the method under that string
         // key, and `for...of`/spread/destructure look it up for the protocol.
-        let mut iter_sym = IndexMap::new();
+        let mut iter_sym = IndexMap::default();
         iter_sym.insert(Arc::from("__symbol__"), Value::Bool(true));
         iter_sym.insert(
             Arc::from("__sym_key__"),
@@ -259,7 +260,7 @@ fn global_fn(name: &str, heap: &mut Heap) -> Value {
         // Well-known `Symbol.toPrimitive`, same sentinel scheme: a computed
         // key `{ [Symbol.toPrimitive]() {} }` stringifies to this key, and
         // `Vm::to_primitive` consults it ahead of valueOf/toString.
-        let mut to_prim_sym = IndexMap::new();
+        let mut to_prim_sym = IndexMap::default();
         to_prim_sym.insert(Arc::from("__symbol__"), Value::Bool(true));
         to_prim_sym.insert(
             Arc::from("__sym_key__"),
@@ -574,7 +575,7 @@ impl NumberFormatOpts {
 /// `new Intl.NumberFormat(locale, options)`: an object whose `format` is a
 /// callable marker carrying the options (see the VM's `__nf_format__` call).
 pub(crate) fn make_number_format(options: Option<&Value>, heap: &mut Heap) -> Value {
-    let mut format = IndexMap::new();
+    let mut format = IndexMap::default();
     format.insert(
         Arc::from("__global_fn__"),
         Value::String(JsString::from("__nf_format__")),
@@ -584,7 +585,7 @@ pub(crate) fn make_number_format(options: Option<&Value>, heap: &mut Heap) -> Va
         options.cloned().unwrap_or(Value::Undefined),
     );
     let format = Value::Object(heap.alloc_object(format));
-    let mut nf = IndexMap::new();
+    let mut nf = IndexMap::default();
     nf.insert(Arc::from("format"), format);
     Value::Object(heap.alloc_object(nf))
 }
@@ -1120,7 +1121,7 @@ pub fn call_global_fn(kind: &str, args: &[Value], heap: &mut Heap) -> Result<Val
         // Symbol semantics (no global registry, no well-known symbols, no
         // Symbol.toPrimitive dispatch).
         "Symbol" => {
-            let mut s = IndexMap::new();
+            let mut s = IndexMap::default();
             s.insert(Arc::from("__symbol__"), Value::Bool(true));
             // Optional description, coerced to string per spec (undefined stays absent).
             if !matches!(arg, Value::Undefined) {
@@ -1137,7 +1138,7 @@ pub fn call_global_fn(kind: &str, args: &[Value], heap: &mut Heap) -> Result<Val
         // same key as identical — so `Symbol.for('x') === Symbol.for('x')`.
         "Symbol.for" => {
             let key = arg.to_js_string(heap);
-            let mut s = IndexMap::new();
+            let mut s = IndexMap::default();
             s.insert(Arc::from("__symbol__"), Value::Bool(true));
             s.insert(
                 Arc::from("__symbol_for__"),
@@ -1948,7 +1949,7 @@ impl<'a> JsonParser<'a> {
     fn parse_object(&mut self, depth: usize, heap: &mut Heap) -> Result<Value> {
         self.pos += 1; // `{`
         self.skip_ws();
-        let mut map: IndexMap<Arc<str>, Value> = IndexMap::new();
+        let mut map: ObjectMap = IndexMap::default();
         if self.peek() == Some(b'}') {
             self.pos += 1;
             return Ok(Value::Object(heap.alloc_object(map)));
@@ -2376,7 +2377,7 @@ fn alloc_match_result(
     subject: &str,
     heap: &mut Heap,
 ) -> Value {
-    let mut map: IndexMap<Arc<str>, Value> = IndexMap::new();
+    let mut map: ObjectMap = IndexMap::default();
     // Numbered capture groups, including group 0 (the whole match).
     let len = caps.len();
     for i in 0..len {
@@ -2401,7 +2402,7 @@ fn alloc_match_result(
     let groups_val = if named.is_empty() {
         Value::Undefined
     } else {
-        let mut g: IndexMap<Arc<str>, Value> = IndexMap::new();
+        let mut g: ObjectMap = IndexMap::default();
         for name in named {
             let v = caps
                 .name(name)
@@ -3284,7 +3285,7 @@ pub fn array_index_key(s: &str) -> Option<u32> {
 /// insertion order. Reserved internal markers are filtered out. This is the
 /// single ordering used by Object.keys/values/entries, for-in (which desugars
 /// to Object.keys), and JSON.stringify so they all agree.
-pub fn ordered_visible_keys(map: &IndexMap<Arc<str>, Value>) -> Vec<Arc<str>> {
+pub fn ordered_visible_keys(map: &ObjectMap) -> Vec<Arc<str>> {
     let non_enum = marker_list(map, "__non_enum__");
     let mut indices: Vec<(u32, Arc<str>)> = Vec::new();
     let mut strings: Vec<Arc<str>> = Vec::new();
@@ -3306,7 +3307,7 @@ pub fn ordered_visible_keys(map: &IndexMap<Arc<str>, Value>) -> Vec<Arc<str>> {
 /// value (NOT a heap array) so it is readable from the map alone — `ordered_
 /// visible_keys` and the spread path have the map but not the heap. Real
 /// property keys never contain a NUL, so it is an unambiguous separator.
-pub fn marker_list(map: &IndexMap<Arc<str>, Value>, marker: &str) -> Vec<String> {
+pub fn marker_list(map: &ObjectMap, marker: &str) -> Vec<String> {
     match map.get(marker) {
         Some(Value::String(s)) if !s.is_empty() => {
             s.split('\u{0}').map(|x| x.to_string()).collect()
@@ -3316,7 +3317,7 @@ pub fn marker_list(map: &IndexMap<Arc<str>, Value>, marker: &str) -> Vec<String>
 }
 
 /// True iff `key` is listed in the object's `marker` attribute list.
-pub fn marker_contains(map: &IndexMap<Arc<str>, Value>, marker: &str, key: &str) -> bool {
+pub fn marker_contains(map: &ObjectMap, marker: &str, key: &str) -> bool {
     match map.get(marker) {
         Some(Value::String(s)) => s.split('\u{0}').any(|x| x == key),
         _ => false,
@@ -3325,7 +3326,7 @@ pub fn marker_contains(map: &IndexMap<Arc<str>, Value>, marker: &str, key: &str)
 
 /// Add `key` to an object's `marker` attribute list (NUL-joined string),
 /// creating it if absent and avoiding duplicates.
-fn marker_add(map: &mut IndexMap<Arc<str>, Value>, marker: &str, key: &str) {
+fn marker_add(map: &mut ObjectMap, marker: &str, key: &str) {
     let mut list: Vec<String> = match map.get(marker) {
         Some(Value::String(s)) if !s.is_empty() => {
             s.split('\u{0}').map(|x| x.to_string()).collect()
@@ -3342,7 +3343,7 @@ fn marker_add(map: &mut IndexMap<Arc<str>, Value>, marker: &str, key: &str) {
 }
 
 /// Remove `key` from an object's `marker` attribute list.
-fn marker_remove(map: &mut IndexMap<Arc<str>, Value>, marker: &str, key: &str) {
+fn marker_remove(map: &mut ObjectMap, marker: &str, key: &str) {
     if let Some(Value::String(s)) = map.get(marker) {
         let kept: Vec<&str> = s.split('\u{0}').filter(|x| *x != key).collect();
         map.insert(
@@ -3382,7 +3383,7 @@ fn apply_descriptor(obj_h: Handle, key: &str, desc: &Value, heap: &mut Heap) -> 
                 let table_h = match heap.object(obj_h).and_then(|m| m.get(table)) {
                     Some(Value::Object(th)) => *th,
                     _ => {
-                        let th = heap.alloc_object(IndexMap::new());
+                        let th = heap.alloc_object(IndexMap::default());
                         if let Some(m) = heap.object_mut(obj_h) {
                             m.insert(Arc::from(table), Value::Object(th));
                         }
@@ -3521,7 +3522,7 @@ fn call_object_method(method: &str, args: &[Value], heap: &mut Heap) -> Result<O
         "assign" => {
             let mut target = match &first {
                 Value::Object(h) => heap.object_map(*h),
-                _ => IndexMap::new(),
+                _ => IndexMap::default(),
             };
             for src in args.iter().skip(1) {
                 if let Value::Object(h) = src {
@@ -3540,7 +3541,7 @@ fn call_object_method(method: &str, args: &[Value], heap: &mut Heap) -> Result<O
         }
         "fromEntries" => {
             // Object.fromEntries([[k, v], ...]) — inverse of Object.entries.
-            let mut obj = IndexMap::new();
+            let mut obj = IndexMap::default();
             if let Value::Array(ph) = &first {
                 for pair in heap.array_vec(*ph) {
                     if let Value::Array(kvh) = pair {
@@ -3601,7 +3602,7 @@ fn call_object_method(method: &str, args: &[Value], heap: &mut Heap) -> Result<O
             // optional second argument's property descriptors. The prototype
             // argument's chain is not modeled, but `Object.create(null)` /
             // `Object.create(proto)` both yield a usable plain object.
-            let mut obj = IndexMap::new();
+            let mut obj = IndexMap::default();
             if let Some(Value::Object(props_h)) = args.get(1) {
                 let props = heap.object_map(*props_h);
                 for (k, desc) in props {
@@ -3624,7 +3625,7 @@ fn call_object_method(method: &str, args: &[Value], heap: &mut Heap) -> Result<O
             // and usable), and null for null/undefined.
             match &first {
                 Value::Object(_) | Value::Array(_) => {
-                    Ok(Some(Value::Object(heap.alloc_object(IndexMap::new()))))
+                    Ok(Some(Value::Object(heap.alloc_object(IndexMap::default()))))
                 }
                 _ => Ok(Some(Value::Null)),
             }
@@ -3698,7 +3699,7 @@ fn call_object_method(method: &str, args: &[Value], heap: &mut Heap) -> Result<O
             }
             let enumerable = !marker_contains(&m, "__non_enum__", &key);
             let configurable = !marker_contains(&m, "__non_config__", &key);
-            let mut desc: IndexMap<Arc<str>, Value> = IndexMap::new();
+            let mut desc: ObjectMap = IndexMap::default();
             if is_accessor {
                 desc.insert(Arc::from("get"), getter.unwrap_or(Value::Undefined));
                 desc.insert(Arc::from("set"), setter.unwrap_or(Value::Undefined));
@@ -3950,7 +3951,7 @@ fn try_lower_pending_call_batch(method: &str, args: &[Value], heap: &mut Heap) -
         })
         .collect();
     let items_arr = Value::Array(heap.alloc_array(items));
-    let mut obj = IndexMap::new();
+    let mut obj = IndexMap::default();
     obj.insert(Arc::from("__promise__"), Value::Bool(true));
     obj.insert(
         Arc::from("status"),
@@ -3980,7 +3981,7 @@ fn call_promise_method(method: &str, args: &[Value], heap: &mut Heap) -> Result<
             if is_promise(&val, heap) {
                 return Ok(Some(val));
             }
-            let mut obj = IndexMap::new();
+            let mut obj = IndexMap::default();
             obj.insert(Arc::from("__promise__"), Value::Bool(true));
             obj.insert(
                 Arc::from("status"),
@@ -3991,7 +3992,7 @@ fn call_promise_method(method: &str, args: &[Value], heap: &mut Heap) -> Result<
         }
         "reject" => {
             let reason = args.first().cloned().unwrap_or(Value::Undefined);
-            let mut obj = IndexMap::new();
+            let mut obj = IndexMap::default();
             obj.insert(Arc::from("__promise__"), Value::Bool(true));
             obj.insert(
                 Arc::from("status"),
@@ -4025,7 +4026,7 @@ fn call_promise_method(method: &str, args: &[Value], heap: &mut Heap) -> Result<
                 }
             }
             let value_arr = Value::Array(heap.alloc_array(results));
-            let mut obj = IndexMap::new();
+            let mut obj = IndexMap::default();
             obj.insert(Arc::from("__promise__"), Value::Bool(true));
             obj.insert(
                 Arc::from("status"),
@@ -4041,10 +4042,10 @@ fn call_promise_method(method: &str, args: &[Value], heap: &mut Heap) -> Result<
             };
             let mut results: Vec<Value> = Vec::with_capacity(arr.len());
             for item in &arr {
-                let mut entry = IndexMap::new();
+                let mut entry = IndexMap::default();
                 let map = match item {
                     Value::Object(h) => heap.object_map(*h),
-                    _ => IndexMap::new(),
+                    _ => IndexMap::default(),
                 };
                 if matches!(map.get("status"), Some(Value::String(s)) if s.as_ref() == "rejected") {
                     entry.insert(
@@ -4090,7 +4091,7 @@ fn call_promise_method(method: &str, args: &[Value], heap: &mut Heap) -> Result<
                 }
                 // An empty array races forever; surface a pending promise.
                 None => {
-                    let mut obj = IndexMap::new();
+                    let mut obj = IndexMap::default();
                     obj.insert(Arc::from("__promise__"), Value::Bool(true));
                     obj.insert(
                         Arc::from("status"),
@@ -4127,7 +4128,7 @@ fn call_promise_method(method: &str, args: &[Value], heap: &mut Heap) -> Result<
                 }
             }
             let agg_obj = make_aggregate_error(errors, heap);
-            let mut obj = IndexMap::new();
+            let mut obj = IndexMap::default();
             obj.insert(Arc::from("__promise__"), Value::Bool(true));
             obj.insert(
                 Arc::from("status"),
@@ -4268,7 +4269,7 @@ fn base64_decode(s: &str) -> Option<Vec<u8>> {
 /// true (Node: AggregateError extends Error).
 pub fn make_aggregate_error(errors: Vec<Value>, heap: &mut Heap) -> Value {
     let errors_arr = Value::Array(heap.alloc_array(errors));
-    let mut agg = IndexMap::new();
+    let mut agg = IndexMap::default();
     agg.insert(Arc::from("__error__"), Value::Bool(true));
     agg.insert(
         Arc::from("name"),
@@ -4286,7 +4287,7 @@ pub fn make_aggregate_error(errors: Vec<Value>, heap: &mut Heap) -> Value {
 /// all consume it through the `__items__`/`__cursor__` protocol.
 pub fn make_array_iterator(items: Vec<Value>, heap: &mut Heap) -> Value {
     let items_h = heap.alloc_array(items);
-    let mut obj = IndexMap::new();
+    let mut obj = IndexMap::default();
     obj.insert(Arc::from("__array_iterator__"), Value::Bool(true));
     obj.insert(Arc::from("__items__"), Value::Array(items_h));
     obj.insert(Arc::from("__cursor__"), Value::Int(0));
@@ -4311,7 +4312,7 @@ pub fn is_promise(val: &Value, heap: &Heap) -> bool {
 /// resolved/rejected and enqueues the reactions as microtasks.
 pub fn make_pending_promise(heap: &mut Heap) -> Value {
     let reactions = heap.alloc_array(Vec::new());
-    let mut obj = IndexMap::new();
+    let mut obj = IndexMap::default();
     obj.insert(Arc::from("__promise__"), Value::Bool(true));
     obj.insert(
         Arc::from("status"),
@@ -4327,7 +4328,7 @@ pub fn make_resolved_promise(val: Value, heap: &mut Heap) -> Value {
     if is_promise(&val, heap) {
         return val;
     }
-    let mut obj = IndexMap::new();
+    let mut obj = IndexMap::default();
     obj.insert(Arc::from("__promise__"), Value::Bool(true));
     obj.insert(
         Arc::from("status"),
@@ -4339,7 +4340,7 @@ pub fn make_resolved_promise(val: Value, heap: &mut Heap) -> Value {
 
 /// Create a rejected promise carrying the given reason.
 pub fn make_rejected_promise(reason: Value, heap: &mut Heap) -> Value {
-    let mut obj = IndexMap::new();
+    let mut obj = IndexMap::default();
     obj.insert(Arc::from("__promise__"), Value::Bool(true));
     obj.insert(
         Arc::from("status"),

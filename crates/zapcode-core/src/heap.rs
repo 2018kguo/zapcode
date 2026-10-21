@@ -13,6 +13,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 
+/// An object's properties, in insertion order. FxHash: keys are short property
+/// names and lookups are the hottest path in the VM; guest-driven collision
+/// blowups are already bounded by the allocation and time limits.
+pub type ObjectMap = IndexMap<Arc<str>, Value, rustc_hash::FxBuildHasher>;
+
 /// An index into the [`Heap`]'s slot table identifying one array or object.
 pub type Handle = u32;
 
@@ -20,7 +25,7 @@ pub type Handle = u32;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HeapSlot {
     Array(Vec<Value>),
-    Object(IndexMap<Arc<str>, Value>),
+    Object(ObjectMap),
 }
 
 /// A flat arena of array/object slots. Owned by the VM and carried in snapshots.
@@ -65,7 +70,7 @@ impl Heap {
     }
 
     /// Allocate an object slot, returning its handle. (Wrap in `Value::Object`.)
-    pub fn alloc_object(&mut self, fields: IndexMap<Arc<str>, Value>) -> Handle {
+    pub fn alloc_object(&mut self, fields: ObjectMap) -> Handle {
         let handle = self.slots.len() as Handle;
         self.slots.push(HeapSlot::Object(fields));
         handle
@@ -100,7 +105,7 @@ impl Heap {
     }
 
     /// Borrow the object at `handle`.
-    pub fn object(&self, handle: Handle) -> Option<&IndexMap<Arc<str>, Value>> {
+    pub fn object(&self, handle: Handle) -> Option<&ObjectMap> {
         match self.slots.get(handle as usize) {
             Some(HeapSlot::Object(o)) => Some(o),
             _ => None,
@@ -108,11 +113,11 @@ impl Heap {
     }
 
     /// A cloned copy of the object at `handle`.
-    pub fn object_map(&self, handle: Handle) -> IndexMap<Arc<str>, Value> {
+    pub fn object_map(&self, handle: Handle) -> ObjectMap {
         self.object(handle).cloned().unwrap_or_default()
     }
 
-    pub fn object_mut(&mut self, handle: Handle) -> Option<&mut IndexMap<Arc<str>, Value>> {
+    pub fn object_mut(&mut self, handle: Handle) -> Option<&mut ObjectMap> {
         match self.slots.get_mut(handle as usize) {
             Some(HeapSlot::Object(o)) => Some(o),
             _ => None,
@@ -120,7 +125,7 @@ impl Heap {
     }
 
     /// Replace the contents of an object slot in place.
-    pub fn set_object(&mut self, handle: Handle, fields: IndexMap<Arc<str>, Value>) {
+    pub fn set_object(&mut self, handle: Handle, fields: ObjectMap) {
         if let Some(slot) = self.slots.get_mut(handle as usize) {
             *slot = HeapSlot::Object(fields);
         }
@@ -225,10 +230,10 @@ impl Heap {
                 if let Some(&clone) = seen.get(h) {
                     return Ok(Value::Object(clone));
                 }
-                let clone = self.alloc_object(IndexMap::new());
+                let clone = self.alloc_object(IndexMap::default());
                 seen.insert(*h, clone);
                 let map = self.object_map(*h);
-                let mut cloned: IndexMap<Arc<str>, Value> = IndexMap::new();
+                let mut cloned: ObjectMap = IndexMap::default();
                 for (k, v) in map.iter() {
                     cloned.insert(k.clone(), self.deep_clone_inner(v, seen, depth + 1)?);
                 }
@@ -254,7 +259,8 @@ impl Heap {
                 // is O(entries) refcount bumps plus at most one string
                 // allocation per first-seen key.
                 let old = std::mem::take(map);
-                let mut rebuilt: IndexMap<Arc<str>, Value> = IndexMap::with_capacity(old.len());
+                let mut rebuilt: ObjectMap =
+                    IndexMap::with_capacity_and_hasher(old.len(), Default::default());
                 for (k, v) in old {
                     rebuilt.insert(interner.intern_arc(k), v);
                 }
@@ -393,7 +399,7 @@ mod tests {
         // Host builds inputs in a standalone heap: an object { inner: [10, 20] }.
         let mut input = Heap::new();
         let inner = input.alloc_array(vec![Value::Int(10), Value::Int(20)]);
-        let mut fields = IndexMap::new();
+        let mut fields = IndexMap::default();
         fields.insert(Arc::from("inner"), Value::Array(inner));
         let outer = input.alloc_object(fields);
         let input_value = Value::Object(outer);

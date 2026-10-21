@@ -36,6 +36,7 @@ regex = "1.11"
 
 # Data structures
 indexmap = { version = "2.13.0", features = ["serde"] }
+rustc-hash = "2.1"
 
 # Error handling
 thiserror = "2.0.18"

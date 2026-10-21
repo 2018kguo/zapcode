@@ -1,3 +1,4 @@
+use crate::heap::ObjectMap;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem::size_of;
 use std::sync::Arc;
@@ -1195,7 +1196,7 @@ impl Vm {
         mode: PromiseCallbackMode,
         result: Value,
     ) -> Result<()> {
-        let mut record = IndexMap::new();
+        let mut record = IndexMap::default();
         record.insert(Arc::from("on_fulfilled"), on_fulfilled);
         record.insert(Arc::from("on_rejected"), on_rejected);
         record.insert(
@@ -1381,7 +1382,7 @@ impl Vm {
     /// mark). Used for the losing elements of a decided `race`/`any` — the
     /// combinator absorbed responsibility for them.
     fn register_sink_reaction(&mut self, receiver: Handle) -> Result<()> {
-        let mut record = IndexMap::new();
+        let mut record = IndexMap::default();
         record.insert(Arc::from("mode"), Value::String(JsString::from("sink")));
         let rec = Value::Object(self.heap.alloc_object(record));
         let reactions = match self
@@ -1410,7 +1411,7 @@ impl Vm {
     /// Register a *ResumeAsync* reaction on a pending internal promise: when
     /// it settles, parked [`AsyncTask`] `task_id` resumes with the outcome.
     fn register_task_reaction(&mut self, receiver: Handle, task_id: u64) -> Result<()> {
-        let mut record = IndexMap::new();
+        let mut record = IndexMap::default();
         record.insert(Arc::from("mode"), Value::String(JsString::from("task")));
         record.insert(Arc::from("task"), Value::Int(task_id as i64));
         let rec = Value::Object(self.heap.alloc_object(record));
@@ -1447,7 +1448,7 @@ impl Vm {
         index: usize,
     ) -> Result<()> {
         self.tracker.track_allocation(&self.limits)?;
-        let mut record = IndexMap::new();
+        let mut record = IndexMap::default();
         record.insert(Arc::from("mode"), Value::String(JsString::from("combine")));
         record.insert(Arc::from("batch"), batch);
         record.insert(Arc::from("index"), Value::Int(index as i64));
@@ -1629,7 +1630,7 @@ impl Vm {
             }
             "allSettled" => {
                 self.tracker.track_allocation(&self.limits)?;
-                let mut entry = IndexMap::new();
+                let mut entry = IndexMap::default();
                 if is_rejection {
                     entry.insert(
                         Arc::from("status"),
@@ -2411,7 +2412,7 @@ impl Vm {
                 }
                 Value::Object(h) if builtins::is_promise(&item, &self.heap) => {
                     let map = self.heap.object_map(h);
-                    let mut entry = IndexMap::new();
+                    let mut entry = IndexMap::default();
                     match map.get("status") {
                         Some(Value::String(s)) if s.as_ref() == "rejected" => {
                             entry.insert(
@@ -2438,7 +2439,7 @@ impl Vm {
                 }
                 other => {
                     // Plain value: fulfilled.
-                    let mut entry = IndexMap::new();
+                    let mut entry = IndexMap::default();
                     entry.insert(
                         Arc::from("status"),
                         Value::String(JsString::from("fulfilled")),
@@ -2616,7 +2617,7 @@ impl Vm {
                     Some(v) => self.push(v)?,
                     None => {
                         let errors_arr = Value::Array(self.heap.alloc_array(errors));
-                        let mut agg = IndexMap::new();
+                        let mut agg = IndexMap::default();
                         // Branded so `e instanceof Error` is true (Node:
                         // AggregateError extends Error).
                         agg.insert(Arc::from("__error__"), Value::Bool(true));
@@ -4312,7 +4313,7 @@ impl Vm {
                 call_args.push(Value::Int(offset));
                 call_args.push(Value::String(s.into()));
                 if !info.named.is_empty() {
-                    let mut g: IndexMap<Arc<str>, Value> = IndexMap::new();
+                    let mut g: ObjectMap = IndexMap::default();
                     for (k, v) in info.named {
                         g.insert(Arc::from(k.as_str()), v);
                     }
@@ -4620,7 +4621,7 @@ impl Vm {
         let parsed = builtins::json_to_value(&text, &mut self.heap)?;
         // Root holder: { "": parsed }.
         let holder = {
-            let mut m: IndexMap<Arc<str>, Value> = IndexMap::new();
+            let mut m: ObjectMap = IndexMap::default();
             m.insert(Arc::from(""), parsed);
             Value::Object(self.heap.alloc_object(m))
         };
@@ -5911,7 +5912,7 @@ impl Vm {
     }
 
     fn make_iterator_result(&mut self, value: Value, done: bool) -> Value {
-        let mut obj = IndexMap::new();
+        let mut obj = IndexMap::default();
         obj.insert(Arc::from("value"), value);
         obj.insert(Arc::from("done"), Value::Bool(done));
         Value::Object(self.heap.alloc_object(obj))
@@ -6383,7 +6384,7 @@ impl Vm {
             }
             Instruction::CreateObject(count) => {
                 self.tracker.track_allocation(&self.limits)?;
-                let mut obj = IndexMap::new();
+                let mut obj = IndexMap::default();
                 // Pop key-value pairs (or spread values)
                 let mut entries = Vec::new();
                 for _ in 0..count {
@@ -6408,7 +6409,7 @@ impl Vm {
             }
             Instruction::ObjectRest(excluded) => {
                 let source = self.pop()?;
-                let rest: IndexMap<Arc<str>, Value> = match source {
+                let rest: ObjectMap = match source {
                     Value::Object(h) => self
                         .heap
                         .object_map(h)
@@ -6417,7 +6418,7 @@ impl Vm {
                             !excluded.iter().any(|excluded| excluded == key.as_ref())
                         })
                         .collect(),
-                    _ => IndexMap::new(),
+                    _ => IndexMap::default(),
                 };
                 let h = self.heap.alloc_object(rest);
                 self.push(Value::Object(h))?;
@@ -7504,13 +7505,13 @@ impl Vm {
                                     // Plain object keyed by ToPropertyKey; group
                                     // order is first-occurrence, like Node.
                                     let mut groups: IndexMap<Arc<str>, Vec<Value>> =
-                                        IndexMap::new();
+                                        IndexMap::default();
                                     for (key, item) in keyed {
                                         let k = key.to_js_string(&self.heap);
                                         groups.entry(Arc::from(k.as_str())).or_default().push(item);
                                     }
                                     self.tracker.track_allocation(&self.limits)?;
-                                    let mut obj = IndexMap::new();
+                                    let mut obj = IndexMap::default();
                                     for (k, group) in groups {
                                         self.track_array_capacity(group.len())?;
                                         let h = self.heap.alloc_array(group);
@@ -7534,7 +7535,7 @@ impl Vm {
                                         .into_iter()
                                         .map(|(k, g)| {
                                             let gh = self.heap.alloc_array(g);
-                                            let mut em = IndexMap::new();
+                                            let mut em = IndexMap::default();
                                             em.insert(Arc::from("key"), k);
                                             em.insert(Arc::from("value"), Value::Array(gh));
                                             Value::Object(self.heap.alloc_object(em))
@@ -7629,7 +7630,7 @@ impl Vm {
                             {
                                 let target = match args.first() {
                                     Some(Value::Object(h)) => *h,
-                                    _ => self.heap.alloc_object(IndexMap::new()),
+                                    _ => self.heap.alloc_object(IndexMap::default()),
                                 };
                                 for src in args.iter().skip(1).cloned().collect::<Vec<_>>() {
                                     let Value::Object(sh) = &src else { continue };
@@ -7878,7 +7879,7 @@ impl Vm {
                 // Mark as a pending-batch promise tagged with the combinator;
                 // the await resolves it per `kind`.
                 let items_arr = Value::Array(self.heap.alloc_array(items));
-                let mut obj = IndexMap::new();
+                let mut obj = IndexMap::default();
                 obj.insert(Arc::from("__promise__"), Value::Bool(true));
                 obj.insert(
                     Arc::from("status"),
@@ -7906,7 +7907,7 @@ impl Vm {
                         )))
                     }
                 };
-                let mut obj = IndexMap::new();
+                let mut obj = IndexMap::default();
                 obj.insert(Arc::from("__promise__"), Value::Bool(true));
                 obj.insert(
                     Arc::from("status"),
@@ -8806,7 +8807,7 @@ impl Vm {
                                 };
                                 let promise = builtins::make_pending_promise(&mut self.heap);
                                 let make_capability = |reject: bool, heap: &mut Heap| {
-                                    let mut cap = IndexMap::new();
+                                    let mut cap = IndexMap::default();
                                     cap.insert(
                                         Arc::from("__promise_capability__"),
                                         promise.clone(),
@@ -8951,7 +8952,7 @@ impl Vm {
                                         self.push(v.clone())?
                                     }
                                     _ => {
-                                        let h = self.heap.alloc_object(IndexMap::new());
+                                        let h = self.heap.alloc_object(IndexMap::default());
                                         self.push(Value::Object(h))?
                                     }
                                 }
@@ -8977,7 +8978,7 @@ impl Vm {
                     Value::Object(class_h) if is_user_class => {
                         let class_obj = self.heap.object_map(*class_h);
                         // Create a new instance object
-                        let mut instance = IndexMap::new();
+                        let mut instance = IndexMap::default();
 
                         // Copy prototype methods onto the instance
                         if let Some(Value::Object(proto_h)) = class_obj.get("__prototype__") {
@@ -9305,7 +9306,7 @@ impl Vm {
         };
         // Validate the pattern/flags eagerly (mirrors JS throwing on a bad regex).
         builtins::compile_regex(&pattern, &flags)?;
-        let mut obj = IndexMap::new();
+        let mut obj = IndexMap::default();
         obj.insert(Arc::from("__regexp__"), Value::Bool(true));
         obj.insert(
             Arc::from("pattern"),
@@ -9324,11 +9325,7 @@ impl Vm {
     /// `__…__` keys), so we walk parent class objects skipping those internals.
     /// Returns the first match, mirroring JS static inheritance through the
     /// constructor's prototype chain.
-    fn inherited_static_member(
-        &self,
-        class_map: &IndexMap<Arc<str>, Value>,
-        name: &str,
-    ) -> Option<Value> {
+    fn inherited_static_member(&self, class_map: &ObjectMap, name: &str) -> Option<Value> {
         let mut current = match class_map.get("__super__") {
             Some(Value::Object(h)) => *h,
             _ => return None,
@@ -9522,7 +9519,7 @@ impl Vm {
         let proto_obj = Value::Object(self.heap.alloc_object(prototype));
 
         // Build the class object
-        let mut class_obj = IndexMap::new();
+        let mut class_obj = IndexMap::default();
         class_obj.insert(
             Arc::from("__class_name__"),
             Value::String(JsString::from(name)),
@@ -9597,7 +9594,7 @@ impl Vm {
     /// of each pair, pushed after its name) into a map preserving DECLARATION order
     /// (they were pushed in declaration order, so they pop in reverse). Used by
     /// `CreateClass` to collect method/accessor/field-init groups.
-    fn pop_named_closure_pairs(&mut self, n: usize) -> Result<IndexMap<Arc<str>, Value>> {
+    fn pop_named_closure_pairs(&mut self, n: usize) -> Result<ObjectMap> {
         let mut popped = Vec::with_capacity(n);
         for _ in 0..n {
             let closure = self.pop()?;
@@ -9605,7 +9602,7 @@ impl Vm {
             popped.push((name, closure));
         }
         // Reverse back to declaration order before inserting.
-        let mut out = IndexMap::new();
+        let mut out = IndexMap::default();
         for (name, closure) in popped.into_iter().rev() {
             if let Value::String(nm) = name {
                 out.insert(Arc::from(nm.as_str()), closure);
@@ -9647,15 +9644,14 @@ impl Vm {
     fn instance_accessor(&self, obj: &Value, kind: &str, name: &str) -> Option<Value> {
         let Value::Object(h) = obj else { return None };
         let map = self.heap.object(*h)?;
-        let is_class_object = map.contains_key("__class_name__");
-        let is_instance_key = matches!(kind, "__getters__" | "__setters__");
-        if is_class_object && is_instance_key {
-            return None;
-        }
+        // Most objects have no accessor table: one lookup and out.
         let descs = match map.get(kind)? {
             Value::Object(d) => *d,
             _ => return None,
         };
+        if matches!(kind, "__getters__" | "__setters__") && map.contains_key("__class_name__") {
+            return None;
+        }
         match self.heap.object(descs)?.get(name) {
             Some(f @ Value::Function(_)) => Some(f.clone()),
             _ => None,
@@ -9673,7 +9669,9 @@ impl Vm {
         }
         match obj {
             Value::Object(h) => {
-                let map = self.heap.object_map(*h);
+                // Borrow the object (a read never needs a copy of the whole map).
+                let empty = IndexMap::default();
+                let map = self.heap.object(*h).unwrap_or(&empty);
                 // Check if property exists as a real value on the object
                 if let Some(val) = map.get(name) {
                     if !matches!(val, Value::Undefined) {
@@ -9689,7 +9687,7 @@ impl Vm {
                             return Ok(n.clone());
                         }
                     }
-                    if let Some(v) = self.inherited_static_member(&map, name) {
+                    if let Some(v) = self.inherited_static_member(map, name) {
                         return Ok(v);
                     }
                 }
@@ -9947,13 +9945,13 @@ fn extract_object_fields(
     let mut consumed: Vec<String> = Vec::new();
     for field in fields {
         if field.rest {
-            let rest_map: IndexMap<Arc<str>, Value> = match value {
+            let rest_map: ObjectMap = match value {
                 Value::Object(h) => heap
                     .object_map(*h)
                     .into_iter()
                     .filter(|(k, _)| !consumed.iter().any(|c| c == k.as_ref()))
                     .collect(),
-                _ => IndexMap::new(),
+                _ => IndexMap::default(),
             };
             out.push(Value::Object(heap.alloc_object(rest_map)));
         } else if let Some(nested) = &field.nested {
@@ -10171,7 +10169,7 @@ fn build_map_entries(arg: &Value, heap: &mut Heap) -> Vec<Value> {
     entries
         .into_iter()
         .map(|(k, v)| {
-            let mut em = IndexMap::new();
+            let mut em = IndexMap::default();
             em.insert(Arc::from("key"), k);
             em.insert(Arc::from("value"), v);
             Value::Object(heap.alloc_object(em))
@@ -10181,7 +10179,7 @@ fn build_map_entries(arg: &Value, heap: &mut Heap) -> Vec<Value> {
 
 fn make_map_object(entries: Vec<Value>, heap: &mut Heap) -> Value {
     let entries_arr = Value::Array(heap.alloc_array(entries));
-    let mut obj = IndexMap::new();
+    let mut obj = IndexMap::default();
     obj.insert(Arc::from("__map__"), Value::Bool(true));
     obj.insert(Arc::from("__entries__"), entries_arr);
     Value::Object(heap.alloc_object(obj))
@@ -10254,7 +10252,7 @@ fn make_set_object(items: Vec<Value>, heap: &mut Heap) -> Value {
         }
     }
     let items_arr = Value::Array(heap.alloc_array(unique));
-    let mut obj = IndexMap::new();
+    let mut obj = IndexMap::default();
     obj.insert(Arc::from("__set__"), Value::Bool(true));
     obj.insert(Arc::from("__items__"), items_arr);
     Value::Object(heap.alloc_object(obj))
@@ -10358,7 +10356,7 @@ fn execute_set_method(
 
 /// The constructor a class should run: its own, or (for a subclass with no own
 /// constructor) the nearest ancestor's, so args forward to `super`.
-fn find_class_constructor(class_obj: &IndexMap<Arc<str>, Value>, heap: &Heap) -> Option<Value> {
+fn find_class_constructor(class_obj: &ObjectMap, heap: &Heap) -> Option<Value> {
     match class_obj.get("__constructor__") {
         Some(Value::Function(c)) => Some(Value::Function(c.clone())),
         _ => match class_obj.get("__super__") {
@@ -10372,7 +10370,7 @@ fn find_class_constructor(class_obj: &IndexMap<Arc<str>, Value>, heap: &Heap) ->
 }
 
 fn make_error_object(name: &str, message: &str, heap: &mut Heap) -> Value {
-    let mut obj = IndexMap::new();
+    let mut obj = IndexMap::default();
     obj.insert(Arc::from("__error__"), Value::Bool(true));
     obj.insert(Arc::from("name"), Value::String(JsString::from(name)));
     obj.insert(Arc::from("message"), Value::String(JsString::from(message)));
@@ -10429,7 +10427,7 @@ fn execute_map_method(
                     e.insert(Arc::from("value"), value);
                 }
             } else {
-                let mut entry = IndexMap::new();
+                let mut entry = IndexMap::default();
                 entry.insert(Arc::from("key"), key);
                 entry.insert(Arc::from("value"), value);
                 let eh = heap.alloc_object(entry);
@@ -10509,14 +10507,14 @@ const MAX_TIME_MS: u64 = 8_640_000_000_000_000;
 const MAX_TIME_YEAR: i64 = 300_000;
 
 fn make_date_object(millis: i64, heap: &mut Heap) -> Value {
-    let mut obj = IndexMap::new();
+    let mut obj = IndexMap::default();
     obj.insert(Arc::from("__date_ms__"), Value::Int(millis));
     Value::Object(heap.alloc_object(obj))
 }
 
 /// An Invalid Date (its time value is NaN).
 fn make_invalid_date(heap: &mut Heap) -> Value {
-    let mut obj = IndexMap::new();
+    let mut obj = IndexMap::default();
     obj.insert(Arc::from("__date_ms__"), Value::Float(f64::NAN));
     Value::Object(heap.alloc_object(obj))
 }
@@ -10771,11 +10769,7 @@ fn is_date_method(name: &str) -> bool {
 /// Decompose the current timestamp into UTC civil fields, override the
 /// field(s) the setter names (with the spec's optional trailing arguments),
 /// recompose. Local setters alias the UTC ones (the sandbox runs in UTC).
-fn date_setter_millis(
-    map: &IndexMap<Arc<str>, Value>,
-    method: &str,
-    args: &[Value],
-) -> Option<f64> {
+fn date_setter_millis(map: &ObjectMap, method: &str, args: &[Value]) -> Option<f64> {
     let cur = match map.get("__date_ms__") {
         Some(Value::Int(ms)) => *ms as f64,
         Some(Value::Float(ms)) => *ms,
@@ -10865,7 +10859,7 @@ fn date_setter_millis(
 }
 
 fn execute_date_method(
-    map: &IndexMap<Arc<str>, Value>,
+    map: &ObjectMap,
     method: &str,
     args: &[Value],
     heap: &Heap,

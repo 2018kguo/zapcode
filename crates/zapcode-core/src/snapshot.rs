@@ -649,7 +649,7 @@ mod template_elision {
         let mut snap = suspended();
         assert!(snap.snapshot.heap_template_elided);
         let template_len = crate::vm::builtin_template().1.len();
-        let handle = snap.heap_mut().alloc_object(indexmap::IndexMap::new());
+        let handle = snap.heap_mut().alloc_object(indexmap::IndexMap::default());
         // The handle is full-heap-relative (past the template), not
         // tail-relative — the restored VM sees the same heap.
         assert!(snap.snapshot.heap.len() > template_len);

@@ -2,9 +2,7 @@
 //! quoted when nested, `{ a: 1 }` / `[ 1, 2 ]`, `Map(1) { k => v }`, nesting
 //! cut off at depth 2, entries broken onto lines past ~72 columns.
 
-use std::sync::Arc;
-
-use indexmap::IndexMap;
+use crate::heap::ObjectMap;
 
 use super::builtins::ordered_visible_keys;
 use crate::heap::Heap;
@@ -55,12 +53,7 @@ fn inspect(v: &Value, heap: &Heap, depth: usize, indent: usize) -> String {
     }
 }
 
-fn inspect_object(
-    map: &IndexMap<Arc<str>, Value>,
-    heap: &Heap,
-    depth: usize,
-    indent: usize,
-) -> String {
+fn inspect_object(map: &ObjectMap, heap: &Heap, depth: usize, indent: usize) -> String {
     let get = |k: &str| map.get(k);
     let str_of = |k: &str| get(k).map(|v| v.to_js_string(heap)).unwrap_or_default();
     if get("__date_ms__").is_some() {

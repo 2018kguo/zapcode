@@ -2,7 +2,6 @@
 //! bindings: array/object inputs are allocated into a standalone heap and must
 //! resolve correctly once the VM appends its builtins on top.
 
-use indexmap::IndexMap;
 use std::sync::Arc;
 use zapcode_core::heap::Heap;
 use zapcode_core::{ResourceLimits, Value, VmState, ZapcodeRun};
@@ -43,7 +42,7 @@ fn array_input_handle_resolves_after_builtins_appended() {
 #[test]
 fn object_input_round_trips_and_can_be_mutated() {
     let mut heap = Heap::new();
-    let mut fields = IndexMap::new();
+    let mut fields = zapcode_core::heap::ObjectMap::default();
     fields.insert(Arc::from("count"), Value::Int(41));
     let obj = heap.alloc_object(fields);
 
@@ -65,10 +64,10 @@ fn object_input_round_trips_and_can_be_mutated() {
 #[test]
 fn nested_array_of_objects_input_resolves() {
     let mut heap = Heap::new();
-    let mut a = IndexMap::new();
+    let mut a = zapcode_core::heap::ObjectMap::default();
     a.insert(Arc::from("v"), Value::Int(10));
     let oa = heap.alloc_object(a);
-    let mut b = IndexMap::new();
+    let mut b = zapcode_core::heap::ObjectMap::default();
     b.insert(Arc::from("v"), Value::Int(20));
     let ob = heap.alloc_object(b);
     let arr = heap.alloc_array(vec![Value::Object(oa), Value::Object(ob)]);

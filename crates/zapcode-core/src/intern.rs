@@ -124,11 +124,11 @@ mod tests {
         // Build two objects with the SAME keys but independent (per-occurrence)
         // `Arc<str>` allocations, exactly as a fresh snapshot load produces.
         let mut heap = Heap::new();
-        let mut m1: IndexMap<Arc<str>, Value> = IndexMap::new();
+        let mut m1: crate::heap::ObjectMap = IndexMap::default();
         m1.insert(Arc::from("id"), Value::Int(1));
         m1.insert(Arc::from("name"), Value::Int(2));
         let h1 = heap.alloc_object(m1);
-        let mut m2: IndexMap<Arc<str>, Value> = IndexMap::new();
+        let mut m2: crate::heap::ObjectMap = IndexMap::default();
         m2.insert(Arc::from("id"), Value::Int(3));
         m2.insert(Arc::from("name"), Value::Int(4));
         let h2 = heap.alloc_object(m2);

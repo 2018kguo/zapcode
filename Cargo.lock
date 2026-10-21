@@ -1642,6 +1642,7 @@ dependencies = [
  "oxc_syntax",
  "postcard",
  "regex",
+ "rustc-hash",
  "serde",
  "sha2",
  "thiserror",

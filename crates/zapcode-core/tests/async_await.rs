@@ -1043,10 +1043,16 @@ fn test_callback_result_user_object_not_unwrapped() {
 
     // Return a user object that looks like a promise but lacks __promise__.
     // Allocate it into the snapshot's heap so the handle is valid on resume.
-    let user_obj = Value::Object(snap.heap_mut().alloc_object(indexmap::indexmap! {
-        "status".into() => Value::String("resolved".into()),
-        "value".into() => Value::Int(42),
-    }));
+    let user_obj = Value::Object(
+        snap.heap_mut().alloc_object(
+            [
+                ("status".into(), Value::String("resolved".into())),
+                ("value".into(), Value::Int(42)),
+            ]
+            .into_iter()
+            .collect(),
+        ),
+    );
     let final_state = snap.resume(user_obj).unwrap();
     let heap = &final_state.heap;
     match &final_state.state {
