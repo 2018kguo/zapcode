@@ -199,7 +199,10 @@ pub fn register_globals(globals: &mut HashMap<String, Value>, heap: &mut Heap) {
 
     // `Intl` namespace: only `NumberFormat` (en-US output, see NumberFormatOpts).
     let mut intl = IndexMap::new();
-    intl.insert(Arc::from("NumberFormat"), builtin_constructor("Intl.NumberFormat", heap));
+    intl.insert(
+        Arc::from("NumberFormat"),
+        builtin_constructor("Intl.NumberFormat", heap),
+    );
     globals.insert("Intl".to_string(), Value::Object(heap.alloc_object(intl)));
 }
 
@@ -469,8 +472,13 @@ impl NumberFormatOpts {
             Some(Value::Object(h)) => heap.object(*h),
             _ => None,
         };
-        let get = |k: &str| map.and_then(|m| m.get(k)).filter(|v| !matches!(v, Value::Undefined));
-        let style = get("style").map(|v| v.to_js_string(heap)).unwrap_or_default();
+        let get = |k: &str| {
+            map.and_then(|m| m.get(k))
+                .filter(|v| !matches!(v, Value::Undefined))
+        };
+        let style = get("style")
+            .map(|v| v.to_js_string(heap))
+            .unwrap_or_default();
         let currency = (style == "currency")
             .then(|| get("currency").map(|v| v.to_js_string(heap).to_uppercase()))
             .flatten();
@@ -481,14 +489,23 @@ impl NumberFormatOpts {
             _ => (0, 3),
         };
         let digits = |k: &str| get(k).map(|v| (v.to_number() as usize).min(100));
-        let (min_frac, max_frac) = match (digits("minimumFractionDigits"), digits("maximumFractionDigits")) {
+        let (min_frac, max_frac) = match (
+            digits("minimumFractionDigits"),
+            digits("maximumFractionDigits"),
+        ) {
             (Some(mn), Some(mx)) => (mn, mx.max(mn)),
             (Some(mn), None) => (mn, def_max.max(mn)),
             (None, Some(mx)) => (def_min.min(mx), mx),
             (None, None) => (def_min, def_max),
         };
         let grouping = !matches!(get("useGrouping"), Some(Value::Bool(false)));
-        Self { percent: style == "percent", currency, min_frac, max_frac, grouping }
+        Self {
+            percent: style == "percent",
+            currency,
+            min_frac,
+            max_frac,
+            grouping,
+        }
     }
 
     pub(crate) fn format(&self, n: f64) -> String {
@@ -506,7 +523,11 @@ impl NumberFormatOpts {
                 js_to_fixed(n.abs(), self.max_frac)
             };
             let (int_part, frac) = fixed.split_once('.').unwrap_or((fixed.as_str(), ""));
-            let keep = frac.trim_end_matches('0').len().max(self.min_frac).min(frac.len());
+            let keep = frac
+                .trim_end_matches('0')
+                .len()
+                .max(self.min_frac)
+                .min(frac.len());
             let mut out = String::new();
             let len = int_part.len();
             for (i, c) in int_part.chars().enumerate() {
@@ -534,7 +555,11 @@ impl NumberFormatOpts {
                 "KRW" => "₩",
                 _ => "",
             };
-            body = if symbol.is_empty() { format!("{code}\u{a0}{body}") } else { format!("{symbol}{body}") };
+            body = if symbol.is_empty() {
+                format!("{code}\u{a0}{body}")
+            } else {
+                format!("{symbol}{body}")
+            };
         }
         if self.percent {
             body.push('%');
@@ -550,8 +575,14 @@ impl NumberFormatOpts {
 /// callable marker carrying the options (see the VM's `__nf_format__` call).
 pub(crate) fn make_number_format(options: Option<&Value>, heap: &mut Heap) -> Value {
     let mut format = IndexMap::new();
-    format.insert(Arc::from("__global_fn__"), Value::String(JsString::from("__nf_format__")));
-    format.insert(Arc::from("__nf_opts__"), options.cloned().unwrap_or(Value::Undefined));
+    format.insert(
+        Arc::from("__global_fn__"),
+        Value::String(JsString::from("__nf_format__")),
+    );
+    format.insert(
+        Arc::from("__nf_opts__"),
+        options.cloned().unwrap_or(Value::Undefined),
+    );
     let format = Value::Object(heap.alloc_object(format));
     let mut nf = IndexMap::new();
     nf.insert(Arc::from("format"), format);
@@ -1183,7 +1214,10 @@ fn call_console_method(
     match method {
         // Node routes `error`/`warn` to stderr; `log`/`info`/`debug` to stdout.
         "log" | "info" | "warn" | "error" | "debug" => {
-            let output: Vec<String> = args.iter().map(|v| v.to_js_string(heap)).collect();
+            let output: Vec<String> = args
+                .iter()
+                .map(|v| super::inspect::inspect_arg(v, heap))
+                .collect();
             let line = output.join(" ");
             let sink = if matches!(method, "warn" | "error") {
                 stderr

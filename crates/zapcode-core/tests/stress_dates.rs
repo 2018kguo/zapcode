@@ -83,7 +83,7 @@ fn formatters_and_string_coercion() {
     );
     assert_eq!(
         run_str("String(new Date(1700000000000))"),
-        "2023-11-14T22:13:20.000Z"
+        "Tue Nov 14 2023 22:13:20 GMT+0000 (Coordinated Universal Time)"
     );
     assert_eq!(run_str("new Date(1700000000000).getTimezoneOffset()"), "0");
 }

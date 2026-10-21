@@ -811,7 +811,9 @@ fn reading_unbound_identifier_is_reference_error() {
     // Matches Node: reading an unbound name throws; `typeof` is special-cased.
     assert_eq!(run_str("typeof someUndefinedVar"), "undefined");
     assert_eq!(
-        run_str("let n='none'; try { someUndefinedVar } catch(e){ n = e.name + ': ' + e.message } n"),
+        run_str(
+            "let n='none'; try { someUndefinedVar } catch(e){ n = e.name + ': ' + e.message } n"
+        ),
         "ReferenceError: someUndefinedVar is not defined"
     );
 }

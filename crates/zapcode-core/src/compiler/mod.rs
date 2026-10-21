@@ -429,7 +429,12 @@ impl Compiler {
             .iter()
             .rposition(has)
             .map(JumpTarget::Loop)
-            .or_else(|| self.labeled_blocks.iter().rposition(has).map(JumpTarget::Block))
+            .or_else(|| {
+                self.labeled_blocks
+                    .iter()
+                    .rposition(has)
+                    .map(JumpTarget::Block)
+            })
     }
 
     /// Emit a `break` (or `continue`) to `target`, first popping the operand-
@@ -442,11 +447,18 @@ impl Compiler {
             Some(JumpTarget::Block(i)) => self.labeled_blocks[i].loop_depth,
             None => self.loop_stack.len(),
         };
-        let pops: usize = self.loop_stack[crossed_from..].iter().map(|li| li.stack_slots).sum();
+        let pops: usize = self.loop_stack[crossed_from..]
+            .iter()
+            .map(|li| li.stack_slots)
+            .sum();
         for _ in 0..pops {
             self.emit(Instruction::Pop);
         }
-        let idx = self.emit(if is_break { Instruction::Break(0) } else { Instruction::Continue(0) });
+        let idx = self.emit(if is_break {
+            Instruction::Break(0)
+        } else {
+            Instruction::Continue(0)
+        });
         let info = match target {
             Some(JumpTarget::Loop(i)) => &mut self.loop_stack[i],
             Some(JumpTarget::Block(i)) => &mut self.labeled_blocks[i],
@@ -1484,14 +1496,22 @@ impl Compiler {
     fn hoist_var_names(&mut self, stmts: &[Statement]) {
         for stmt in stmts {
             match stmt {
-                Statement::VariableDecl { kind: VarKind::Var, declarations, .. } => {
+                Statement::VariableDecl {
+                    kind: VarKind::Var,
+                    declarations,
+                    ..
+                } => {
                     for d in declarations {
                         if let AssignTarget::Ident(name) = &d.pattern {
                             self.declare_local(name);
                         }
                     }
                 }
-                Statement::If { consequent, alternate, .. } => {
+                Statement::If {
+                    consequent,
+                    alternate,
+                    ..
+                } => {
                     self.hoist_var_names(consequent);
                     if let Some(alt) = alternate {
                         self.hoist_var_names(alt);
@@ -1507,7 +1527,12 @@ impl Compiler {
                 | Statement::DoWhile { body, .. }
                 | Statement::ForOf { body, .. }
                 | Statement::Block { body, .. } => self.hoist_var_names(body),
-                Statement::TryCatch { try_body, catch_body, finally_body, .. } => {
+                Statement::TryCatch {
+                    try_body,
+                    catch_body,
+                    finally_body,
+                    ..
+                } => {
                     self.hoist_var_names(try_body);
                     self.hoist_var_names(catch_body);
                     if let Some(f) = finally_body {

@@ -66,7 +66,7 @@ await test("args is the raw positional array; input is the validated named objec
   assert.deepEqual(rec.input, { a: 1 });
 });
 
-await test("object keys crossing the boundary are normalized to sorted order", async () => {
+await test("object keys crossing the boundary keep insertion order", async () => {
   const r = await execute(`await echo({ zebra: 1, apple: 2, mango: 3 })`, {
     echo: tool(async (a) => a, {
       zebra: { type: "number" },
@@ -74,9 +74,8 @@ await test("object keys crossing the boundary are normalized to sorted order", a
       mango: { type: "number" },
     }),
   });
-  // Deterministic alphabetical normalization (asserted as actual behavior).
-  assert.deepEqual(Object.keys(r.toolCalls[0].input), ["apple", "mango", "zebra"]);
-  assert.deepEqual(Object.keys(r.toolCalls[0].result), ["apple", "mango", "zebra"]);
+  assert.deepEqual(Object.keys(r.toolCalls[0].input), ["zebra", "apple", "mango"]);
+  assert.deepEqual(Object.keys(r.toolCalls[0].result), ["zebra", "apple", "mango"]);
 });
 
 // ---------------------------------------------------------------------------

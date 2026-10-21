@@ -44,6 +44,9 @@ pub fn disable_gc_stress_for_tests() {
 }
 
 mod builtins;
+mod datefmt;
+mod inspect;
+pub(crate) use datefmt::date_to_string;
 
 /// Shared ECMA-262 `Number::toString` formatter, used both by VM string
 /// coercion (`value.rs`) and the builtin number methods so every path agrees.
@@ -2924,8 +2927,15 @@ impl Vm {
 
     /// `Intl.NumberFormat#format(n)`: the options ride on the format marker `h`.
     fn number_format_call(&self, h: Handle, args: &[Value]) -> Value {
-        let opts = self.heap.object(h).and_then(|m| m.get("__nf_opts__")).cloned();
-        let n = args.first().map(|v| v.to_number_heap(&self.heap)).unwrap_or(f64::NAN);
+        let opts = self
+            .heap
+            .object(h)
+            .and_then(|m| m.get("__nf_opts__"))
+            .cloned();
+        let n = args
+            .first()
+            .map(|v| v.to_number_heap(&self.heap))
+            .unwrap_or(f64::NAN);
         let s = builtins::NumberFormatOpts::from_value(opts.as_ref(), &self.heap).format(n);
         Value::String(JsString::from(s.as_str()))
     }
@@ -5978,7 +5988,9 @@ impl Vm {
                         if soft || self.external_functions.contains(name.as_ref() as &str) {
                             Ok(Value::Undefined)
                         } else {
-                            Err(ZapcodeError::ReferenceError(format!("{name} is not defined")))
+                            Err(ZapcodeError::ReferenceError(format!(
+                                "{name} is not defined"
+                            )))
                         }
                     })?;
                 self.last_global_name = Some(name.to_string());
@@ -7095,10 +7107,14 @@ impl Vm {
                                     .map(|v| v.to_number_heap(&self.heap))
                                     .unwrap_or(f64::NAN);
                                 if method_name.as_ref() == "toLocaleString" && args.len() >= 2 {
-                                    let s = builtins::NumberFormatOpts::from_value(args.get(1), &self.heap).format(n);
+                                    let s = builtins::NumberFormatOpts::from_value(
+                                        args.get(1),
+                                        &self.heap,
+                                    )
+                                    .format(n);
                                     Some(Value::String(JsString::from(s.as_str())))
                                 } else {
-                                                                    builtins::call_number_method(n, &method_name, &args)?
+                                    builtins::call_number_method(n, &method_name, &args)?
                                 }
                             }
                             "__bigint__" => {
@@ -7380,7 +7396,7 @@ impl Vm {
                                         Some(Value::Float(new_ms))
                                     } else {
                                         let map = self.heap.object_map(date);
-                                        execute_date_method(&map, &method_name)
+                                        execute_date_method(&map, &method_name, &args, &self.heap)
                                     }
                                 } else {
                                     None
@@ -10194,9 +10210,21 @@ fn is_set_object(value: &Value, heap: &Heap) -> bool {
 fn is_set_method(name: &str) -> bool {
     matches!(
         name,
-        "add" | "has" | "delete" | "clear" | "values" | "keys" | "entries" | "forEach"
-            | "union" | "intersection" | "difference" | "symmetricDifference"
-            | "isSubsetOf" | "isSupersetOf" | "isDisjointFrom"
+        "add"
+            | "has"
+            | "delete"
+            | "clear"
+            | "values"
+            | "keys"
+            | "entries"
+            | "forEach"
+            | "union"
+            | "intersection"
+            | "difference"
+            | "symmetricDifference"
+            | "isSubsetOf"
+            | "isSupersetOf"
+            | "isDisjointFrom"
     )
 }
 
@@ -10283,22 +10311,38 @@ fn execute_set_method(
             Some(builtins::make_array_iterator(pairs, heap))
         }
         // ES2025 set algebra; `other` is any Set.
-        "union" | "intersection" | "difference" | "symmetricDifference" | "isSubsetOf"
-        | "isSupersetOf" | "isDisjointFrom" => {
+        "union"
+        | "intersection"
+        | "difference"
+        | "symmetricDifference"
+        | "isSubsetOf"
+        | "isSupersetOf"
+        | "isDisjointFrom" => {
             let other = set_items(&arg, heap);
             let in_other = |v: &Value| other.iter().any(|o| same_value_zero(o, v));
             let in_self = |v: &Value| items.iter().any(|i| same_value_zero(i, v));
             Some(match method {
                 "union" => make_set_object(items.iter().chain(&other).cloned().collect(), heap),
-                "intersection" => make_set_object(items.iter().filter(|v| in_other(v)).cloned().collect(), heap),
-                "difference" => make_set_object(items.iter().filter(|v| !in_other(v)).cloned().collect(), heap),
-                "symmetricDifference" => make_set_object(
-                    items.iter().filter(|v| !in_other(v)).chain(other.iter().filter(|v| !in_self(v))).cloned().collect(),
+                "intersection" => make_set_object(
+                    items.iter().filter(|v| in_other(v)).cloned().collect(),
                     heap,
                 ),
-                "isSubsetOf" => Value::Bool(items.iter().all(|v| in_other(v))),
-                "isSupersetOf" => Value::Bool(other.iter().all(|v| in_self(v))),
-                _ => Value::Bool(!items.iter().any(|v| in_other(v))),
+                "difference" => make_set_object(
+                    items.iter().filter(|v| !in_other(v)).cloned().collect(),
+                    heap,
+                ),
+                "symmetricDifference" => make_set_object(
+                    items
+                        .iter()
+                        .filter(|v| !in_other(v))
+                        .chain(other.iter().filter(|v| !in_self(v)))
+                        .cloned()
+                        .collect(),
+                    heap,
+                ),
+                "isSubsetOf" => Value::Bool(items.iter().all(&in_other)),
+                "isSupersetOf" => Value::Bool(other.iter().all(in_self)),
+                _ => Value::Bool(!items.iter().any(in_other)),
             })
         }
         _ => None,
@@ -10691,6 +10735,12 @@ fn is_date_method(name: &str) -> bool {
             | "toJSON"
             | "toString"
             | "toDateString"
+            | "toTimeString"
+            | "toUTCString"
+            | "toGMTString"
+            | "toLocaleString"
+            | "toLocaleDateString"
+            | "toLocaleTimeString"
             | "getTimezoneOffset"
             | "setTime"
             | "setUTCFullYear"
@@ -10807,7 +10857,12 @@ fn date_setter_millis(
     Some(total_ms as f64)
 }
 
-fn execute_date_method(map: &IndexMap<Arc<str>, Value>, method: &str) -> Option<Value> {
+fn execute_date_method(
+    map: &IndexMap<Arc<str>, Value>,
+    method: &str,
+    args: &[Value],
+    heap: &Heap,
+) -> Option<Value> {
     let millis_f = match map.get("__date_ms__") {
         Some(Value::Int(millis)) => *millis as f64,
         Some(Value::Float(millis)) => *millis,
@@ -10830,10 +10885,18 @@ fn execute_date_method(map: &IndexMap<Arc<str>, Value>, method: &str) -> Option<
     if method == "getTimezoneOffset" {
         return Some(Value::Int(0));
     }
-    if matches!(method, "toJSON" | "toString" | "toDateString") {
+    if method == "toJSON" {
         return Some(Value::String(JsString::from(
             unix_millis_to_iso(millis).as_str(),
         )));
+    }
+    // toLocale*String(locale, options): options are the second argument.
+    let opts = match args.get(1) {
+        Some(Value::Object(h)) => heap.object(*h),
+        _ => None,
+    };
+    if let Some(s) = datefmt::format_date(millis, method, opts, heap) {
+        return Some(Value::String(JsString::from(s.as_str())));
     }
     let seconds = millis.div_euclid(1000);
     let ms = millis.rem_euclid(1000);

@@ -298,7 +298,7 @@ impl Value {
                 let Some(map) = heap.object(*h) else {
                     return "[object Object]".to_string();
                 };
-                // A Date stringifies to its ISO form (rather than [object Object]).
+                // A Date stringifies like Date.prototype.toString.
                 if let Some(ms) = map.get("__date_ms__") {
                     let ms = match ms {
                         Value::Int(n) => *n as f64,
@@ -308,7 +308,7 @@ impl Value {
                     if ms.is_nan() {
                         return "Invalid Date".to_string();
                     }
-                    return crate::vm::unix_millis_to_iso(ms as i64);
+                    return crate::vm::date_to_string(ms as i64);
                 }
                 // A promise object (the deferred-call / settled promise repr,
                 // tagged with `__promise__: true`) stringifies to "[object Promise]"

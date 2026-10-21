@@ -474,13 +474,12 @@ fn date_to_json_equals_to_iso_string() {
 }
 
 #[test]
-fn date_to_string_returns_iso_documented_divergence() {
-    // DIVERGENCE (documented): `Date#toString` and `Date#toDateString` return the
-    // ISO-8601 string here, NOT Node's human-readable form
-    // (`"Thu Jan 01 1970 00:00:00 GMT+0000 (Coordinated Universal Time)"` /
-    // `"Thu Jan 01 1970"`). Asserting zapcode's actual ISO behavior.
-    check("new Date(0).toString()", "1970-01-01T00:00:00.000Z");
-    check("new Date(0).toDateString()", "1970-01-01T00:00:00.000Z");
+fn date_to_string_matches_node() {
+    check(
+        "new Date(0).toString()",
+        "Thu Jan 01 1970 00:00:00 GMT+0000 (Coordinated Universal Time)",
+    );
+    check("new Date(0).toDateString()", "Thu Jan 01 1970");
 }
 
 // ============================================================================
