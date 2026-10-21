@@ -860,11 +860,9 @@ fn instance_constructor_property() {
 }
 
 #[test]
-fn methods_are_per_instance_not_shared_documented_divergence() {
-    // DIVERGENCE (documented): each instance gets its own bound method value, so
-    // two instances' method references are not identical.
-    assert_eq!(run_str("class C { m(){ return 1; } } const a = new C(); const b = new C(); String(a.m === b.m)"), "false");
-    // JS: true
+fn methods_are_shared_across_instances() {
+    // Matches Node: both instances read the same method.
+    assert_eq!(run_str("class C { m(){ return 1; } } const a = new C(); const b = new C(); String(a.m === b.m)"), "true");
 }
 
 #[test]

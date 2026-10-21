@@ -369,6 +369,10 @@ impl Value {
             // Reference identity for arrays/objects (same heap slot).
             (Value::Array(a), Value::Array(b)) => a == b,
             (Value::Object(a), Value::Object(b)) => a == b,
+            // Closures carry no identity of their own: treat two as the same
+            // function when they come from the same code over the same captured
+            // cells (so `f === f`, and distinct expressions differ).
+            (Value::Function(a), Value::Function(b)) => a.func_ref == b.func_ref && a.env == b.env,
             _ => false,
         }
     }

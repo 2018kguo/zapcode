@@ -23,6 +23,7 @@ is the source of truth). Historical stress-pass notes live in [`docs/history/`](
 | `Intl` beyond `NumberFormat` | `Intl.DateTimeFormat`, `Collator`, `PluralRules` etc. aren't provided (use `toLocaleDateString`) |
 | `console.log` of functions | prints `[Function (anonymous)]` without the name |
 | `Symbol.iterator in []` | `false` (iteration itself works) |
+| Function identity | Closures compare by code + captured cells: two closures made by the same expression in the same scope, capturing nothing, are `===` (Node: distinct) |
 | `Array.prototype.method.call(...)` | Prototype objects aren't exposed; call the method on the value |
 
 ## By design

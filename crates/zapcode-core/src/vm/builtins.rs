@@ -2460,23 +2460,20 @@ fn call_string_method(
         "length" => Value::Int(s.len_utf16() as i64),
         "charAt" => {
             let idx = arg_int(args, 0);
-            let units = s.units();
-            if idx < 0 || idx as usize >= units.len() {
+            if idx < 0 || idx as usize >= s.len_utf16() {
                 Value::String(JsString::from(""))
             } else {
                 let i = idx as usize;
-                Value::String(JsString::from_units(&units[i..i + 1]))
+                Value::String(s.slice_units(i, i + 1))
             }
         }
-        "charCodeAt" => {
-            let idx = arg_int(args, 0);
-            let units = s.units();
-            if idx < 0 || idx as usize >= units.len() {
-                Value::Float(f64::NAN)
-            } else {
-                Value::Int(units[idx as usize] as i64)
-            }
-        }
+        "charCodeAt" => match usize::try_from(arg_int(args, 0))
+            .ok()
+            .and_then(|i| s.unit_at(i))
+        {
+            Some(u) => Value::Int(i64::from(u)),
+            None => Value::Float(f64::NAN),
+        },
         "codePointAt" => {
             let idx = arg_int(args, 0);
             let units = s.units();
@@ -2499,8 +2496,8 @@ fn call_string_method(
         }
         "substr" => {
             // substr(start, length); negative start counts from the end.
-            let units = s.units();
-            let len = units.len() as i64;
+            let ulen = s.len_utf16();
+            let len = ulen as i64;
             let raw_start = arg_int(args, 0);
             let start = if raw_start < 0 {
                 (len + raw_start).max(0)
@@ -2509,10 +2506,10 @@ fn call_string_method(
             } as usize;
             let count = match args.get(1) {
                 Some(v) if !matches!(v, Value::Undefined) => v.to_number().max(0.0) as usize,
-                _ => units.len() - start,
+                _ => ulen - start,
             };
-            let end = (start + count).min(units.len());
-            Value::String(JsString::from_units(&units[start..end]))
+            let end = (start + count).min(ulen);
+            Value::String(s.slice_units(start, end))
         }
         "indexOf" => {
             let needle: Vec<u16> = arg_str(args, 0, heap).encode_utf16().collect();
@@ -2570,23 +2567,22 @@ fn call_string_method(
             Value::Bool(units[..end].ends_with(&needle))
         }
         "slice" => {
-            let units = s.units();
-            let len = units.len() as i64;
-            let start = normalize_index(arg_int(args, 0), len).min(units.len());
+            let ulen = s.len_utf16();
+            let len = ulen as i64;
+            let start = normalize_index(arg_int(args, 0), len).min(ulen);
             let end = if args.len() > 1 {
-                normalize_index(arg_int(args, 1), len).min(units.len())
+                normalize_index(arg_int(args, 1), len).min(ulen)
             } else {
-                units.len()
+                ulen
             };
             if start >= end {
                 Value::String(JsString::from(""))
             } else {
-                Value::String(JsString::from_units(&units[start..end]))
+                Value::String(s.slice_units(start, end))
             }
         }
         "substring" => {
-            let units = s.units();
-            let len = units.len();
+            let len = s.len_utf16();
             let start = (arg_int(args, 0).max(0) as usize).min(len);
             let end = if args.len() > 1 {
                 (arg_int(args, 1).max(0) as usize).min(len)
@@ -2598,7 +2594,7 @@ fn call_string_method(
             } else {
                 (start, end)
             };
-            Value::String(JsString::from_units(&units[start..end]))
+            Value::String(s.slice_units(start, end))
         }
         "toUpperCase" => Value::String(JsString::from(s.to_uppercase().as_str())),
         "toLowerCase" => Value::String(JsString::from(s.to_lowercase().as_str())),
@@ -2852,8 +2848,7 @@ fn call_string_method(
         }
         "at" => {
             let idx = arg_int(args, 0);
-            let units = s.units();
-            let len = units.len() as i64;
+            let len = s.len_utf16() as i64;
             // A negative index counts from the end; an index out of range (either
             // direction, including too-negative) yields `undefined` — no clamping.
             let resolved = if idx < 0 { len + idx } else { idx };
@@ -2861,7 +2856,7 @@ fn call_string_method(
                 Value::Undefined
             } else {
                 let i = resolved as usize;
-                Value::String(JsString::from_units(&units[i..i + 1]))
+                Value::String(s.slice_units(i, i + 1))
             }
         }
         "normalize" => {

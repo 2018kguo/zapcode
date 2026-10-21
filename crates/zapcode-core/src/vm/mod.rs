@@ -50,6 +50,7 @@ pub fn disable_gc_stress_for_tests() {
 }
 
 mod builtins;
+mod collection_index;
 mod datefmt;
 mod inspect;
 pub(crate) use datefmt::date_to_string;
@@ -455,6 +456,8 @@ pub struct Vm {
     /// synchronous run completes (and after each host-call resume), giving JS
     /// Promise ordering. Serialized so a suspension mid-drain resumes cleanly.
     pub(crate) microtasks: std::collections::VecDeque<Microtask>,
+    /// Hash index per Set/Map backing array (see `collection_index`).
+    collection_index: rustc_hash::FxHashMap<Handle, collection_index::Index>,
     /// Promises that settled rejected with nobody to handle the rejection
     /// (no reject reaction at settle time). Cleared when a handler attaches
     /// (`.catch` on a rejected promise) or the rejection is consumed (`await`,
@@ -700,6 +703,7 @@ impl Vm {
             next_frame_is_constructor: false,
             resume_action: None,
             microtasks: std::collections::VecDeque::new(),
+            collection_index: Default::default(),
             unhandled_rejections: Vec::new(),
             async_tasks: BTreeMap::new(),
             next_async_task_id: 0,
@@ -840,6 +844,7 @@ impl Vm {
             next_frame_is_constructor: false,
             resume_action: None,
             microtasks: std::collections::VecDeque::new(),
+            collection_index: Default::default(),
             unhandled_rejections: Vec::new(),
             async_tasks: BTreeMap::new(),
             next_async_task_id: 0,
@@ -3284,6 +3289,8 @@ impl Vm {
         let mut roots: Vec<Handle> = Vec::new();
         self.for_each_root_handle_mut(&mut |h| roots.push(*h));
         let remap = self.heap.compact_retaining(self.builtin_base, &roots);
+        // Handles move: the Set/Map indexes are keyed by them.
+        self.collection_index.clear();
         self.for_each_root_handle_mut(&mut |h| {
             let new = remap[*h as usize];
             debug_assert_ne!(new, Handle::MAX, "in-run compactor dropped a rooted slot");
@@ -4800,6 +4807,104 @@ impl Vm {
     /// Execute an array callback method (map, filter, reduce, forEach, etc.)
     /// Returns `Ok(Some(value))` if the method completed synchronously, or
     /// `Ok(None)` if a continuation was started (async callback).
+    /// O(1) `has`/`add` on a Set and `get`/`has`/`set` on a Map through the
+    /// hash index; `None` means "use the scanning implementation" (other
+    /// methods, or a key with no hash identity). `delete`/`clear` drop the
+    /// index so it is rebuilt from the heap on next use.
+    fn indexed_collection_op(
+        &mut self,
+        obj: Handle,
+        is_map: bool,
+        method: &str,
+        args: &[Value],
+    ) -> Option<Value> {
+        let backing_key = if is_map { "__entries__" } else { "__items__" };
+        let backing = match self.heap.object(obj)?.get(backing_key)? {
+            Value::Array(h) => *h,
+            _ => return None,
+        };
+        let supported = if is_map {
+            matches!(method, "get" | "has" | "set")
+        } else {
+            matches!(method, "has" | "add")
+        };
+        if !supported {
+            if matches!(method, "delete" | "clear") {
+                self.collection_index.remove(&backing);
+            }
+            return None;
+        }
+        let key = args.first().cloned().unwrap_or(Value::Undefined);
+        let hk = collection_index::hkey(&key)?;
+        let entry_key = |heap: &Heap, v: &Value| -> Option<Value> {
+            if !is_map {
+                return Some(v.clone());
+            }
+            match v {
+                Value::Object(eh) => heap.object(*eh)?.get("key").cloned(),
+                _ => None,
+            }
+        };
+        let len = self.heap.array(backing).len();
+        if self
+            .collection_index
+            .get(&backing)
+            .is_none_or(|ix| ix.len != len)
+        {
+            let mut ix = collection_index::Index {
+                len,
+                pos: Default::default(),
+            };
+            for (i, v) in self.heap.array(backing).iter().enumerate() {
+                let k = collection_index::hkey(&entry_key(&self.heap, v)?)?;
+                ix.pos.entry(k).or_insert(i);
+            }
+            self.collection_index.insert(backing, ix);
+        }
+        let found = self.collection_index.get(&backing)?.pos.get(&hk).copied();
+        let entry_value = |heap: &Heap, p: usize| -> Option<Value> {
+            match heap.array(backing).get(p)? {
+                Value::Object(eh) => heap.object(*eh)?.get("value").cloned(),
+                _ => None,
+            }
+        };
+        Some(match (method, found) {
+            ("has", f) => Value::Bool(f.is_some()),
+            ("get", Some(p)) => entry_value(&self.heap, p).unwrap_or(Value::Undefined),
+            ("get", None) => Value::Undefined,
+            ("set", Some(p)) => {
+                let value = args.get(1).cloned().unwrap_or(Value::Undefined);
+                if let Some(Value::Object(eh)) = self.heap.array(backing).get(p).cloned() {
+                    if let Some(e) = self.heap.object_mut(eh) {
+                        e.insert(Arc::from("value"), value);
+                    }
+                }
+                Value::Object(obj)
+            }
+            ("add", Some(_)) => Value::Object(obj),
+            (_, None) => {
+                // set / add of a new key: append, then record its position.
+                let item = if is_map {
+                    let mut entry = ObjectMap::default();
+                    entry.insert(Arc::from("key"), key);
+                    entry.insert(
+                        Arc::from("value"),
+                        args.get(1).cloned().unwrap_or(Value::Undefined),
+                    );
+                    Value::Object(self.heap.alloc_object(entry))
+                } else {
+                    key
+                };
+                self.heap.array_mut(backing)?.push(item);
+                let ix = self.collection_index.get_mut(&backing)?;
+                ix.pos.insert(hk, len);
+                ix.len = len + 1;
+                Value::Object(obj)
+            }
+            _ => return None,
+        })
+    }
+
     /// `Array.prototype.sort` ordering: a stable bottom-up merge sort, so a
     /// guest comparator runs O(n log n) times (it was an insertion sort: O(n²)
     /// guest calls). Without a comparator, elements order by their string form.
@@ -7370,7 +7475,15 @@ impl Vm {
                                         }
                                         Some(Value::Undefined)
                                     } else {
-                                        execute_map_method(map, &method_name, &args, &mut self.heap)
+                                        self.indexed_collection_op(map, true, &method_name, &args)
+                                            .or_else(|| {
+                                                execute_map_method(
+                                                    map,
+                                                    &method_name,
+                                                    &args,
+                                                    &mut self.heap,
+                                                )
+                                            })
                                     }
                                 } else {
                                     None
@@ -7395,7 +7508,15 @@ impl Vm {
                                         }
                                         Some(Value::Undefined)
                                     } else {
-                                        execute_set_method(map, &method_name, &args, &mut self.heap)
+                                        self.indexed_collection_op(map, false, &method_name, &args)
+                                            .or_else(|| {
+                                                execute_set_method(
+                                                    map,
+                                                    &method_name,
+                                                    &args,
+                                                    &mut self.heap,
+                                                )
+                                            })
                                     }
                                 } else {
                                     None
@@ -10261,9 +10382,15 @@ fn is_array_iterator(value: &Value, heap: &Heap) -> bool {
 
 /// Build a Set object from items, de-duplicating by strict equality.
 fn make_set_object(items: Vec<Value>, heap: &mut Heap) -> Value {
+    // Dedupe by hash key; only keys without one (functions) need a scan.
+    let mut seen = rustc_hash::FxHashSet::default();
     let mut unique: Vec<Value> = Vec::new();
     for item in items {
-        if !unique.iter().any(|u| same_value_zero(u, &item)) {
+        let new = match collection_index::hkey(&item) {
+            Some(k) => seen.insert(k),
+            None => !unique.iter().any(|u| same_value_zero(u, &item)),
+        };
+        if new {
             unique.push(item);
         }
     }
@@ -10969,10 +11096,11 @@ fn civil_from_days(days_since_epoch: i64) -> (i64, u32, u32) {
 /// The UTF-16 code unit at index `i` of `s` as a single-unit JS string (a lone
 /// surrogate becomes a `Wtf` string), or `undefined` if out of range.
 fn unit_at(s: &JsString, i: usize) -> Value {
-    s.units()
-        .get(i)
-        .map(|u| Value::String(JsString::from_units(&[*u])))
-        .unwrap_or(Value::Undefined)
+    if i < s.len_utf16() {
+        Value::String(s.slice_units(i, i + 1))
+    } else {
+        Value::Undefined
+    }
 }
 
 fn is_array_method(name: &str) -> bool {

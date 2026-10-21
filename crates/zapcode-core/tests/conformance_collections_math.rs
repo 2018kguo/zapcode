@@ -342,3 +342,35 @@ fn number_format_options() {
         "$1.00 | $2.50 | $1,000,000.00"
     );
 }
+
+#[test]
+fn hashed_set_and_map_keep_same_value_zero_semantics() {
+    // The hash index must agree with SameValueZero (expected values are Node's).
+    assert_eq!(
+        run_str("const s = new Set([NaN, 0, -0, 1, 1.0, '1', null, undefined]); [s.size, s.has(NaN), s.has(-0), s.has('1')].join()"),
+        "6,true,true,true"
+    );
+    assert_eq!(
+        run_str("const m = new Map([['x', 1], ['y', 2], ['z', 3]]); m.delete('y'); m.set('y', 9); [...m.keys()].join() + '|' + m.get('y')"),
+        "x,z,y|9"
+    );
+    assert_eq!(
+        run_str("const m = new Map(); const k = [{}, {}]; k.forEach((o, i) => m.set(o, i)); [m.get(k[1]), m.get({}), m.size].join()"),
+        "1,,2"
+    );
+    assert_eq!(
+        run_str("const m = new Map(); for (let i = 0; i < 5000; i++) m.set('k' + (i % 1000), i); [m.size, m.get('k999')].join()"),
+        "1000,4999"
+    );
+    assert_eq!(
+        run_str(
+            "const s = new Set([1,2]); s.clear(); s.add(3); [s.size, s.has(1), s.has(3)].join()"
+        ),
+        "1,false,true"
+    );
+}
+
+#[test]
+fn a_function_equals_itself() {
+    assert_eq!(run_str("const f = () => 1; const g = () => 1; [f === f, f === g, [f].includes(f), new Set([f, f]).size].join()"), "true,false,true,1");
+}

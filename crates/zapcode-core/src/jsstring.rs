@@ -19,9 +19,13 @@ use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::sync::Arc;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum JsString {
-    /// Well-formed (no lone surrogates), stored as UTF-8 for cheap `&str` access.
+    /// Pure ASCII: each byte is one UTF-16 unit, so `length`, indexing and
+    /// slicing are O(1)/O(k) instead of re-encoding the string (which made a
+    /// character loop O(n^2)). Chosen at construction; see [`JsString::text`].
+    Ascii(Arc<str>),
+    /// Well-formed non-ASCII text, stored as UTF-8 for cheap `&str` access.
     Valid(Arc<str>),
     /// Contains lone surrogate(s): the exact UTF-16 units, plus a lossy UTF-8
     /// rendering so `Deref<str>`/`Display` still work for textual consumers.
@@ -36,11 +40,37 @@ pub struct WtfStr {
 }
 
 impl JsString {
+    /// Well-formed text, tagged `Ascii` when it is (the only constructor for
+    /// those two variants, so a `Valid` string is never pure ASCII).
+    pub fn text(s: Arc<str>) -> JsString {
+        if s.is_ascii() {
+            JsString::Ascii(s)
+        } else {
+            JsString::Valid(s)
+        }
+    }
+
+    /// The UTF-16 code unit at index `i`.
+    pub fn unit_at(&self, i: usize) -> Option<u16> {
+        match self {
+            JsString::Ascii(s) => s.as_bytes().get(i).map(|&b| u16::from(b)),
+            _ => self.units().get(i).copied(),
+        }
+    }
+
+    /// The code units `start..end` as a string (callers clamp the range).
+    pub fn slice_units(&self, start: usize, end: usize) -> JsString {
+        match self {
+            JsString::Ascii(s) => JsString::Ascii(Arc::from(&s[start..end])),
+            _ => JsString::from_units(&self.units()[start..end]),
+        }
+    }
+
     /// The textual content as `&str` (lossy — replacement chars — only for the
     /// rare lone-surrogate case, which has no valid UTF-8 representation).
     pub fn as_str(&self) -> &str {
         match self {
-            JsString::Valid(s) => s,
+            JsString::Ascii(s) | JsString::Valid(s) => s,
             JsString::Wtf(w) => &w.lossy,
         }
     }
@@ -48,6 +78,7 @@ impl JsString {
     /// The UTF-16 code units (what JS `length`/`charCodeAt`/indexing operate on).
     pub fn units(&self) -> Cow<'_, [u16]> {
         match self {
+            JsString::Ascii(s) => Cow::Owned(s.bytes().map(u16::from).collect()),
             JsString::Valid(s) => Cow::Owned(s.encode_utf16().collect()),
             JsString::Wtf(w) => Cow::Borrowed(&w.units),
         }
@@ -56,6 +87,7 @@ impl JsString {
     /// Number of UTF-16 code units — JS `String.prototype.length`.
     pub fn len_utf16(&self) -> usize {
         match self {
+            JsString::Ascii(s) => s.len(),
             JsString::Valid(s) => s.encode_utf16().count(),
             JsString::Wtf(w) => w.units.len(),
         }
@@ -63,7 +95,7 @@ impl JsString {
 
     pub fn is_empty(&self) -> bool {
         match self {
-            JsString::Valid(s) => s.is_empty(),
+            JsString::Ascii(s) | JsString::Valid(s) => s.is_empty(),
             JsString::Wtf(w) => w.units.is_empty(),
         }
     }
@@ -73,7 +105,7 @@ impl JsString {
     /// lone-surrogate (`Wtf`) representation otherwise.
     pub fn from_units(units: &[u16]) -> JsString {
         match String::from_utf16(units) {
-            Ok(s) => JsString::Valid(Arc::from(s.as_str())),
+            Ok(s) => JsString::text(Arc::from(s.as_str())),
             Err(_) => {
                 let lossy = String::from_utf16_lossy(units);
                 JsString::Wtf(Arc::new(WtfStr {
@@ -100,31 +132,41 @@ impl AsRef<str> for JsString {
 
 impl From<&str> for JsString {
     fn from(s: &str) -> Self {
-        JsString::Valid(Arc::from(s))
+        JsString::text(Arc::from(s))
     }
 }
 
 impl From<String> for JsString {
     fn from(s: String) -> Self {
-        JsString::Valid(Arc::from(s.as_str()))
+        JsString::text(Arc::from(s.as_str()))
     }
 }
 
 impl From<&String> for JsString {
     fn from(s: &String) -> Self {
-        JsString::Valid(Arc::from(s.as_str()))
+        JsString::text(Arc::from(s.as_str()))
     }
 }
 
 impl From<Arc<str>> for JsString {
     fn from(s: Arc<str>) -> Self {
-        JsString::Valid(s)
+        JsString::text(s)
     }
 }
 
 impl From<char> for JsString {
     fn from(c: char) -> Self {
-        JsString::Valid(Arc::from(c.to_string().as_str()))
+        JsString::text(Arc::from(c.to_string().as_str()))
+    }
+}
+
+/// `Ascii` is a storage detail: it prints like `Valid`.
+impl fmt::Debug for JsString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            JsString::Ascii(s) | JsString::Valid(s) => f.debug_tuple("Valid").field(s).finish(),
+            JsString::Wtf(w) => f.debug_tuple("Wtf").field(w).finish(),
+        }
     }
 }
 
@@ -140,9 +182,9 @@ impl fmt::Display for JsString {
 impl PartialEq for JsString {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (JsString::Valid(a), JsString::Valid(b)) => a == b,
             (JsString::Wtf(a), JsString::Wtf(b)) => a.units == b.units,
-            _ => false,
+            (JsString::Wtf(_), _) | (_, JsString::Wtf(_)) => false,
+            _ => self.as_str() == other.as_str(),
         }
     }
 }
@@ -150,7 +192,7 @@ impl Eq for JsString {}
 
 impl PartialEq<str> for JsString {
     fn eq(&self, other: &str) -> bool {
-        matches!(self, JsString::Valid(s) if s.as_ref() == other)
+        !matches!(self, JsString::Wtf(_)) && self.as_str() == other
     }
 }
 impl PartialEq<&str> for JsString {
@@ -161,7 +203,11 @@ impl PartialEq<&str> for JsString {
 
 impl Ord for JsString {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // Lexicographic by UTF-16 code units (JS string comparison order).
+        // Lexicographic by UTF-16 code units (JS string comparison order);
+        // for ASCII that is plain byte order.
+        if let (JsString::Ascii(a), JsString::Ascii(b)) = (self, other) {
+            return a.as_bytes().cmp(b.as_bytes());
+        }
         self.units().cmp(&other.units())
     }
 }
@@ -176,7 +222,7 @@ impl Hash for JsString {
         // Equal values hash equal: `Valid` hashes its text; `Wtf` hashes units.
         // (They are never equal to each other, so distinct hashing is fine.)
         match self {
-            JsString::Valid(s) => {
+            JsString::Ascii(s) | JsString::Valid(s) => {
                 0u8.hash(state);
                 s.hash(state);
             }
@@ -190,7 +236,7 @@ impl Hash for JsString {
 
 impl Default for JsString {
     fn default() -> Self {
-        JsString::Valid(Arc::from(""))
+        JsString::Ascii(Arc::from(""))
     }
 }
 
@@ -207,7 +253,7 @@ enum JsStringRepr {
 impl Serialize for JsString {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let repr = match self {
-            JsString::Valid(s) => JsStringRepr::Valid(s.to_string()),
+            JsString::Ascii(s) | JsString::Valid(s) => JsStringRepr::Valid(s.to_string()),
             JsString::Wtf(w) => JsStringRepr::Wtf(w.units.clone()),
         };
         repr.serialize(serializer)
@@ -217,7 +263,7 @@ impl Serialize for JsString {
 impl<'de> Deserialize<'de> for JsString {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         match JsStringRepr::deserialize(deserializer)? {
-            JsStringRepr::Valid(s) => Ok(JsString::Valid(Arc::from(s.as_str()))),
+            JsStringRepr::Valid(s) => Ok(JsString::text(Arc::from(s.as_str()))),
             JsStringRepr::Wtf(units) => Ok(JsString::from_units(&units)),
         }
     }
