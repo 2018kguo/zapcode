@@ -755,17 +755,11 @@ fn unlabeled_break_skips_enclosing_labeled_block() {
 }
 
 #[test]
-fn labeled_continue_across_nested_for_of_documented_divergence() {
-    // DIVERGENCE (documented, control-flow residual): a labeled `continue` that
-    // targets an OUTER `for...of` does not resume the remaining outer iterations
-    // the way the spec requires; here it stops after the first outer pass.
-    //
-    // JS: "11,21"  (continue outer should still iterate a=2). zapcode yields "11".
-    // (Labeled continue across C-style `for`/`while` IS correct — see the tests
-    // above; only the for...of iterator path has this gap.)
+fn labeled_continue_across_nested_for_of() {
+    // Matches Node: `continue outer` pops the inner iterator before resuming.
     assert_eq!(
         run_str("let r=[]; outer: for(const a of [1,2]){ for(const b of [1,2]){ if(b===2) continue outer; r.push(a*10+b);}} r.join(',')"),
-        "11"
+        "11,21"
     );
 }
 

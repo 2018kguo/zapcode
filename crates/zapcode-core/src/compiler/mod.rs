@@ -148,10 +148,27 @@ enum CompilerMode {
     SessionChunk,
 }
 
+#[derive(Default)]
 struct LoopInfo {
     break_patches: Vec<usize>,
     continue_patches: Vec<usize>,
     label: Option<String>,
+    /// Operand-stack values this construct keeps live across its body (the
+    /// `for…of` iterator, the `switch` discriminant). A jump out to an
+    /// enclosing target must pop them first.
+    stack_slots: usize,
+    /// `continue` skips a `switch` and targets the enclosing loop.
+    is_switch: bool,
+    /// For labeled blocks: `loop_stack.len()` when the block was entered.
+    loop_depth: usize,
+}
+
+/// Where a `break`/`continue` jumps: an index into `loop_stack` or into
+/// `labeled_blocks`.
+#[derive(Clone, Copy)]
+enum JumpTarget {
+    Loop(usize),
+    Block(usize),
 }
 
 impl Compiler {
@@ -401,6 +418,44 @@ impl Compiler {
     /// adopt the pending label into its own `LoopInfo` (so `break label` /
     /// `continue label` resolve against it). Anything else (notably a plain
     /// block) is a labeled non-loop and needs its own break frame.
+    /// Resolve `label` to the innermost loop/switch carrying it, else to a
+    /// labeled block.
+    fn find_jump_target(&self, label: &str) -> Option<JumpTarget> {
+        let has = |li: &LoopInfo| li.label.as_deref() == Some(label);
+        self.loop_stack
+            .iter()
+            .rposition(has)
+            .map(JumpTarget::Loop)
+            .or_else(|| self.labeled_blocks.iter().rposition(has).map(JumpTarget::Block))
+    }
+
+    /// Emit a `break` (or `continue`) to `target`, first popping the operand-
+    /// stack values held by every construct the jump leaves (inner `for…of`
+    /// iterators, `switch` discriminants). The target's own values stay: its
+    /// exit pops them on `break`, and its head reuses them on `continue`.
+    fn emit_jump_to(&mut self, target: Option<JumpTarget>, is_break: bool) {
+        let crossed_from = match target {
+            Some(JumpTarget::Loop(i)) => i + 1,
+            Some(JumpTarget::Block(i)) => self.labeled_blocks[i].loop_depth,
+            None => self.loop_stack.len(),
+        };
+        let pops: usize = self.loop_stack[crossed_from..].iter().map(|li| li.stack_slots).sum();
+        for _ in 0..pops {
+            self.emit(Instruction::Pop);
+        }
+        let idx = self.emit(if is_break { Instruction::Break(0) } else { Instruction::Continue(0) });
+        let info = match target {
+            Some(JumpTarget::Loop(i)) => &mut self.loop_stack[i],
+            Some(JumpTarget::Block(i)) => &mut self.labeled_blocks[i],
+            None => return,
+        };
+        if is_break {
+            info.break_patches.push(idx);
+        } else {
+            info.continue_patches.push(idx);
+        }
+    }
+
     fn body_consumes_label(stmt: &Statement) -> bool {
         matches!(
             stmt,
@@ -691,6 +746,7 @@ impl Compiler {
                     break_patches: Vec::new(),
                     continue_patches: Vec::new(),
                     label: self.pending_label.take(),
+                    ..Default::default()
                 });
 
                 self.compile_expr(test)?;
@@ -716,6 +772,7 @@ impl Compiler {
                     break_patches: Vec::new(),
                     continue_patches: Vec::new(),
                     label: self.pending_label.take(),
+                    ..Default::default()
                 });
 
                 self.compile_block_scoped(body)?;
@@ -770,6 +827,7 @@ impl Compiler {
                     break_patches: Vec::new(),
                     continue_patches: Vec::new(),
                     label: self.pending_label.take(),
+                    ..Default::default()
                 });
 
                 let exit_jump = if let Some(test) = test {
@@ -827,6 +885,8 @@ impl Compiler {
                     break_patches: Vec::new(),
                     continue_patches: Vec::new(),
                     label: self.pending_label.take(),
+                    stack_slots: 1,
+                    ..Default::default()
                 });
 
                 // IteratorNext consumes the iterator and pushes the *advanced*
@@ -915,52 +975,30 @@ impl Compiler {
                 )?;
             }
             Statement::Break { label, .. } => {
-                let idx = self.emit(Instruction::Break(0));
+                // A labeled break targets the matching loop/switch, or — if none
+                // matches — a labeled non-loop block (e.g. `foo: {...}`). An
+                // unlabeled break targets the innermost loop/switch only.
                 let target = match label {
-                    // A labeled break targets the matching loop/switch, or — if
-                    // none matches — a labeled non-loop block (e.g. `foo: {...}`).
-                    Some(l) => self
-                        .loop_stack
-                        .iter_mut()
-                        .rev()
-                        .find(|li| li.label.as_deref() == Some(l.as_str()))
-                        .or_else(|| {
-                            self.labeled_blocks
-                                .iter_mut()
-                                .rev()
-                                .find(|li| li.label.as_deref() == Some(l.as_str()))
-                        }),
-                    // An unlabeled break targets the innermost loop/switch only,
-                    // never an enclosing labeled block.
-                    None => self.loop_stack.last_mut(),
+                    Some(l) => self.find_jump_target(l),
+                    None => self.loop_stack.len().checked_sub(1).map(JumpTarget::Loop),
                 };
-                if let Some(loop_info) = target {
-                    loop_info.break_patches.push(idx);
-                }
+                self.emit_jump_to(target, true);
             }
             Statement::Continue { label, .. } => {
-                let idx = self.emit(Instruction::Continue(0));
+                // `continue label` only legally targets a loop, but a labeled
+                // *block* may match in malformed input; fall back to it so the
+                // jump is still patched (to the block end) rather than left at 0
+                // and running away. An unlabeled continue skips enclosing
+                // switches and targets the innermost loop.
                 let target = match label {
-                    // `continue label` only legally targets a loop, but a labeled
-                    // *block* may match in malformed input; fall back to it so the
-                    // jump is still patched (to the block end) rather than left at
-                    // 0 and running away.
-                    Some(l) => self
+                    Some(l) => self.find_jump_target(l),
+                    None => self
                         .loop_stack
-                        .iter_mut()
-                        .rev()
-                        .find(|li| li.label.as_deref() == Some(l.as_str()))
-                        .or_else(|| {
-                            self.labeled_blocks
-                                .iter_mut()
-                                .rev()
-                                .find(|li| li.label.as_deref() == Some(l.as_str()))
-                        }),
-                    None => self.loop_stack.last_mut(),
+                        .iter()
+                        .rposition(|li| !li.is_switch)
+                        .map(JumpTarget::Loop),
                 };
-                if let Some(loop_info) = target {
-                    loop_info.continue_patches.push(idx);
-                }
+                self.emit_jump_to(target, false);
             }
             Statement::Labeled { label, body, .. } => {
                 if Self::body_consumes_label(body) {
@@ -977,6 +1015,8 @@ impl Compiler {
                         break_patches: Vec::new(),
                         continue_patches: Vec::new(),
                         label: Some(label.clone()),
+                        loop_depth: self.loop_stack.len(),
+                        ..Default::default()
                     });
                     self.compile_statement(body)?;
                     let end = self.current_offset();
@@ -1062,6 +1102,9 @@ impl Compiler {
                     break_patches: Vec::new(),
                     continue_patches: Vec::new(),
                     label: self.pending_label.take(),
+                    stack_slots: 1,
+                    is_switch: true,
+                    ..Default::default()
                 });
 
                 // Compile case bodies
@@ -1080,11 +1123,6 @@ impl Compiler {
                 // `break` exits the switch.
                 for patch in switch_info.break_patches {
                     self.patch_jump(patch, end);
-                }
-                // `continue` inside a switch targets the *enclosing* loop, not the
-                // switch — forward it to the parent loop if there is one.
-                if let Some(parent) = self.loop_stack.last_mut() {
-                    parent.continue_patches.extend(switch_info.continue_patches);
                 }
 
                 // Patch jumps

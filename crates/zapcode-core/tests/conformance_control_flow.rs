@@ -307,3 +307,50 @@ fn block_and_loop_completion_values() {
     assert_eq!(run_str("if (true) { 'a'; 'b' }"), "b");
     assert_eq!(run_str("let x = 5; x"), "5");
 }
+
+// ----------------------------------------------------------------------------
+// Jumps that leave a `for…of` or `switch` (each keeps a value on the operand
+// stack: the iterator / the discriminant). Every expected value is Node's.
+// ----------------------------------------------------------------------------
+
+#[test]
+fn continue_inside_switch_inside_for_of() {
+    assert_eq!(
+        run_str("const out = []; for (const x of [1,2,3]) { switch (x) { case 2: continue; } out.push(x) } out.join()"),
+        "1,3"
+    );
+}
+
+#[test]
+fn labeled_continue_from_inner_for_of_to_outer_for_of() {
+    assert_eq!(
+        run_str("const out = []; outer: for (const a of [1,2]) { for (const b of [1,2,3]) { if (b === 2) continue outer; out.push(`${a}${b}`) } } out.join()"),
+        "11,21"
+    );
+}
+
+#[test]
+fn labeled_continue_out_of_switch_and_for_of() {
+    assert_eq!(
+        run_str("const out = []; outer: for (const a of [1,2]) { switch (a) { case 1: for (const b of [7,8]) { continue outer; } } out.push(a) } out.join()"),
+        "2"
+    );
+}
+
+#[test]
+fn break_out_of_nested_for_of_leaves_outer_loops_intact() {
+    // The break used to leave the inner iterator on the stack, so the loop
+    // around it read the wrong iterator.
+    assert_eq!(
+        run_str("let n = 0; for (const r of [1,2,3]) { outer: for (const a of [1,2]) { for (const b of [1,2]) { if (b === 2) break outer; n++ } } } n"),
+        "3"
+    );
+}
+
+#[test]
+fn break_labeled_block_from_nested_for_of() {
+    assert_eq!(
+        run_str("const out = []; for (const r of [1,2]) { blk: { for (const a of [1,2]) { for (const b of [1]) { if (a === 2) break blk; out.push(`${r}${a}`) } } } } out.join()"),
+        "11,21"
+    );
+}
