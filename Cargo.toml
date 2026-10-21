@@ -55,8 +55,17 @@ wasm-bindgen = "0.2"
 serde-wasm-bindgen = "0.6"
 js-sys = "0.3"
 
+# Whole-program optimization for shipped builds (as ruff and uv do). Panics
+# stay "unwind": napi-rs and pyo3 turn them into host exceptions.
+[profile.release]
+lto = "fat"
+codegen-units = 1
+
 # Release builds plus symbols, for samply / flamegraphs:
 #   cargo build --profile profiling --example profile_agent
 [profile.profiling]
 inherits = "release"
 debug = true
+# Faster to build than fat LTO; good enough for flame graphs.
+lto = "thin"
+codegen-units = 16
