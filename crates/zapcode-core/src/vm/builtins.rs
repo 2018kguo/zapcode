@@ -656,7 +656,7 @@ pub fn call_bigint_method(
             }
             Value::String(JsString::from(n.to_str_radix(radix).as_str()))
         }
-        "valueOf" => Value::BigInt(n.clone()),
+        "valueOf" => Value::BigInt(Box::new(n.clone())),
         "toLocaleString" => {
             // No ICU/locale data — group the decimal digits in threes, like the
             // Number default (sign preserved).
@@ -1000,12 +1000,12 @@ pub fn call_global_fn(kind: &str, args: &[Value], heap: &mut Heap) -> Result<Val
         // Number or unparseable string is a RangeError/SyntaxError, like JS.
         "BigInt" => match &arg {
             Value::BigInt(n) => Value::BigInt(n.clone()),
-            Value::Int(n) => Value::BigInt(num_bigint::BigInt::from(*n)),
-            Value::Bool(b) => Value::BigInt(num_bigint::BigInt::from(*b as i64)),
+            Value::Int(n) => Value::BigInt(Box::new(num_bigint::BigInt::from(*n))),
+            Value::Bool(b) => Value::BigInt(Box::new(num_bigint::BigInt::from(*b as i64))),
             Value::Float(f) => {
                 if f.is_finite() && f.fract() == 0.0 {
                     match <num_bigint::BigInt as num_traits::FromPrimitive>::from_f64(*f) {
-                        Some(v) => Value::BigInt(v),
+                        Some(v) => Value::BigInt(Box::new(v)),
                         None => {
                             return Err(ZapcodeError::RangeError(
                                 "The number is not a safe integer".to_string(),
@@ -1027,7 +1027,7 @@ pub fn call_global_fn(kind: &str, args: &[Value], heap: &mut Heap) -> Result<Val
                     num_bigint::BigInt::parse_bytes(t.as_bytes(), 10)
                 };
                 match parsed {
-                    Some(v) => Value::BigInt(v),
+                    Some(v) => Value::BigInt(Box::new(v)),
                     None => {
                         return Err(ZapcodeError::TypeError(format!(
                             "Cannot convert {} to a BigInt",

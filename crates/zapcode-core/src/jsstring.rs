@@ -25,7 +25,14 @@ pub enum JsString {
     Valid(Arc<str>),
     /// Contains lone surrogate(s): the exact UTF-16 units, plus a lossy UTF-8
     /// rendering so `Deref<str>`/`Display` still work for textual consumers.
-    Wtf { units: Arc<[u16]>, lossy: Arc<str> },
+    /// Behind one pointer so `JsString` (and so `Value`) stays small.
+    Wtf(Arc<WtfStr>),
+}
+
+#[derive(Debug)]
+pub struct WtfStr {
+    pub units: Vec<u16>,
+    pub lossy: String,
 }
 
 impl JsString {
@@ -34,7 +41,7 @@ impl JsString {
     pub fn as_str(&self) -> &str {
         match self {
             JsString::Valid(s) => s,
-            JsString::Wtf { lossy, .. } => lossy,
+            JsString::Wtf(w) => &w.lossy,
         }
     }
 
@@ -42,7 +49,7 @@ impl JsString {
     pub fn units(&self) -> Cow<'_, [u16]> {
         match self {
             JsString::Valid(s) => Cow::Owned(s.encode_utf16().collect()),
-            JsString::Wtf { units, .. } => Cow::Borrowed(units),
+            JsString::Wtf(w) => Cow::Borrowed(&w.units),
         }
     }
 
@@ -50,14 +57,14 @@ impl JsString {
     pub fn len_utf16(&self) -> usize {
         match self {
             JsString::Valid(s) => s.encode_utf16().count(),
-            JsString::Wtf { units, .. } => units.len(),
+            JsString::Wtf(w) => w.units.len(),
         }
     }
 
     pub fn is_empty(&self) -> bool {
         match self {
             JsString::Valid(s) => s.is_empty(),
-            JsString::Wtf { units, .. } => units.is_empty(),
+            JsString::Wtf(w) => w.units.is_empty(),
         }
     }
 
@@ -69,10 +76,10 @@ impl JsString {
             Ok(s) => JsString::Valid(Arc::from(s.as_str())),
             Err(_) => {
                 let lossy = String::from_utf16_lossy(units);
-                JsString::Wtf {
-                    units: Arc::from(units),
-                    lossy: Arc::from(lossy.as_str()),
-                }
+                JsString::Wtf(Arc::new(WtfStr {
+                    units: units.to_vec(),
+                    lossy,
+                }))
             }
         }
     }
@@ -134,7 +141,7 @@ impl PartialEq for JsString {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (JsString::Valid(a), JsString::Valid(b)) => a == b,
-            (JsString::Wtf { units: a, .. }, JsString::Wtf { units: b, .. }) => a == b,
+            (JsString::Wtf(a), JsString::Wtf(b)) => a.units == b.units,
             _ => false,
         }
     }
@@ -173,9 +180,9 @@ impl Hash for JsString {
                 0u8.hash(state);
                 s.hash(state);
             }
-            JsString::Wtf { units, .. } => {
+            JsString::Wtf(w) => {
                 1u8.hash(state);
-                units.hash(state);
+                w.units.hash(state);
             }
         }
     }
@@ -201,7 +208,7 @@ impl Serialize for JsString {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let repr = match self {
             JsString::Valid(s) => JsStringRepr::Valid(s.to_string()),
-            JsString::Wtf { units, .. } => JsStringRepr::Wtf(units.to_vec()),
+            JsString::Wtf(w) => JsStringRepr::Wtf(w.units.clone()),
         };
         repr.serialize(serializer)
     }

@@ -28,15 +28,16 @@ pub enum Value {
     /// An arbitrary-precision integer (`10n`). A distinct type from Number:
     /// `typeof 10n === "bigint"`, and mixing BigInt with Number in arithmetic is
     /// a TypeError, matching JS.
-    BigInt(num_bigint::BigInt),
+    /// Boxed (like the other large variants) so `Value` stays 32 bytes.
+    BigInt(Box<num_bigint::BigInt>),
     String(JsString),
     /// Reference to an array slot in the [`Heap`]. Cloning shares the handle.
     Array(Handle),
     /// Reference to an object slot in the [`Heap`].
     Object(Handle),
-    Function(Closure),
+    Function(Box<Closure>),
     /// A generator object — calling function* creates one of these.
-    Generator(GeneratorObject),
+    Generator(Box<GeneratorObject>),
     /// A deferred external call result, used to batch parallel calls inside a
     /// `Promise.all([...])`. Holds the call id; resolved by the host on resume.
     /// Only ever lives transiently inside a batch — never escapes to user code.
@@ -45,18 +46,23 @@ pub enum Value {
     /// Not visible to user code — used to dispatch builtin calls. These handles
     /// must be serializable because argument evaluation can suspend after a
     /// method is loaded but before it is called.
-    BuiltinMethod {
-        object_name: Arc<str>,
-        method_name: Arc<str>,
-        /// The receiver this method is bound to, captured at property-load time
-        /// so argument evaluation can't clobber it. `None` for unbound markers.
-        #[serde(default)]
-        recv: Option<Box<Value>>,
-        /// Where to write the receiver back after a mutating method (push, etc.),
-        /// supporting nested paths like `obj.items` or `rows[i].tags`.
-        #[serde(default)]
-        place: Option<Place>,
-    },
+    BuiltinMethod(Box<BuiltinMethodRef>),
+}
+
+/// Payload of [`Value::BuiltinMethod`], boxed to keep `Value` small (the
+/// wire bytes are identical to the former inline struct variant).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BuiltinMethodRef {
+    pub object_name: Arc<str>,
+    pub method_name: Arc<str>,
+    /// The receiver this method is bound to, captured at property-load time
+    /// so argument evaluation can't clobber it. `None` for unbound markers.
+    #[serde(default)]
+    pub recv: Option<Box<Value>>,
+    /// Where to write the receiver back after a mutating method (push, etc.),
+    /// supporting nested paths like `obj.items` or `rows[i].tags`.
+    #[serde(default)]
+    pub place: Option<Place>,
 }
 
 /// The root variable a [`Place`] resolves from.
@@ -170,7 +176,7 @@ impl Value {
             Value::Bool(b) => *b,
             Value::Int(n) => *n != 0,
             Value::Float(n) => *n != 0.0 && !n.is_nan(),
-            Value::BigInt(n) => !num_traits::Zero::is_zero(n),
+            Value::BigInt(n) => !num_traits::Zero::is_zero(n.as_ref()),
             Value::String(s) => !s.is_empty(),
             Value::Array(_)
             | Value::Object(_)
@@ -193,7 +199,7 @@ impl Value {
             Value::Int(n) => *n as f64,
             Value::Float(n) => *n,
             // `Number(bigint)` converts; precision past 2^53 is lost, like JS.
-            Value::BigInt(n) => num_traits::ToPrimitive::to_f64(n).unwrap_or(f64::NAN),
+            Value::BigInt(n) => num_traits::ToPrimitive::to_f64(n.as_ref()).unwrap_or(f64::NAN),
             Value::String(s) => Self::parse_number_str(s),
             _ => f64::NAN,
         }
@@ -468,8 +474,8 @@ impl Value {
                 }
             }
             Value::Generator(gen) => gen.for_each_handle_mut(f),
-            Value::BuiltinMethod { recv, .. } => {
-                if let Some(r) = recv {
+            Value::BuiltinMethod(m) => {
+                if let Some(r) = &mut m.recv {
                     r.for_each_handle_mut(f);
                 }
             }

@@ -89,3 +89,37 @@ fn async_map_3() -> zapcode_core::Value {
     )
     .unwrap()
 }
+
+// ── Realistic agent workloads (run long enough that dispatch dominates setup) ──
+
+/// Shape of typical agent code: build records, filter/map/reduce, group,
+/// sort, format strings.
+const DATA_PIPELINE: &str = r#"
+const rows = [];
+for (let i = 0; i < 300; i++) {
+  rows.push({ id: i, region: ["us", "eu", "apac"][i % 3], amount: (i * 37) % 500, tags: ["a", "b"] });
+}
+const big = rows.filter(r => r.amount > 100).map(r => ({ ...r, usd: r.amount * 1.1 }));
+const byRegion = {};
+for (const r of big) {
+  byRegion[r.region] = (byRegion[r.region] ?? 0) + r.usd;
+}
+const top = big.sort((a, b) => b.usd - a.usd).slice(0, 10).map(r => `${r.id}:${r.usd.toFixed(2)}`);
+({ regions: Object.keys(byRegion).length, top: top.join(",") })
+"#;
+
+#[divan::bench]
+fn data_pipeline_300() -> zapcode_core::Value {
+    eval_ts(DATA_PIPELINE).unwrap()
+}
+
+#[divan::bench]
+fn property_access_loop() -> zapcode_core::Value {
+    eval_ts("const o = { a: 1, b: { c: 2 } }; let s = 0; for (let i = 0; i < 1000; i++) { s += o.a + o.b.c; } s").unwrap()
+}
+
+#[divan::bench]
+fn fibonacci_15() -> zapcode_core::Value {
+    eval_ts("function fib(n) { if (n <= 1) { return n; } return fib(n - 1) + fib(n - 2); } fib(15)")
+        .unwrap()
+}

@@ -13,8 +13,8 @@ use crate::sandbox::{ResourceLimits, ResourceTracker};
 use crate::snapshot::ZapcodeSnapshot;
 use crate::trace::{ExecutionTrace, SpanBuilder, TraceStatus};
 use crate::value::{
-    Closure, FunctionRef, GeneratorObject, Place, PlaceRoot, PlaceSeg, SuspendedFrame, Value,
-    MAX_RENDER_DEPTH,
+    BuiltinMethodRef, Closure, FunctionRef, GeneratorObject, Place, PlaceRoot, PlaceSeg,
+    SuspendedFrame, Value, MAX_RENDER_DEPTH,
 };
 
 // ── In-run heap compaction tuning (see docs/in-run-memory-design.md) ──────
@@ -3961,12 +3961,8 @@ impl Vm {
     fn call_function_internal(&mut self, callee: &Value, args: Vec<Value>) -> Result<Value> {
         // A builtin static passed as a callback (`Object.groupBy(xs, Math.floor)`,
         // `arr.map(JSON.stringify)`): dispatch through the pure builtin layer.
-        if let Value::BuiltinMethod {
-            object_name,
-            method_name,
-            ..
-        } = callee
-        {
+        if let Value::BuiltinMethod(m) = callee {
+            let (object_name, method_name) = (&m.object_name, &m.method_name);
             if let Some(v) = builtins::call_global_method(
                 object_name,
                 method_name,
@@ -4090,7 +4086,7 @@ impl Vm {
         };
         self.globals.insert(
             format!("__gen_{}", gen_id),
-            Value::Generator(gen_obj.clone()),
+            Value::Generator(Box::new(gen_obj.clone())),
         );
         gen_obj
     }
@@ -4117,7 +4113,7 @@ impl Vm {
         // object — running the body here would hit `Yield` with no driver.
         if self.current_function(closure.func_ref).is_generator {
             let gen_obj = self.make_generator_object(&closure, &args, this_value);
-            return Ok(Value::Generator(gen_obj));
+            return Ok(Value::Generator(Box::new(gen_obj)));
         }
 
         let target_frame_depth = self.frames.len();
@@ -5392,7 +5388,8 @@ impl Vm {
         if gen_obj.done {
             self.globals.remove(&gen_key);
         } else {
-            self.globals.insert(gen_key, Value::Generator(gen_obj));
+            self.globals
+                .insert(gen_key, Value::Generator(Box::new(gen_obj)));
         }
     }
 
@@ -5772,7 +5769,7 @@ impl Vm {
             Value::Object(_) if is_map_object(&val, &self.heap) => {
                 Ok(map_entry_pairs(&val, &mut self.heap))
             }
-            Value::Generator(gen_obj) => self.drain_generator(gen_obj.clone()),
+            Value::Generator(gen_obj) => self.drain_generator((**gen_obj).clone()),
             Value::Object(_) => {
                 if let Some(items) = self.drain_custom_iterator(&val)? {
                     Ok(items)
@@ -5815,7 +5812,7 @@ impl Vm {
             // resumes from where this one left off.
             let gen_key = format!("__gen_{}", gen_obj.id);
             match self.globals.get(&gen_key) {
-                Some(Value::Generator(g)) => gen_obj = g.clone(),
+                Some(Value::Generator(g)) => gen_obj = (**g).clone(),
                 _ => break,
             }
         }
@@ -5846,7 +5843,7 @@ impl Vm {
         // A generator METHOD (`*[Symbol.iterator]() { … }`) returns a
         // generator object — drain it through the generator machinery.
         if let Value::Generator(gen_obj) = iterator {
-            return Ok(Some(self.drain_generator(gen_obj)?));
+            return Ok(Some(self.drain_generator(*gen_obj)?));
         }
         let iter_h = match &iterator {
             Value::Object(ih) => *ih,
@@ -5908,7 +5905,7 @@ impl Vm {
                     Constant::Bool(b) => Value::Bool(b),
                     Constant::Int(n) => Value::Int(n),
                     Constant::Float(n) => Value::Float(n),
-                    Constant::BigInt(v) => Value::BigInt(v.clone()),
+                    Constant::BigInt(v) => Value::BigInt(Box::new(v.clone())),
                     Constant::String(s) => Value::String(JsString::from(s)),
                 };
                 self.push(value)?;
@@ -6041,7 +6038,7 @@ impl Vm {
                     (Value::Float(a), Value::Float(b)) => Value::Float(a + b),
                     (Value::Int(a), Value::Float(b)) => Value::Float(*a as f64 + b),
                     (Value::Float(a), Value::Int(b)) => Value::Float(a + *b as f64),
-                    (Value::BigInt(a), Value::BigInt(b)) => Value::BigInt(a + b),
+                    (Value::BigInt(a), Value::BigInt(b)) => Value::BigInt(Box::new(&**a + &**b)),
                     // Concatenate by UTF-16 code units so a trailing lone high
                     // surrogate and a leading lone low surrogate RE-PAIR into the
                     // astral char (e.g. `"\uD83D" + "\uDE00"` === "😀"), matching JS.
@@ -6100,7 +6097,7 @@ impl Vm {
                         Some(r) => int_arith_result(r),
                         None => Value::Float(*a as f64 - *b as f64),
                     },
-                    (Value::BigInt(a), Value::BigInt(b)) => Value::BigInt(a - b),
+                    (Value::BigInt(a), Value::BigInt(b)) => Value::BigInt(Box::new(&**a - &**b)),
                     _ if matches!(left, Value::BigInt(_)) || matches!(right, Value::BigInt(_)) => {
                         return Err(mix_bigint_error());
                     }
@@ -6124,7 +6121,7 @@ impl Vm {
                         Some(r) => int_arith_result(r),
                         None => Value::Float(*a as f64 * *b as f64),
                     },
-                    (Value::BigInt(a), Value::BigInt(b)) => Value::BigInt(a * b),
+                    (Value::BigInt(a), Value::BigInt(b)) => Value::BigInt(Box::new(&**a * &**b)),
                     _ if matches!(left, Value::BigInt(_)) || matches!(right, Value::BigInt(_)) => {
                         return Err(mix_bigint_error());
                     }
@@ -6141,11 +6138,11 @@ impl Vm {
                 let right = self.to_primitive(&right, ToPrimitiveHint::Number)?;
                 let result = match (&left, &right) {
                     (Value::BigInt(a), Value::BigInt(b)) => {
-                        if num_traits::Zero::is_zero(b) {
+                        if num_traits::Zero::is_zero(b.as_ref()) {
                             return Err(ZapcodeError::RangeError("Division by zero".to_string()));
                         }
                         // BigInt division truncates toward zero.
-                        Value::BigInt(a / b)
+                        Value::BigInt(Box::new(&**a / &**b))
                     }
                     _ if matches!(left, Value::BigInt(_)) || matches!(right, Value::BigInt(_)) => {
                         return Err(mix_bigint_error());
@@ -6171,10 +6168,10 @@ impl Vm {
                         None => Value::Float(-0.0),
                     },
                     (Value::BigInt(a), Value::BigInt(b)) => {
-                        if num_traits::Zero::is_zero(b) {
+                        if num_traits::Zero::is_zero(b.as_ref()) {
                             return Err(ZapcodeError::RangeError("Division by zero".to_string()));
                         }
-                        Value::BigInt(a % b)
+                        Value::BigInt(Box::new(&**a % &**b))
                     }
                     _ if matches!(left, Value::BigInt(_)) || matches!(right, Value::BigInt(_)) => {
                         return Err(mix_bigint_error());
@@ -6193,9 +6190,9 @@ impl Vm {
                 let result = match (&left, &right) {
                     (Value::BigInt(a), Value::BigInt(b)) => {
                         // Exponent must be a non-negative integer that fits a u32.
-                        match num_traits::ToPrimitive::to_u32(b) {
-                            Some(e) => Value::BigInt(a.pow(e)),
-                            None if num_traits::Signed::is_negative(b) => {
+                        match num_traits::ToPrimitive::to_u32(b.as_ref()) {
+                            Some(e) => Value::BigInt(Box::new(a.pow(e))),
+                            None if num_traits::Signed::is_negative(b.as_ref()) => {
                                 return Err(ZapcodeError::RangeError(
                                     "Exponent must be non-negative".to_string(),
                                 ))
@@ -6234,7 +6231,7 @@ impl Vm {
                         Some(r) => Value::Int(r),
                         None => Value::Float(-(n as f64)),
                     },
-                    Value::BigInt(n) => Value::BigInt(-n),
+                    Value::BigInt(n) => Value::BigInt(Box::new(-*n)),
                     _ => Value::Float(-val.to_number_heap(&self.heap)),
                 };
                 self.push(result)?;
@@ -6426,20 +6423,13 @@ impl Vm {
                 // chained access on the produced value.
                 self.last_global_name = None;
                 match result {
-                    Value::BuiltinMethod {
-                        object_name,
-                        method_name,
-                        ..
-                    } => {
+                    Value::BuiltinMethod(mut m) => {
                         // Bind the receiver + write-back place onto the method so
                         // argument evaluation can't clobber it.
                         self.last_receiver_source = None;
-                        self.push(Value::BuiltinMethod {
-                            object_name,
-                            method_name,
-                            recv: Some(Box::new(obj)),
-                            place: obj_place,
-                        })?;
+                        m.recv = Some(Box::new(obj));
+                        m.place = obj_place;
+                        self.push(Value::BuiltinMethod(m))?;
                     }
                     Value::Function(_) => {
                         // User method: keep the existing `this`-binding mechanism.
@@ -6570,24 +6560,16 @@ impl Vm {
                     _ => Value::Undefined,
                 };
                 match result {
-                    Value::BuiltinMethod {
-                        object_name,
-                        method_name,
-                        ..
-                    } => {
-                        let place = match (obj_place, seg) {
+                    Value::BuiltinMethod(mut m) => {
+                        m.place = match (obj_place, seg) {
                             (Some(mut p), Some(s)) => {
                                 p.path.push(s);
                                 Some(p)
                             }
                             _ => None,
                         };
-                        self.push(Value::BuiltinMethod {
-                            object_name,
-                            method_name,
-                            recv: Some(Box::new(obj)),
-                            place,
-                        })?;
+                        m.recv = Some(Box::new(obj));
+                        self.push(Value::BuiltinMethod(m))?;
                     }
                     other => {
                         self.last_place = match (obj_place, seg) {
@@ -6991,7 +6973,7 @@ impl Vm {
             // Functions
             Instruction::CreateClosure(func_idx) => {
                 let closure = self.create_closure(func_idx);
-                self.push(Value::Function(closure))?;
+                self.push(Value::Function(Box::new(closure)))?;
             }
             Instruction::Call(arg_count) => {
                 let mut args = Vec::with_capacity(arg_count);
@@ -7013,7 +6995,7 @@ impl Vm {
                             // for the whole body's lifetime.
                             let this_value = self.last_receiver.take();
                             let gen_obj = self.make_generator_object(&closure, &args, this_value);
-                            self.push(Value::Generator(gen_obj))?;
+                            self.push(Value::Generator(Box::new(gen_obj)))?;
                             self.last_receiver = None;
                             self.last_receiver_source = None;
                         } else {
@@ -7021,12 +7003,13 @@ impl Vm {
                             self.push_call_frame(&closure, &args, this_value)?;
                         }
                     }
-                    Value::BuiltinMethod {
-                        object_name,
-                        method_name,
-                        recv,
-                        place,
-                    } => {
+                    Value::BuiltinMethod(m) => {
+                        let BuiltinMethodRef {
+                            object_name,
+                            method_name,
+                            recv,
+                            place,
+                        } = *m;
                         // Receiver is carried on the method (immune to arg eval);
                         // fall back to the legacy slot for any unbound handle.
                         let receiver = recv.map(|b| *b).or_else(|| self.last_receiver.take());
@@ -7119,7 +7102,7 @@ impl Vm {
                             }
                             "__bigint__" => {
                                 let n = match receiver.as_ref() {
-                                    Some(Value::BigInt(n)) => n.clone(),
+                                    Some(Value::BigInt(n)) => (**n).clone(),
                                     _ => num_bigint::BigInt::from(0),
                                 };
                                 builtins::call_bigint_method(&n, &method_name, &args)?
@@ -7177,7 +7160,7 @@ impl Vm {
                                                 // body frame runs like any call
                                                 // — tool calls inside it can
                                                 // suspend the VM durably.
-                                                self.start_generator_pull(g, arg, false)?;
+                                                self.start_generator_pull(*g, arg, false)?;
                                                 return Ok(None);
                                             } else if self.continuations.iter().any(|c| {
                                                 matches!(c, Continuation::GeneratorNext { gen_obj: g, .. }
@@ -7215,7 +7198,7 @@ impl Vm {
                                             if let Some(Value::Generator(g)) =
                                                 self.globals.remove(&gen_key)
                                             {
-                                                let result = self.finish_generator(g, val);
+                                                let result = self.finish_generator(*g, val);
                                                 Some(result)
                                             } else {
                                                 Some(self.make_iterator_result(val, true))
@@ -7239,12 +7222,13 @@ impl Vm {
                                         && !self.batch_all_internal(&promise)
                                     {
                                         if let Some(m) = self.microtasks.pop_front() {
-                                            let callee = Value::BuiltinMethod {
-                                                object_name: object_name.clone(),
-                                                method_name: method_name.clone(),
-                                                recv: Some(Box::new(promise.clone())),
-                                                place: place.clone(),
-                                            };
+                                            let callee =
+                                                Value::BuiltinMethod(Box::new(BuiltinMethodRef {
+                                                    object_name: object_name.clone(),
+                                                    method_name: method_name.clone(),
+                                                    recv: Some(Box::new(promise.clone())),
+                                                    place: place.clone(),
+                                                }));
                                             self.push(callee)?;
                                             for a in &args {
                                                 self.push(a.clone())?;
@@ -8071,7 +8055,7 @@ impl Vm {
                                 // Main-loop pull (Stage 1): the body frame
                                 // runs like any call — tool calls inside a
                                 // for…of-driven generator suspend durably.
-                                self.start_generator_pull(g, Value::Undefined, true)?;
+                                self.start_generator_pull(*g, Value::Undefined, true)?;
                             } else if self.continuations.iter().any(|c| {
                                 matches!(c, Continuation::GeneratorNext { gen_obj: g, .. }
                                     if g.id == gen_id)
@@ -8211,7 +8195,7 @@ impl Vm {
                 let val = self.pop()?;
                 match &val {
                     Value::Generator(gen_obj) => {
-                        let items = self.drain_generator(gen_obj.clone())?;
+                        let items = self.drain_generator((**gen_obj).clone())?;
                         let h = self.heap.alloc_array(items);
                         self.push(Value::Array(h))?;
                     }
@@ -9877,12 +9861,12 @@ impl Vm {
 /// Construct an unbound builtin-method handle. The receiver and write-back place
 /// are attached by the `GetProperty`/`GetIndex` handlers.
 fn builtin_method(object_name: &str, method_name: &str) -> Value {
-    Value::BuiltinMethod {
+    Value::BuiltinMethod(Box::new(BuiltinMethodRef {
         object_name: Arc::from(object_name),
         method_name: Arc::from(method_name),
         recv: None,
         place: None,
-    }
+    }))
 }
 
 // Re-export for the ParamPattern type used in function calls
