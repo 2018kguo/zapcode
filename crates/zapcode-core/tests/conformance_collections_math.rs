@@ -282,3 +282,33 @@ fn math_constants() {
     assert_eq!(run_str("Math.PI > 3.14 && Math.PI < 3.15"), "true");
     assert_eq!(run_str("Math.E > 2.71 && Math.E < 2.72"), "true");
 }
+
+// ----------------------------------------------------------------------------
+// ES2025 Set methods and Intl.NumberFormat (expected values are Node's)
+// ----------------------------------------------------------------------------
+
+#[test]
+fn set_algebra_methods() {
+    assert_eq!(run_str("[...new Set([1,2]).union(new Set([2,3]))].join()"), "1,2,3");
+    assert_eq!(run_str("[...new Set([1,2,3]).intersection(new Set([2,3,4]))].join()"), "2,3");
+    assert_eq!(run_str("[...new Set([1,2,3]).difference(new Set([2]))].join()"), "1,3");
+    assert_eq!(run_str("[...new Set([1,2]).symmetricDifference(new Set([2,3]))].join()"), "1,3");
+    assert_eq!(
+        run_str("[new Set([1]).isSubsetOf(new Set([1,2])), new Set([1,2]).isSupersetOf(new Set([2])), new Set([1]).isDisjointFrom(new Set([1]))].join()"),
+        "true,true,false"
+    );
+}
+
+#[test]
+fn number_format_options() {
+    assert_eq!(run_str("(1234.5).toLocaleString('en-US', {style: 'currency', currency: 'USD'})"), "$1,234.50");
+    assert_eq!(run_str("(-1234.5).toLocaleString('en-US', {style: 'currency', currency: 'EUR'})"), "-€1,234.50");
+    assert_eq!(run_str("(1234.5).toLocaleString('en-US', {style: 'currency', currency: 'JPY'})"), "¥1,235");
+    assert_eq!(run_str("(0.25678).toLocaleString('en-US', {style: 'percent', maximumFractionDigits: 1})"), "25.7%");
+    assert_eq!(run_str("(1234.5).toLocaleString('en-US', {minimumFractionDigits: 2})"), "1,234.50");
+    assert_eq!(run_str("(1234567.891).toLocaleString('en-US', {useGrouping: false})"), "1234567.891");
+    assert_eq!(
+        run_str("const f = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'}); [1, 2.5, 1e6].map(f.format).join(' | ')"),
+        "$1.00 | $2.50 | $1,000,000.00"
+    );
+}

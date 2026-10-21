@@ -54,6 +54,8 @@ const INTERNAL_MARKER_KEYS: &[&str] = &[
     "__prototype__",
     "__super__",
     "__builtin_constructor__",
+    // `Intl.NumberFormat#format` options.
+    "__nf_opts__",
     // Promise-executor capability functions (`new Promise((resolve, reject))`).
     "__promise_capability__",
     "__capability_reject__",
@@ -194,6 +196,11 @@ pub fn register_globals(globals: &mut HashMap<String, Value>, heap: &mut Heap) {
         Value::Float(1.0 / std::f64::consts::SQRT_2),
     );
     globals.insert("Math".to_string(), Value::Object(heap.alloc_object(math)));
+
+    // `Intl` namespace: only `NumberFormat` (en-US output, see NumberFormatOpts).
+    let mut intl = IndexMap::new();
+    intl.insert(Arc::from("NumberFormat"), builtin_constructor("Intl.NumberFormat", heap));
+    globals.insert("Intl".to_string(), Value::Object(heap.alloc_object(intl)));
 }
 
 /// A `{ __global_fn__: target }` marker object (a callable static), heap-allocated.
@@ -444,6 +451,111 @@ fn js_to_locale_string(n: f64) -> String {
         out.push_str(frac);
     }
     out
+}
+
+/// The `Intl.NumberFormat` options Zapcode honors. Output is always en-US
+/// style (no ICU data in the sandbox); the locale argument is ignored.
+pub(crate) struct NumberFormatOpts {
+    percent: bool,
+    currency: Option<String>,
+    min_frac: usize,
+    max_frac: usize,
+    grouping: bool,
+}
+
+impl NumberFormatOpts {
+    pub(crate) fn from_value(opts: Option<&Value>, heap: &Heap) -> Self {
+        let map = match opts {
+            Some(Value::Object(h)) => heap.object(*h),
+            _ => None,
+        };
+        let get = |k: &str| map.and_then(|m| m.get(k)).filter(|v| !matches!(v, Value::Undefined));
+        let style = get("style").map(|v| v.to_js_string(heap)).unwrap_or_default();
+        let currency = (style == "currency")
+            .then(|| get("currency").map(|v| v.to_js_string(heap).to_uppercase()))
+            .flatten();
+        let (def_min, def_max) = match (&currency, style.as_str()) {
+            (Some(c), _) if matches!(c.as_str(), "JPY" | "KRW" | "VND" | "CLP" | "ISK") => (0, 0),
+            (Some(_), _) => (2, 2),
+            (None, "percent") => (0, 0),
+            _ => (0, 3),
+        };
+        let digits = |k: &str| get(k).map(|v| (v.to_number() as usize).min(100));
+        let (min_frac, max_frac) = match (digits("minimumFractionDigits"), digits("maximumFractionDigits")) {
+            (Some(mn), Some(mx)) => (mn, mx.max(mn)),
+            (Some(mn), None) => (mn, def_max.max(mn)),
+            (None, Some(mx)) => (def_min.min(mx), mx),
+            (None, None) => (def_min, def_max),
+        };
+        let grouping = !matches!(get("useGrouping"), Some(Value::Bool(false)));
+        Self { percent: style == "percent", currency, min_frac, max_frac, grouping }
+    }
+
+    pub(crate) fn format(&self, n: f64) -> String {
+        if n.is_nan() {
+            return "NaN".to_string();
+        }
+        let n = if self.percent { n * 100.0 } else { n };
+        let mut body = if n.is_infinite() {
+            "∞".to_string()
+        } else {
+            // js_to_fixed switches to exponent notation at 1e21, as toFixed does.
+            let fixed = if n.abs() >= 1e21 {
+                format!("{:.*}", self.max_frac, n.abs())
+            } else {
+                js_to_fixed(n.abs(), self.max_frac)
+            };
+            let (int_part, frac) = fixed.split_once('.').unwrap_or((fixed.as_str(), ""));
+            let keep = frac.trim_end_matches('0').len().max(self.min_frac).min(frac.len());
+            let mut out = String::new();
+            let len = int_part.len();
+            for (i, c) in int_part.chars().enumerate() {
+                if self.grouping && i > 0 && (len - i) % 3 == 0 {
+                    out.push(',');
+                }
+                out.push(c);
+            }
+            if keep > 0 {
+                out.push('.');
+                out.push_str(&frac[..keep]);
+            }
+            out
+        };
+        if let Some(code) = &self.currency {
+            let symbol = match code.as_str() {
+                "USD" => "$",
+                "EUR" => "€",
+                "GBP" => "£",
+                "JPY" => "¥",
+                "INR" => "₹",
+                "CNY" => "CN¥",
+                "CAD" => "CA$",
+                "AUD" => "A$",
+                "KRW" => "₩",
+                _ => "",
+            };
+            body = if symbol.is_empty() { format!("{code}\u{a0}{body}") } else { format!("{symbol}{body}") };
+        }
+        if self.percent {
+            body.push('%');
+        }
+        if n.is_sign_negative() {
+            body.insert(0, '-');
+        }
+        body
+    }
+}
+
+/// `new Intl.NumberFormat(locale, options)`: an object whose `format` is a
+/// callable marker carrying the options (see the VM's `__nf_format__` call).
+pub(crate) fn make_number_format(options: Option<&Value>, heap: &mut Heap) -> Value {
+    let mut format = IndexMap::new();
+    format.insert(Arc::from("__global_fn__"), Value::String(JsString::from("__nf_format__")));
+    format.insert(Arc::from("__nf_opts__"), options.cloned().unwrap_or(Value::Undefined));
+    let format = Value::Object(heap.alloc_object(format));
+    let mut nf = IndexMap::new();
+    nf.insert(Arc::from("format"), format);
+    Value::Object(heap.alloc_object(nf))
 }
 
 /// Methods on number primitives: `(3.14159).toFixed(2)`, `(255).toString(16)`, …

@@ -708,6 +708,7 @@ impl Vm {
     /// Names of all builtin globals registered by `register_globals`.
     pub(crate) const BUILTIN_GLOBAL_NAMES: &'static [&'static str] = &[
         "console",
+        "Intl",
         "JSON",
         "Object",
         "Array",
@@ -2921,6 +2922,14 @@ impl Vm {
         err.with_location_suffix(&suffix)
     }
 
+    /// `Intl.NumberFormat#format(n)`: the options ride on the format marker `h`.
+    fn number_format_call(&self, h: Handle, args: &[Value]) -> Value {
+        let opts = self.heap.object(h).and_then(|m| m.get("__nf_opts__")).cloned();
+        let n = args.first().map(|v| v.to_number_heap(&self.heap)).unwrap_or(f64::NAN);
+        let s = builtins::NumberFormatOpts::from_value(opts.as_ref(), &self.heap).format(n);
+        Value::String(JsString::from(s.as_str()))
+    }
+
     /// JS `Function.prototype.length`: the count of leading parameters that have
     /// neither a default value nor are a rest element (counting stops at the
     /// first such parameter).
@@ -3972,6 +3981,9 @@ impl Vm {
                     _ => None,
                 });
             if let Some(kind) = kind {
+                if kind == "__nf_format__" {
+                    return Ok(self.number_format_call(*h, &args));
+                }
                 if let Some(result) = self.call_scheduler_global(&kind, &args) {
                     return result;
                 }
@@ -7082,7 +7094,12 @@ impl Vm {
                                     .as_ref()
                                     .map(|v| v.to_number_heap(&self.heap))
                                     .unwrap_or(f64::NAN);
-                                builtins::call_number_method(n, &method_name, &args)?
+                                if method_name.as_ref() == "toLocaleString" && args.len() >= 2 {
+                                    let s = builtins::NumberFormatOpts::from_value(args.get(1), &self.heap).format(n);
+                                    Some(Value::String(JsString::from(s.as_str())))
+                                } else {
+                                                                    builtins::call_number_method(n, &method_name, &args)?
+                                }
                             }
                             "__bigint__" => {
                                 let n = match receiver.as_ref() {
@@ -7666,6 +7683,11 @@ impl Vm {
                             Some(Value::String(s)) => Arc::<str>::from(s.as_str()),
                             _ => Arc::from(""),
                         };
+                        if kind.as_ref() == "__nf_format__" {
+                            let s = self.number_format_call(h, &args);
+                            self.push(s)?;
+                            return Ok(None);
+                        }
                         // setTimeout/clearTimeout/queueMicrotask mutate VM
                         // scheduling state — dispatch here, not in builtins.
                         if let Some(result) = self.call_scheduler_global(kind.as_ref(), &args) {
@@ -8810,6 +8832,11 @@ impl Vm {
                                 let entries = build_map_entries(&arg, &mut self.heap);
                                 let m = make_map_object(entries, &mut self.heap);
                                 self.push(m)?;
+                                return Ok(None);
+                            }
+                            "Intl.NumberFormat" => {
+                                let nf = builtins::make_number_format(args.get(1), &mut self.heap);
+                                self.push(nf)?;
                                 return Ok(None);
                             }
                             "WeakSet" => {
@@ -10168,6 +10195,8 @@ fn is_set_method(name: &str) -> bool {
     matches!(
         name,
         "add" | "has" | "delete" | "clear" | "values" | "keys" | "entries" | "forEach"
+            | "union" | "intersection" | "difference" | "symmetricDifference"
+            | "isSubsetOf" | "isSupersetOf" | "isDisjointFrom"
     )
 }
 
@@ -10252,6 +10281,25 @@ fn execute_set_method(
                 .map(|v| Value::Array(heap.alloc_array(vec![v.clone(), v])))
                 .collect();
             Some(builtins::make_array_iterator(pairs, heap))
+        }
+        // ES2025 set algebra; `other` is any Set.
+        "union" | "intersection" | "difference" | "symmetricDifference" | "isSubsetOf"
+        | "isSupersetOf" | "isDisjointFrom" => {
+            let other = set_items(&arg, heap);
+            let in_other = |v: &Value| other.iter().any(|o| same_value_zero(o, v));
+            let in_self = |v: &Value| items.iter().any(|i| same_value_zero(i, v));
+            Some(match method {
+                "union" => make_set_object(items.iter().chain(&other).cloned().collect(), heap),
+                "intersection" => make_set_object(items.iter().filter(|v| in_other(v)).cloned().collect(), heap),
+                "difference" => make_set_object(items.iter().filter(|v| !in_other(v)).cloned().collect(), heap),
+                "symmetricDifference" => make_set_object(
+                    items.iter().filter(|v| !in_other(v)).chain(other.iter().filter(|v| !in_self(v))).cloned().collect(),
+                    heap,
+                ),
+                "isSubsetOf" => Value::Bool(items.iter().all(|v| in_other(v))),
+                "isSupersetOf" => Value::Bool(other.iter().all(|v| in_self(v))),
+                _ => Value::Bool(!items.iter().any(|v| in_other(v))),
+            })
         }
         _ => None,
     }
