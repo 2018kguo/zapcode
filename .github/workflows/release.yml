@@ -137,7 +137,14 @@ jobs:
       # other publish failure fails the job.
       - name: Publish
         if: ${{ !inputs.dry_run }}
+        env:
+          # Only for bootstrapping a package's first publish: npm trust can't
+          # be configured until the package exists. Without it, OIDC is used.
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+          fi
           publish() {
             local name version
             name=$(node -p "require('./$1/package.json').name")
