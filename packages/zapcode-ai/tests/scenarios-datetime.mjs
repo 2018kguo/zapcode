@@ -1,5 +1,5 @@
 // EXPLORATORY stress-pass catalog (not part of the green test:e2e gate; run via `npm run test:scenarios`).
-// Checks named BUG/MISSING document gaps found during the realistic-scenario pass; see ../../KNOWN_GAPS.md.
+// Checks named BUG/MISSING document gaps found during the realistic-scenario pass; see ../../docs/history/stress-pass-gaps.md.
 // Some were fixed after this file was written, so those checks now intentionally show as failing-to-flag-fixed.
 /**
  * Date/time, scheduling, and numeric stress tests for the Zapcode sandbox.

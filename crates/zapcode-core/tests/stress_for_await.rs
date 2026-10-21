@@ -2,7 +2,7 @@
 //! binding. Covers arrays of promises, plain values, mixed, rejection, and a
 //! suspend/resume across an external call inside the loop body. Also asserts
 //! that an `async function*` declaration still parses (its for-await
-//! *consumption* is documented as a gap in STRESS-PASS-BUGS.md).
+//! *consumption* is documented as a gap in docs/history/STRESS-PASS-BUGS.md).
 
 use zapcode_core::vm::{eval_ts, VmState};
 use zapcode_core::{ResourceLimits, Value, ZapcodeRun};

@@ -21,7 +21,7 @@
 //!
 //! Cyclic structures are intentionally out of scope (the security workflow owns
 //! DoS/cycle behavior). Documented divergences this suite deliberately works
-//! around (verified against the live interpreter, see STRESS-PASS-BUGS.md and
+//! around (verified against the live interpreter, see docs/history/STRESS-PASS-BUGS.md and
 //! probing notes):
 //!   * `WeakMap` is not a constructor here, so weak-keyed identity is not tested.
 //!   * `Object.freeze` does not enforce immutability (writes silently succeed),

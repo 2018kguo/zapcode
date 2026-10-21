@@ -16,7 +16,7 @@ There are two test tiers, run with two toolchains:
 
 > **Correctness policy.** Every assertion targets *real Node / real-JS* behavior.
 > Where the interpreter has a **known, documented divergence** (see
-> [`STRESS-PASS-BUGS.md`](./STRESS-PASS-BUGS.md)), the test asserts zapcode's
+> [`docs/history/STRESS-PASS-BUGS.md`](./docs/history/STRESS-PASS-BUGS.md)), the test asserts zapcode's
 > **actual** behavior with an inline comment naming the divergence and the JS
 > answer — never a value the interpreter does not produce. The suite is green by
 > construction.
@@ -220,7 +220,7 @@ Both must be fully green. As of this writing the gate is:
 1. **Verify the expected value against real Node first** (`node -e '…'`). The
    suite asserts real-JS behavior.
 2. If the case hits a **documented divergence**
-   ([`STRESS-PASS-BUGS.md`](./STRESS-PASS-BUGS.md) — UTF-16 vs code-point string
+   ([`docs/history/STRESS-PASS-BUGS.md`](./docs/history/STRESS-PASS-BUGS.md) — UTF-16 vs code-point string
    indexing, `Symbol.toPrimitive`, the match-result brand, async-generator
    mid-host-call suspension, a deferred-promise nuance), assert zapcode's
    **actual** behavior with an inline comment that names the divergence and the JS

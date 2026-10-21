@@ -3819,7 +3819,7 @@ impl Vm {
     /// Symbol.toPrimitive is not dispatched: this crate's Symbol support is a
     /// stub (no well-known symbols, object property keys are strings), so a
     /// `[Symbol.toPrimitive]` computed key can't be reliably matched. See
-    /// STRESS-PASS-BUGS.md.
+    /// docs/history/STRESS-PASS-BUGS.md.
     /// Heap-aware `===`. Identical to `Value::strict_eq` except that two distinct
     /// objects that are both registered symbols (`Symbol.for`) compare equal when
     /// they share a registry key — so `Symbol.for('x') === Symbol.for('x')`.

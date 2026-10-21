@@ -143,7 +143,7 @@ hash being unforgeable:
 
 ## 5. Residual risk (honest)
 
-- **Correctness divergences from real JS, not security holes** (tracked in `STRESS-PASS-BUGS.md`):
+- **Correctness divergences from real JS, not security holes** (tracked in `docs/history/STRESS-PASS-BUGS.md`):
   strings are indexed by Unicode code point not UTF-16 code unit (astral chars diverge);
   `[Symbol.toPrimitive]` is not dispatched (the common `valueOf`/`toString` path is); non-global
   regex match results are array-like objects rather than true `Array`s; `Object.freeze` is a

@@ -1,0 +1,12 @@
+{
+  "name": "zapcode-showcase",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "demo": "node demo.mjs"
+  },
+  "dependencies": {
+    "@2018kguo/zapcode": "file:../../../crates/zapcode-js",
+    "@2018kguo/zapcode-ai": "file:../../../packages/zapcode-ai"
+  }
+}

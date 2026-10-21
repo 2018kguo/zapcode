@@ -5,7 +5,7 @@
 //! a documented residual, in which case it asserts zapcode's ACTUAL behavior with an
 //! explicit `DIVERGENCE` comment so the suite stays green and the gap stays visible.
 //!
-//! Documented residuals exercised here (see STRESS-PASS-BUGS.md):
+//! Documented residuals exercised here (see docs/history/STRESS-PASS-BUGS.md):
 //!   * Strings are now UTF-16-indexed (length/charAt/charCodeAt/slice/indexOf/
 //!     split('') operate on code units; an astral char is two units and ops can
 //!     produce lone surrogates that re-pair on concatenation — see

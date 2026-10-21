@@ -8,7 +8,7 @@
 //! scalar expression) so `to_js_string` output is byte-comparable to Node.
 //!
 //! Documented divergences from real JS that this suite deliberately works
-//! around (per STRESS-PASS-BUGS.md and verified against the live interpreter):
+//! around (per docs/history/STRESS-PASS-BUGS.md and verified against the live interpreter):
 //!   * `Array.prototype.lastIndexOf(target, fromIndex)` ignores `fromIndex`
 //!     (always returns the absolute-last match). Pinned below WITH a comment;
 //!     fromIndex-respecting cases are not asserted to the real-JS answer.

@@ -2223,7 +2223,7 @@ pub fn translate_replacement(repl: &str, group_count: usize) -> String {
 /// and `groups` (object of named captures, or `undefined` if the pattern has
 /// none). `m[0]`, `m[1]`, `m.index`, `m.input`, `m.groups.name`, and `m.length`
 /// all resolve through normal object key access. `Array.isArray` is therefore
-/// `false` for this value — an accepted trade-off (see STRESS-PASS-BUGS.md).
+/// `false` for this value — an accepted trade-off (see docs/history/STRESS-PASS-BUGS.md).
 fn alloc_match_result(
     re: &regex::Regex,
     caps: &regex::Captures,

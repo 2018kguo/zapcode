@@ -12,7 +12,7 @@
 //! Every asserted value was verified against real Node v24. Numbers stay in the
 //! non-exponential range so stringification is byte-identical.
 //!
-//! DOCUMENTED RESIDUAL DIVERGENCES (see STRESS-PASS-BUGS.md). Zapcode does *not*:
+//! DOCUMENTED RESIDUAL DIVERGENCES (see docs/history/STRESS-PASS-BUGS.md). Zapcode does *not*:
 //!   * apply ToPrimitive when an Array/Object is an operand of `==`/`!=`/relational
 //!     (`<` `>` `<=` `>=`). So `[1] == 1` is `false` here (Node: `true`) and
 //!     `[2] < [10]` is `true` here (Node: `false`, via "2" < "10"). The cases below
@@ -591,7 +591,7 @@ fn eq_distinct_object_identities() {
 fn eq_array_vs_primitive_documented_residual() {
     // RESIDUAL: zapcode does NOT ToPrimitive an array operand of `==`, so these are
     // `false` here even though Node returns `true` (via the array's string value).
-    // Asserted at zapcode's ACTUAL behavior; see STRESS-PASS-BUGS.md.
+    // Asserted at zapcode's ACTUAL behavior; see docs/history/STRESS-PASS-BUGS.md.
     assert_eq!(b("[] == false"), "false"); // Node: true
     assert_eq!(b("[] == 0"), "false"); // Node: true
     assert_eq!(b("[] == ''"), "false"); // Node: true
@@ -695,7 +695,7 @@ fn relational_array_operand_documented_residual() {
     // of relational operators the way Node does. String-element arrays never compare
     // as less-than in either direction (both `false`), and the multi-digit numeric
     // case diverges too. Asserted at zapcode's ACTUAL behavior; see
-    // STRESS-PASS-BUGS.md.
+    // docs/history/STRESS-PASS-BUGS.md.
     assert_eq!(b("['a'] < ['b']"), "false"); // Node: true ("a" < "b")
     assert_eq!(b("['b'] < ['a']"), "false"); // Node: false (this direction matches)
     assert_eq!(b("['a'] > ['b']"), "false"); // Node: false

@@ -21,7 +21,7 @@
 //!     legal inside an async function, exactly like real JS).
 //!
 //! ── Documented divergences from real JS (NOT asserted to the real answer) ────
-//!   (verified against the live interpreter; see STRESS-PASS-BUGS.md for context)
+//!   (verified against the live interpreter; see docs/history/STRESS-PASS-BUGS.md for context)
 //!   * (FIXED by microtask Stage 3 — kept for history) the await-rejection
 //!     boundary used to wrap reasons in a fresh `Error`; the ORIGINAL reason
 //!     (identity, type, message) now rethrows at `await`, matching Node, and

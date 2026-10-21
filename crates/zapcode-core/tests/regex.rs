@@ -45,7 +45,7 @@ fn match_with_metacharacters_and_flags() {
     // Capture groups (first match) are now exposed on an array-like object
     // (G4): m[0] is the whole match, m[1]/m[2] are the groups, m.length is the
     // group count. (The non-global result is no longer a plain Array so it can
-    // also carry .index/.input/.groups — see STRESS-PASS-BUGS.md.)
+    // also carry .index/.input/.groups — see docs/history/STRESS-PASS-BUGS.md.)
     assert_eq!(
         run_str(r#"const m = "a1".match(/([a-z])(\d)/); `${m[0]},${m[1]},${m[2]}`"#),
         "a1,a,1"

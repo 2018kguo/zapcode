@@ -2,7 +2,7 @@
 //! carrying `.index`, `.input`, named-capture `.groups`, indexed groups, and
 //! `.length` (G4). Non-global match results are array-like heap objects (a Vec-
 //! backed array can't hold extra named props), so `Array.isArray(m)` is false —
-//! an accepted trade-off documented in STRESS-PASS-BUGS.md.
+//! an accepted trade-off documented in docs/history/STRESS-PASS-BUGS.md.
 
 use zapcode_core::vm::VmState;
 use zapcode_core::{ResourceLimits, ZapcodeRun};
