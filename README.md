@@ -252,7 +252,7 @@ cd examples/typescript/showcase && node demo.mjs agent   # the demos above (re-r
 
 ## Credits
 
-Zapcode was created by [Alexandre Mai](https://github.com/TheUncharted) and inspired by
+Zapcode was created by [TheUncharted](https://github.com/TheUncharted) and inspired by
 Pydantic's [Monty](https://github.com/pydantic/monty). This fork keeps the full upstream history.
 Fixes that apply upstream are welcome there too.
 
