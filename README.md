@@ -47,7 +47,7 @@ what's needed to run it in production agent loops:
 | **Built-ins** | Core subset; regex parsed but not executed | Linear-time **regex engine**, Map/Set/WeakMap/WeakSet with iterators, Symbol registry, getters/setters, `defineProperty`, private `#fields`, generators + `yield*`, tagged templates, ES2023 array methods, `Symbol.toPrimitive` |
 | **Promises** | `.then`, `Promise.all` | `new Promise(executor)`, `race`/`any`/`allSettled` with real host timing, `AggregateError`, unhandled-rejection tracking, deterministic `setTimeout` |
 | **Agent API** | `zapcode()` adapters | Plus `execute`, durable `createSession`/`loadSession`, `prepare` (compile once), `typecheck`, `dryRun`, `forkSnapshot`, structured run reports, tool errors as real `Error`s, stdout/stderr split |
-| **Verification** | Unit tests + security suite | 2,350+ Rust tests, a **differential harness** checking 340 programs against Node, a differential fuzzer, and 92 adversarial security tests |
+| **Verification** | Unit tests + security suite | 2,360+ Rust tests, a **differential harness** checking 352 programs against Node, a differential fuzzer, and 92 adversarial security tests |
 | **Hardening** | | Guest-reachable host crashes fixed, bounded recursion everywhere, forged-snapshot rejection, live heap ceiling with in-run compaction |
 
 ## Install
@@ -206,14 +206,16 @@ Everything an agent typically writes: `let`/`const`/`var`, functions, arrows, cl
 (fields, `#private`, accessors, `static`, `extends`/`super`), destructuring, spread/rest, optional
 chaining, `??`/`??=`, template and tagged literals, generators, `async`/`await`, `for…of`/`for…in`,
 labels, `switch`, `try/catch/finally`, regex (named groups, sticky, `matchAll`, `replace` callbacks),
-`JSON`, `Math`, `Date`, `Map`/`Set`, `BigInt`, `Symbol`, `structuredClone`, URI and base64 helpers.
+`JSON`, `Math`, `Date` (with `toLocale*String`), `Map`/`Set` (including the ES2025 set methods), `BigInt`,
+`Symbol`, `Intl.NumberFormat`, `structuredClone`, URI and base64 helpers. `console.log` prints like Node.
 TypeScript types are stripped at parse time by [oxc](https://oxc.rs).
 
 **Blocked on purpose:** `eval`, `Function()`, `import`/`require`, `process`, `globalThis`, `Proxy`,
 `Reflect`, timing APIs.
 
 **Known gaps:** regex lookbehind and backreferences (the linear-time engine rejects them with a clear
-error), `Intl`, array holes, temporal dead zone checks. Details are in [`KNOWN_GAPS.md`](KNOWN_GAPS.md).
+error), locales other than en-US, temporal dead zone checks, array holes. The full list is in
+[`KNOWN_GAPS.md`](KNOWN_GAPS.md).
 
 ## Security
 

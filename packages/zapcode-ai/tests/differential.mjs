@@ -207,6 +207,22 @@ const corpus = [
   `const calls = []; function f({a: {b = (calls.push('hit'), undefined)} = {}} = {}) { return b; } f(); return calls.length;`,
   `const calls = []; function f({a: {b = (calls.push('hit'), undefined)} = {}}) { return b; } f({a: {}}); return calls.length;`,
   `function f({a: {b} = {b: 1}, c = 2, d: {e = 3} = {}}) { return [b, c, e].join(','); } return f({});`,
+
+  // ── jumps out of for…of / switch, scoping, ReferenceError ───────────────
+  `const out = []; for (const x of [1,2,3]) { switch (x) { case 2: continue; } out.push(x) } return out.join();`,
+  `const out = []; outer: for (const a of [1,2]) { for (const b of [1,2,3]) { if (b === 2) continue outer; out.push(a + '' + b) } } return out.join();`,
+  `let n = 0; for (const r of [1,2,3]) { outer: for (const a of [1,2]) { for (const b of [1,2]) { if (b === 2) break outer; n++ } } } return n;`,
+  `try { return nope; } catch (e) { return e.name + ': ' + e.message; }`,
+  `const r = typeof x; var x = 1; return r + ',' + typeof undeclaredName;`,
+  `const g = async function*() { yield 1; yield 2 }; const out = []; for await (const x of g()) out.push(x); return out.join();`,
+
+  // ── Set algebra, Intl.NumberFormat, dates (UTC) ───────────────────────
+  `return [...new Set([1,2,3]).symmetricDifference(new Set([2,4]))].join() + '|' + new Set([1]).isSubsetOf(new Set([1,2]));`,
+  `return [1234.5, -0.5, 1e6].map(n => n.toLocaleString('en-US', {style: 'currency', currency: 'USD'})).join(' ');`,
+  `const f = new Intl.NumberFormat('en-US', {style: 'percent', maximumFractionDigits: 1}); return [0.256, 1, 0.0005].map(f.format).join(' ');`,
+  `return (1234.5678).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});`,
+  `const d = new Date(Date.UTC(2026, 0, 5, 15, 4, 5)); return [d.toUTCString(), d.toLocaleDateString('en-US', {timeZone: 'UTC'}), d.toLocaleString('en-US', {timeZone: 'UTC'})].join(' | ');`,
+  `const d = new Date(Date.UTC(2026, 6, 4)); return d.toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC'});`,
 ];
 
 
