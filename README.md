@@ -187,19 +187,34 @@ Workflow recipes (retry/fallback, sagas with compensation, routing, approval gat
 ## Performance
 
 `cargo bench -p zapcode-core` measures parse → compile → execute with no caching. Both columns
-were measured on the same Apple-silicon laptop (median of 100 runs):
+were measured back to back on the same Apple-silicon laptop (median of 100 runs):
 
 | Benchmark | Upstream 1.5.3 | This fork |
 |---|---|---|
-| `1 + 2 * 3` (cold start) | 2.8 µs | 4.9 µs |
-| Function call | 5.2 µs | 7.6 µs |
-| `Promise.all` of 3 | 7.8 µs | 9.0 µs |
-| Loop, 100 iterations | 76.6 µs | **46.4 µs** |
-| `fib(10)`, 177 calls | 138.5 µs | **123.9 µs** |
+| `1 + 2 * 3` (cold start) | 1.8 µs | **1.5 µs** |
+| Object literal + reads | 3.5 µs | **3.0 µs** |
+| Loop, 100 iterations | 46.2 µs | **20.8 µs** |
+| `fib(10)`, 177 calls | 82.1 µs | **60.8 µs** |
+| Function call | **3.1 µs** | 3.8 µs |
+| `.then` chain of 3 | **7.1 µs** | 10.0 µs |
 
-The fork pays about 2 µs more per cold start for its fuller runtime (built-in globals, heap, microtask queue),
-and runs hot code faster. Across the demos above, snapshots range from 1.0 to 1.3 KB. `prepare()` skips
-parse and compile entirely for repeated runs.
+The fork is slower only where it does more work: promise reactions go through a real microtask queue.
+
+Common agent patterns stay linear as inputs grow. Each of these was O(n²) earlier in the fork;
+times are for n = 8,000:
+
+| Pattern | Before | After |
+|---|---|---|
+| `arr.sort((a, b) => a - b)` | 5.5 s | 34 ms |
+| `Map` set + get | 1.0 s | 22 ms |
+| `str[i]` over a string | 0.66 s | 11 ms |
+| `Set` add + has | 0.43 s | 13 ms |
+| `arr.push` in a loop | quadratic copy | linear |
+
+A `Value` is 32 bytes, VMs share the built-in globals copy-on-write, and object maps use FxHash.
+On an agent-shaped workload (records, filter/map/reduce, string formatting) the fork does 2.2× less
+work than before this pass and peaks at 60% less memory. Snapshots for the demos above are 1.0–1.3 KB,
+and `prepare()` skips parse and compile for repeated runs.
 
 ## Supported language
 

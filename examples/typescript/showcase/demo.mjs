@@ -140,7 +140,7 @@ const demos = {
       best = Math.min(best, since(t));
     }
     ok(
-      `cold start (parse → compile → run ${st("gray", "1 + 2 * 3")}): ${st(["bold", "yellow"], fmtUs(best))}`,
+      `cold start through the Node binding (parse → compile → run ${st("gray", "1 + 2 * 3")}): ${st(["bold", "yellow"], fmtUs(best))}`,
     );
   },
 
