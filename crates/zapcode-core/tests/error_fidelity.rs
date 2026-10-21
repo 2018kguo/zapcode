@@ -60,7 +60,7 @@ fn null_property_access_reports_line() {
 fn undefined_call_reports_line() {
     let e = run_err("const a = 5;\nnoSuchFn(a);");
     assert!(
-        e.starts_with("type error: undefined is not a function"),
+        e.starts_with("reference error: noSuchFn is not defined"),
         "first line changed: {e}"
     );
     assert!(e.contains("\n    at 2:1"), "wrong line: {e}");

@@ -790,17 +790,15 @@ fn runtime_error_message_branch_pattern() {
 }
 
 #[test]
-fn divergence_calling_unbound_identifier_is_typeerror() {
-    // DIVERGENCE: real Node throws a ReferenceError ("undefinedFn is not
-    // defined") when *calling* an unbound name; zapcode reads the name as
-    // `undefined` and then throws a TypeError ("undefined is not a function").
+fn calling_unbound_identifier_is_reference_error() {
+    // Matches Node: calling an unbound name throws a ReferenceError.
     assert_eq!(
         run_str("let n='none'; try { undefinedFn(); } catch(e){ n = e.name; } n"),
-        "TypeError"
+        "ReferenceError"
     );
     assert_eq!(
         run_str("let m='none'; try { undefinedFn(); } catch(e){ m = e.message; } m"),
-        "undefined is not a function"
+        "undefinedFn is not defined"
     );
     assert_eq!(
         run_str("let b='none'; try { undefinedFn(); } catch(e){ b = e instanceof Error; } b"),
@@ -809,12 +807,13 @@ fn divergence_calling_unbound_identifier_is_typeerror() {
 }
 
 #[test]
-fn divergence_reading_unbound_identifier_is_undefined() {
-    // DIVERGENCE: real Node throws a ReferenceError on reading an unbound name;
-    // zapcode yields `undefined` (and `typeof` of it is "undefined", which Node
-    // also gives because typeof is special-cased — that part matches).
+fn reading_unbound_identifier_is_reference_error() {
+    // Matches Node: reading an unbound name throws; `typeof` is special-cased.
     assert_eq!(run_str("typeof someUndefinedVar"), "undefined");
-    assert_eq!(run_str("let x = someUndefinedVar; typeof x"), "undefined");
+    assert_eq!(
+        run_str("let n='none'; try { someUndefinedVar } catch(e){ n = e.name + ': ' + e.message } n"),
+        "ReferenceError: someUndefinedVar is not defined"
+    );
 }
 
 // ============================================================================

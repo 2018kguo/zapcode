@@ -388,6 +388,9 @@ impl Compiler {
 
         // Second pass: compile body. Hoist top-level function declarations first
         // so forward references and mutual recursion resolve.
+        if !self.is_session_chunk() {
+            self.hoist_var_names(&program.body);
+        }
         self.hoist_function_decls(&program.body)?;
         // For the last statement, if it's an expression, keep the value on the stack
         let len = program.body.len();
@@ -670,6 +673,7 @@ impl Compiler {
             }
         }
 
+        func_compiler.hoist_var_names(&func.body);
         // Hoist this function body's own nested function declarations.
         func_compiler.hoist_function_decls(&func.body)?;
         for stmt in &func.body {
@@ -1472,6 +1476,53 @@ impl Compiler {
             self.emit(Instruction::Pop);
         }
         Ok(())
+    }
+
+    /// Hoist a function body's `var` names (from any nested block, but not from
+    /// nested functions) to function-scope slots, so a read before the
+    /// declaration sees `undefined` instead of falling through to a global.
+    fn hoist_var_names(&mut self, stmts: &[Statement]) {
+        for stmt in stmts {
+            match stmt {
+                Statement::VariableDecl { kind: VarKind::Var, declarations, .. } => {
+                    for d in declarations {
+                        if let AssignTarget::Ident(name) = &d.pattern {
+                            self.declare_local(name);
+                        }
+                    }
+                }
+                Statement::If { consequent, alternate, .. } => {
+                    self.hoist_var_names(consequent);
+                    if let Some(alt) = alternate {
+                        self.hoist_var_names(alt);
+                    }
+                }
+                Statement::For { init, body, .. } => {
+                    if let Some(init) = init {
+                        self.hoist_var_names(std::slice::from_ref(init));
+                    }
+                    self.hoist_var_names(body);
+                }
+                Statement::While { body, .. }
+                | Statement::DoWhile { body, .. }
+                | Statement::ForOf { body, .. }
+                | Statement::Block { body, .. } => self.hoist_var_names(body),
+                Statement::TryCatch { try_body, catch_body, finally_body, .. } => {
+                    self.hoist_var_names(try_body);
+                    self.hoist_var_names(catch_body);
+                    if let Some(f) = finally_body {
+                        self.hoist_var_names(f);
+                    }
+                }
+                Statement::Switch { cases, .. } => {
+                    for c in cases {
+                        self.hoist_var_names(&c.consequent);
+                    }
+                }
+                Statement::Labeled { body, .. } => self.hoist_var_names(std::slice::from_ref(body)),
+                _ => {}
+            }
+        }
     }
 
     /// Hoist top-level function declarations of a body: bind each before the
@@ -2697,7 +2748,12 @@ impl Compiler {
                 }
             }
             Expr::TypeOf(operand) => {
-                self.compile_expr(operand)?;
+                match operand.as_ref() {
+                    Expr::Ident(name) if name != "this" && self.resolve_local(name).is_none() => {
+                        self.emit(Instruction::LoadGlobalOrUndefined(Arc::from(name.as_str())));
+                    }
+                    _ => self.compile_expr(operand)?,
+                }
                 self.emit(Instruction::TypeOf);
             }
             Expr::Delete(target) => {

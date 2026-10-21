@@ -2695,7 +2695,7 @@ impl Vm {
         let (name, message) = match err {
             ZapcodeError::TypeError(s) => ("TypeError", s.clone()),
             ZapcodeError::RangeError(s) => ("RangeError", s.clone()),
-            ZapcodeError::ReferenceError(s) => ("ReferenceError", format!("{} is not defined", s)),
+            ZapcodeError::ReferenceError(s) => ("ReferenceError", s.clone()),
             ZapcodeError::UnknownExternalFunction(s) => {
                 ("ReferenceError", format!("{} is not defined", s))
             }
@@ -5936,7 +5936,8 @@ impl Vm {
                 let frame_index = self.frames.len() - 1;
                 self.write_local(frame_index, idx, val);
             }
-            Instruction::LoadGlobal(name) => {
+            Instruction::LoadGlobal(ref name) | Instruction::LoadGlobalOrUndefined(ref name) => {
+                let soft = matches!(instr, Instruction::LoadGlobalOrUndefined(_));
                 // A captured free variable resolves to its shared cell via the
                 // current frame's env overlay before falling back to true globals.
                 if let Some(&cell) = self.current_frame().env.get(name.as_ref()) {
@@ -5958,7 +5959,16 @@ impl Vm {
                     .globals
                     .get(name.as_ref())
                     .cloned()
-                    .unwrap_or(Value::Undefined);
+                    .map(Ok)
+                    .unwrap_or_else(|| {
+                        // An undeclared name throws, as in JS. Tool names stay
+                        // readable as `undefined` (they are only callable).
+                        if soft || self.external_functions.contains(name.as_ref() as &str) {
+                            Ok(Value::Undefined)
+                        } else {
+                            Err(ZapcodeError::ReferenceError(format!("{name} is not defined")))
+                        }
+                    })?;
                 self.last_global_name = Some(name.to_string());
                 // Only track receiver source for user-defined globals — builtins
                 // (console, Math, JSON, etc.) contain non-serializable BuiltinMethod

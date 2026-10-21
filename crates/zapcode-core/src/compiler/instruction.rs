@@ -267,6 +267,10 @@ pub enum Instruction {
 
     // Misc
     Nop,
+    /// `typeof name` on a name that isn't a local: like `LoadGlobal`, but an
+    /// undeclared name yields `undefined` instead of a `ReferenceError`.
+    /// (Appended last so existing variants keep their wire tags.)
+    LoadGlobalOrUndefined(Arc<str>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

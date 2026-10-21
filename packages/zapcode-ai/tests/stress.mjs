@@ -263,7 +263,7 @@ await test("loading a session blob as a plain snapshot is rejected", () => {
 await test("an infinite loop is bounded by a resource limit (doesn't hang)", async () => {
   // Either the time or allocation guard may trip first — both bound the runaway.
   await assert.rejects(
-    () => execute(`while (true) { acc = (acc || 0) + 1; }`, {}, { timeLimitMs: 100 }),
+    () => execute(`let acc = 0; while (true) { acc = acc + 1; }`, {}, { timeLimitMs: 100 }),
     /(time|allocation) limit/i
   );
 });

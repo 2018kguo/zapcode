@@ -163,12 +163,11 @@ await test("a missing required argument is rejected before execution", async () 
   );
 });
 
-await test("calling an unregistered tool name throws (unbound ident is undefined)", async () => {
-  // An unknown identifier reads as `undefined`, so invoking it is a TypeError
-  // ("undefined is not a function") rather than a named-tool diagnostic.
+await test("calling an unregistered tool name throws a ReferenceError", async () => {
+  // As in Node, an unbound identifier throws "<name> is not defined".
   await assert.rejects(
     () => execute(`await doesNotExist({})`, { real: tool(async () => 1) }),
-    /is not a function/
+    /doesNotExist is not defined/
   );
 });
 

@@ -631,3 +631,14 @@ fn closure_returned_from_loop_captures_via_factory() {
         "a:0,b:1,c:2"
     );
 }
+
+#[test]
+fn top_level_var_is_hoisted_and_undeclared_reads_throw() {
+    // Node: a top-level `var` read early is `undefined`; an undeclared name throws.
+    assert_eq!(run_str("let r = typeof x; var x = 1; r"), "undefined");
+    assert_eq!(run_str("let r = String(x); var x = 1; r"), "undefined");
+    assert_eq!(
+        run_str("let r; try { r = nope } catch (e) { r = e.name } r"),
+        "ReferenceError"
+    );
+}

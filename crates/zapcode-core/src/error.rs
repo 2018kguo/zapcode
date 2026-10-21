@@ -20,7 +20,7 @@ pub enum ZapcodeError {
     #[error("range error: {0}")]
     RangeError(String),
 
-    #[error("reference error: {0} is not defined")]
+    #[error("reference error: {0}")]
     ReferenceError(String),
 
     #[error("unknown external function: {0}")]
@@ -52,13 +52,13 @@ impl ZapcodeError {
     /// Append a source-location suffix (e.g. "\n    at 3:7\n    <code frame>")
     /// to the error's message. Only applies to variants whose payload is the
     /// *trailing* text of the rendered message, so the existing first line is
-    /// preserved exactly. Variants with no payload or a mid-message payload
-    /// (`ReferenceError` renders as "{0} is not defined") are returned unchanged.
+    /// preserved exactly. Variants with no payload or a mid-message payload are returned unchanged.
     pub(crate) fn with_location_suffix(self, suffix: &str) -> Self {
         use ZapcodeError::*;
         match self {
             RuntimeError(s) => RuntimeError(format!("{s}{suffix}")),
             TypeError(s) => TypeError(format!("{s}{suffix}")),
+            ReferenceError(s) => ReferenceError(format!("{s}{suffix}")),
             RangeError(s) => RangeError(format!("{s}{suffix}")),
             ExternalError(s) => ExternalError(format!("{s}{suffix}")),
             UnknownExternalFunction(s) => UnknownExternalFunction(format!("{s}{suffix}")),
