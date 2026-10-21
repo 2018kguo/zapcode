@@ -1,0 +1,11 @@
+{
+  "name": "zapcode-durable-agent-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node agent.mjs start A-17"
+  },
+  "dependencies": {
+    "@2018kguo/zapcode": "*"
+  }
+}

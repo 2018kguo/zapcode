@@ -28,7 +28,8 @@ Agents get more done when they write a short program, with loops, branches, retr
 Running that code is the hard part. Containers take hundreds of milliseconds to start and V8
 isolates are heavy, and neither can pause a running script at a tool call and hand you the state as bytes.
 
-Zapcode is a small bytecode VM that runs inside your process:
+Zapcode does for TypeScript what Pydantic's [Monty](https://github.com/pydantic/monty) does for Python:
+a small bytecode VM, written in Rust, that runs inside your process:
 
 - **Starts in microseconds.** No container, no isolate, no Node.js runtime inside the sandbox.
 - **Denies everything by default.** No filesystem, network, env, `eval` or `import`. The only way
@@ -105,6 +106,37 @@ const r = await execute(code, tools, { autoFix: true }); // errors come back as 
 With `autoFix: true`, a failed run returns a structured error instead of throwing, so you can hand it
 back to the model. [`examples/typescript/ai-agent`](examples/typescript/ai-agent) is a complete Claude
 loop on the low-level snapshot API.
+
+## Durable execution, end to end
+
+[`examples/typescript/durable-agent`](examples/typescript/durable-agent/agent.mjs) is a refund agent in
+about 100 lines. It runs until it needs a human, saves its state to a file and exits. A second
+process resumes it with the approval and gets killed mid-tool. A third process finishes the run
+without repeating any tool that already ran.
+
+<img src="assets/demos/durable-agent.gif" alt="An agent suspends for approval, crashes, and resumes in three separate processes" width="860">
+
+The host loop behind it is a write-ahead journal: save the suspension, run the tool, save the result,
+then resume.
+
+```ts
+let state = new Zapcode(program, { inputs: ["orderId"], externalFunctions }).start({ orderId });
+while (!state.completed) {
+  const journal = { snapshot: state.snapshot, call: { name: state.functionName, args: state.args } };
+  await db.save(runId, journal);                       // ~1.4 KB; survives restarts and deploys
+  if (journal.call.name === "requestApproval") return; // park the run; a human resumes it later
+
+  const result = await tools[journal.call.name](...journal.call.args);
+  await db.save(runId, { ...journal, result });        // a finished tool is replayed, never re-run
+  state = ZapcodeSnapshotHandle.load(journal.snapshot).resume(result);
+}
+```
+
+Any process can resume a run: `ZapcodeSnapshotHandle.load(saved.snapshot).resume(value)`, or
+`resumeErrorObject(message, name)` to throw into the guest instead. If the process dies while a tool
+is running, the run restarts from the last saved snapshot and only that call runs again. Tools with
+side effects should take an idempotency key. A `Promise.all` arrives as a single `suspended_many` step
+that you resume with `resumeMany(results)`; the example handles both kinds.
 
 ## Features
 
@@ -252,8 +284,9 @@ cd examples/typescript/showcase && node demo.mjs agent   # the demos above (re-r
 
 ## Credits
 
-Zapcode was created by [TheUncharted](https://github.com/TheUncharted) and inspired by
-Pydantic's [Monty](https://github.com/pydantic/monty). This fork keeps the full upstream history.
+Zapcode was created by [TheUncharted](https://github.com/TheUncharted). The design follows
+Pydantic's [Monty](https://github.com/pydantic/monty), a sandboxed Python interpreter in Rust for
+agent-written code with the same start, suspend and resume model. This fork keeps the full upstream history.
 Fixes that apply upstream are welcome there too.
 
 ## License
