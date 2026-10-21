@@ -2,6 +2,7 @@
 name = "zapcode-py"
 version = "1.6.2" # x-release-please-version
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Python bindings for the Zapcode TypeScript interpreter"

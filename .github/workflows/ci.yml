@@ -30,6 +30,14 @@ jobs:
         run: cargo fmt -- --check
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: JS lint and format (oxlint, oxfmt)
+        run: |
+          npm install --no-audit --no-fund
+          npm run lint
+          npm run fmt:check
 
   # ── Core tests (multi-OS) ──────────────────────────────────────────
   test:

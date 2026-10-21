@@ -2,6 +2,7 @@
 name = "zapcode-core"
 version = "1.6.2" # x-release-please-version
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "A minimal, secure TypeScript subset interpreter — parse, compile, execute, snapshot"
