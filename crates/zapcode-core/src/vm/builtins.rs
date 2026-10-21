@@ -2977,7 +2977,13 @@ fn call_array_method(
     // Snapshot the elements for read-only methods. Mutating methods
     // (push/pop/shift/unshift/splice/fill/reverse/copyWithin) edit the heap slot
     // in place via `handle` so the change is visible through every alias.
-    let arr = heap.array_vec(handle);
+    // The in-place mutators below never read the snapshot; skipping it keeps
+    // `push` in a loop O(n) instead of copying the array every call.
+    let arr = if matches!(method, "push" | "pop" | "shift" | "unshift") {
+        Vec::new()
+    } else {
+        heap.array_vec(handle)
+    };
     let arr = arr.as_slice();
     let result = match method {
         "length" => Value::Int(arr.len() as i64),

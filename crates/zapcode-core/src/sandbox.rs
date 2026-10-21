@@ -24,7 +24,9 @@ impl Default for ResourceLimits {
             memory_limit_bytes: 32 * 1024 * 1024, // 32MB
             time_limit_ms: 5000,                  // 5s
             max_stack_depth: 512,
-            max_allocations: 100_000,
+            // Cumulative heap allocations: a backstop. The live heap is bounded
+            // by memory_limit_bytes (with in-run compaction).
+            max_allocations: 10_000_000,
             max_snapshot_bytes: default_max_snapshot_bytes(),
         }
     }

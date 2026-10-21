@@ -21,6 +21,11 @@ use crate::value::{
 // ── In-run heap compaction tuning (see docs/in-run-memory-design.md) ──────
 /// Compaction is considered once per this many dispatched instructions.
 /// Power of two so the gate is a cheap mask.
+/// Hard cap on operand-stack values (32 MB at 32 bytes each).
+const MAX_OPERAND_STACK: usize = 1 << 20;
+/// Cap on pending timers and on queued microtasks: the queues live outside the
+/// heap, so the memory limit doesn't see them.
+const MAX_SCHEDULED: usize = 100_000;
 const GC_CHECK_INTERVAL: u32 = 1024;
 /// Don't scan heaps below this many slots — not worth the walk.
 const MIN_GC_SLOTS: usize = 4096;
@@ -1675,6 +1680,9 @@ impl Vm {
                 if let Err(e) = self.tracker.track_allocation(&self.limits) {
                     return Some(Err(e));
                 }
+                if self.timers.len() >= MAX_SCHEDULED {
+                    return Some(Err(ZapcodeError::AllocationLimitExceeded));
+                }
                 let callback = args.first().cloned().unwrap_or(Value::Undefined);
                 let delay = args.get(1).map(|v| v.to_number()).unwrap_or(0.0);
                 let delay = if delay.is_finite() && delay > 0.0 {
@@ -1703,6 +1711,9 @@ impl Vm {
                 // Charge the queued job and its hidden result promise.
                 if let Err(e) = self.tracker.track_allocation(&self.limits) {
                     return Some(Err(e));
+                }
+                if self.microtasks.len() >= MAX_SCHEDULED {
+                    return Some(Err(ZapcodeError::AllocationLimitExceeded));
                 }
                 let callback = args.first().cloned().unwrap_or(Value::Undefined);
                 let result_promise = builtins::make_pending_promise(&mut self.heap);
@@ -2681,7 +2692,14 @@ impl Vm {
     }
 
     fn push(&mut self, value: Value) -> Result<()> {
-        self.tracker.track_allocation(&self.limits)?;
+        // A stack push isn't a heap allocation (counting it turned
+        // `max_allocations` into a ~1 ms step budget); runaway loops are the
+        // time limit's job. Cap the operand stack itself so it stays bounded.
+        if self.stack.len() >= MAX_OPERAND_STACK {
+            return Err(ZapcodeError::MemoryLimitExceeded(format!(
+                "operand stack exceeded {MAX_OPERAND_STACK} values"
+            )));
+        }
         self.stack.push(value);
         Ok(())
     }
@@ -4782,6 +4800,50 @@ impl Vm {
     /// Execute an array callback method (map, filter, reduce, forEach, etc.)
     /// Returns `Ok(Some(value))` if the method completed synchronously, or
     /// `Ok(None)` if a continuation was started (async callback).
+    /// `Array.prototype.sort` ordering: a stable bottom-up merge sort, so a
+    /// guest comparator runs O(n log n) times (it was an insertion sort: O(n²)
+    /// guest calls). Without a comparator, elements order by their string form.
+    fn sort_values(&mut self, mut items: Vec<Value>, comparator: &Value) -> Result<Vec<Value>> {
+        if !matches!(comparator, Value::Function(_)) {
+            let heap = &self.heap;
+            items.sort_by_cached_key(|a| a.to_js_string(heap));
+            return Ok(items);
+        }
+        let n = items.len();
+        let mut buf = Vec::with_capacity(n);
+        let mut width = 1;
+        while width < n {
+            for lo in (0..n).step_by(2 * width) {
+                let mid = (lo + width).min(n);
+                let hi = (lo + 2 * width).min(n);
+                let (mut i, mut j) = (lo, mid);
+                while i < mid && j < hi {
+                    // Take from the right only when strictly greater (stable;
+                    // NaN compares as "keep order", like the old loop).
+                    let cmp = self
+                        .call_function_internal(
+                            comparator,
+                            vec![items[i].clone(), items[j].clone()],
+                        )?
+                        .to_number();
+                    if cmp > 0.0 {
+                        buf.push(items[j].clone());
+                        j += 1;
+                    } else {
+                        buf.push(items[i].clone());
+                        i += 1;
+                    }
+                }
+                buf.extend_from_slice(&items[i..mid]);
+                buf.extend_from_slice(&items[j..hi]);
+            }
+            std::mem::swap(&mut items, &mut buf);
+            buf.clear();
+            width *= 2;
+        }
+        Ok(items)
+    }
+
     fn execute_array_callback_method(
         &mut self,
         handle: Handle,
@@ -4920,30 +4982,7 @@ impl Vm {
                         Ok(Some(acc.unwrap_or(Value::Undefined)))
                     }
                     "sort" => {
-                        let mut result = arr;
-                        if matches!(callback, Value::Function(_)) {
-                            let len = result.len();
-                            for i in 1..len {
-                                let mut j = i;
-                                while j > 0 {
-                                    let cmp = self
-                                        .call_function_internal(
-                                            &callback,
-                                            vec![result[j - 1].clone(), result[j].clone()],
-                                        )?
-                                        .to_number();
-                                    if cmp > 0.0 {
-                                        result.swap(j - 1, j);
-                                        j -= 1;
-                                    } else {
-                                        break;
-                                    }
-                                }
-                            }
-                        } else {
-                            let heap = &self.heap;
-                            result.sort_by_key(|a| a.to_js_string(heap));
-                        }
+                        let result = self.sort_values(arr, &callback)?;
                         // sort() mutates in place and returns the same array.
                         self.heap.set_array(handle, result);
                         Ok(Some(Value::Array(handle)))
@@ -4951,30 +4990,7 @@ impl Vm {
                     "toSorted" => {
                         // Like sort, but returns a NEW array and leaves the
                         // original untouched (ES2023).
-                        let mut result = arr;
-                        if matches!(callback, Value::Function(_)) {
-                            let len = result.len();
-                            for i in 1..len {
-                                let mut j = i;
-                                while j > 0 {
-                                    let cmp = self
-                                        .call_function_internal(
-                                            &callback,
-                                            vec![result[j - 1].clone(), result[j].clone()],
-                                        )?
-                                        .to_number();
-                                    if cmp > 0.0 {
-                                        result.swap(j - 1, j);
-                                        j -= 1;
-                                    } else {
-                                        break;
-                                    }
-                                }
-                            }
-                        } else {
-                            let heap = &self.heap;
-                            result.sort_by_key(|a| a.to_js_string(heap));
-                        }
+                        let result = self.sort_values(arr, &callback)?;
                         let h = self.heap.alloc_array(result);
                         Ok(Some(Value::Array(h)))
                     }

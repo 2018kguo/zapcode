@@ -150,7 +150,7 @@ const denied   = forkSnapshot(state.snapshot).resume({ approved: false, reason: 
 ### A sandbox that fails closed
 
 Every escape attempt or resource blow-up becomes a catchable error or a tripped limit, never a crash of
-your process. Limits default to 32 MB of memory, 5 s of time, 512 stack frames and 100k allocations,
+your process. Limits default to 32 MB of memory, 5 s of time, 512 stack frames and 10M heap allocations,
 and all four are configurable.
 
 <img src="assets/demos/sandbox.gif" alt="Escape attempts and resource bombs blocked" width="760">

@@ -1032,3 +1032,20 @@ fn es2023_immutable_change_by_copy_methods() {
         "[3,2,1]"
     );
 }
+
+#[test]
+fn comparator_sort_is_stable_and_matches_node() {
+    // Ties keep their original order (ES2019 requires a stable sort).
+    assert_eq!(
+        run_str("const r = Array.from({length: 50}, (_, i) => ({ k: (i * 7) % 5, i })); r.sort((a, b) => a.k - b.k).map(x => x.i).join(',')"),
+        "0,5,10,15,20,25,30,35,40,45,3,8,13,18,23,28,33,38,43,48,1,6,11,16,21,26,31,36,41,46,4,9,14,19,24,29,34,39,44,49,2,7,12,17,22,27,32,37,42,47"
+    );
+    assert_eq!(
+        run_str("[10, 1, 5, 100, 25].sort().join()"),
+        "1,10,100,25,5"
+    );
+    assert_eq!(
+        run_str("[3, 1, 2].toSorted((a, b) => b - a).join()"),
+        "3,2,1"
+    );
+}

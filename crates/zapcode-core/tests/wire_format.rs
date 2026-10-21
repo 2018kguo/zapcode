@@ -169,8 +169,8 @@ fn load_rejects_oversized_uncompressed_payload() {
 fn loaded_session_limits_are_clamped_to_default() {
     // A session persisted with looser-than-default limits must NOT keep them on
     // reload (a forged blob could otherwise raise its own limits). After reload,
-    // the default allocation budget (100k) must be enforced — a 1.5M-iteration
-    // allocating loop that the inflated limit would permit must now be rejected.
+    // the default 32 MB memory ceiling must be enforced — retaining ~1.6 GB, which
+    // the inflated 2 GB limit would permit, must now be rejected.
     let loose = ResourceLimits {
         memory_limit_bytes: 2 * 1024 * 1024 * 1024, // 2GB
         max_allocations: 5_000_000_000,
@@ -182,7 +182,7 @@ fn loaded_session_limits_are_clamped_to_default() {
 
     let reloaded = ZapcodeSessionSnapshot::load(&bytes).unwrap();
     let loop_code =
-        "let n = 0; for (let i = 0; i < 1500000; i++) { const x = [i]; n = n + x[0]; } n";
+        "const keep = []; for (let i = 0; i < 5000; i++) { keep.push(new Array(10000).fill(i)); } keep.length";
     match reloaded.run_chunk(loop_code.to_string(), Vec::new()) {
         Err(zapcode_core::ZapcodeError::AllocationLimitExceeded) => {} // clamped — good
         Err(zapcode_core::ZapcodeError::MemoryLimitExceeded(_)) => {}  // also acceptable

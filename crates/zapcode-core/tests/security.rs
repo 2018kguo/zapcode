@@ -1424,7 +1424,7 @@ fn small_string_builders_still_work_under_tight_limit() {
 fn test_timer_and_microtask_queues_are_allocation_limited() {
     // Every queued timer/microtask is allocation-tracked: guest code cannot
     // grow the scheduler queues unboundedly while staying under the VM's
-    // tracked limits (default max_allocations is 100k).
+    // tracked limits (each queue is capped at 100k entries).
     let result = eval_ts(
         r#"
         const f = () => {};

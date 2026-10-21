@@ -10,7 +10,7 @@ fn allocation_budget_accumulates_across_chunks() {
     // A single chunk stays well under the budget, but many chunks together
     // must eventually exceed it — proving the count isn't reset per chunk.
     let limits = ResourceLimits {
-        max_allocations: 200,
+        max_allocations: 20,
         ..ResourceLimits::default()
     };
     let mut session = ZapcodeSessionSnapshot::new(Vec::new(), limits).unwrap();
