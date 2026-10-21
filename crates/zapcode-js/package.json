@@ -1,6 +1,6 @@
 {
     "name": "@2018kguo/zapcode-native",
-    "version": "1.6.2",
+    "version": "2.0.0",
     "description": "Native addon behind @2018kguo/zapcode (install that package instead)",
     "main": "index.js",
     "module": "index.js",
