@@ -1,0 +1,7 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": ["**/dist/**", "crates/zapcode-js/index.js", "crates/zapcode-wasm/pkg/**", "target/**"],
+  "rules": {
+    "no-unused-vars": ["warn", { "args": "none", "caughtErrors": "none", "varsIgnorePattern": "^_" }]
+  }
+}

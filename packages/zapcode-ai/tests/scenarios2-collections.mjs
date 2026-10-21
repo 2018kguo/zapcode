@@ -1350,7 +1350,7 @@ if (others.length) {
 }
 if (bugs.length) {
   console.log(`\nConfirmed bugs (expected to fail): ${bugs.length}`);
-  for (const [name, , msg] of bugs) {
+  for (const [name] of bugs) {
     console.log(`  ✗ ${name.slice(0, 60)}`);
   }
 }

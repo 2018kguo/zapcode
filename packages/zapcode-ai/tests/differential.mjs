@@ -337,7 +337,7 @@ const realistic = [
 
   // regex capture over semi-structured text
   `const text = "Deployed v2.3.1 to prod; previously v2.2.9 on staging";
-   const versions = [...text.matchAll(/v(\d+)\.(\d+)\.(\d+)/g)].map(m => m[1] + m[2] + m[3]);
+   const versions = [...text.matchAll(/v(\\d+)\\.(\\d+)\\.(\\d+)/g)].map(m => m[1] + m[2] + m[3]);
    return versions.join(",");`,
 
   // query-string building + parsing round trip

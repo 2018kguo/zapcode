@@ -1,0 +1,14 @@
+{
+  "name": "zapcode-repo",
+  "private": true,
+  "description": "Repo-level JS/TS tooling (the packages live in crates/ and packages/).",
+  "scripts": {
+    "lint": "oxlint",
+    "fmt": "oxfmt packages/zapcode-ai/src packages/zapcode-ai/tests packages/zapcode-ai/scripts examples/typescript",
+    "fmt:check": "oxfmt --check packages/zapcode-ai/src packages/zapcode-ai/tests packages/zapcode-ai/scripts examples/typescript"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.74.0",
+    "oxlint": "^1.89.0"
+  }
+}

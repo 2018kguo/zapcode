@@ -27,7 +27,6 @@
  */
 
 import {
-  Zapcode,
   ZapcodeSnapshotHandle,
   ZapcodeSessionHandle,
   ZapcodeProgramHandle,
