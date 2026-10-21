@@ -38,8 +38,8 @@ pub fn parse(source: &str) -> Result<Program> {
     let source_type = SourceType::tsx().with_module(true);
     let ret = Parser::new(&allocator, &source, source_type).parse();
 
-    if !ret.errors.is_empty() {
-        let msgs: Vec<String> = ret.errors.iter().map(|e| e.to_string()).collect();
+    if ret.diagnostics.has_errors() {
+        let msgs: Vec<String> = ret.diagnostics.errors().map(|e| e.to_string()).collect();
         return Err(ZapcodeError::ParseError(msgs.join("\n")));
     }
 
@@ -462,13 +462,26 @@ impl<'a> AstLowerer<'a> {
                     s.span.start, s.span.end
                 )))
             }
+            ast::Statement::ExportDeclaration(s) => Err(ZapcodeError::SandboxViolation(format!(
+                "export declarations are forbidden in the sandbox (at {}..{})",
+                s.span.start, s.span.end
+            ))),
+            ast::Statement::ExportFromDeclaration(s) => {
+                Err(ZapcodeError::SandboxViolation(format!(
+                    "export declarations are forbidden in the sandbox (at {}..{})",
+                    s.span.start, s.span.end
+                )))
+            }
             ast::Statement::DebuggerStatement(s) => {
                 Err(self.unsupported(s.span, "unsupported statement type"))
             }
             ast::Statement::WithStatement(s) => {
                 Err(self.unsupported(s.span, "unsupported statement type"))
             }
-            ast::Statement::TSModuleDeclaration(s) => {
+            ast::Statement::TSNamespaceDeclaration(s) => {
+                Err(self.unsupported(s.span, "unsupported statement type"))
+            }
+            ast::Statement::TSExternalModuleDeclaration(s) => {
                 Err(self.unsupported(s.span, "unsupported statement type"))
             }
             ast::Statement::TSGlobalDeclaration(s) => {
@@ -910,7 +923,7 @@ impl<'a> AstLowerer<'a> {
             .map(|id| id.name.to_string())
             .unwrap_or_else(|| "AnonymousClass".to_string());
 
-        let super_class = match &class.super_class {
+        let super_class = match class.heritage.as_ref().map(|h| &h.expression) {
             Some(expr) => {
                 if let ast::Expression::Identifier(id) = expr {
                     Some(id.name.to_string())
@@ -942,7 +955,7 @@ impl<'a> AstLowerer<'a> {
     fn lower_class_expr(&mut self, class: &ast::Class<'_>) -> Result<Expr> {
         let name = class.id.as_ref().map(|id| id.name.to_string());
 
-        let super_class = match &class.super_class {
+        let super_class = match class.heritage.as_ref().map(|h| &h.expression) {
             Some(expr) => {
                 if let ast::Expression::Identifier(id) = expr {
                     Some(id.name.to_string())
@@ -982,7 +995,7 @@ impl<'a> AstLowerer<'a> {
                 ast::ClassElement::MethodDefinition(method) => {
                     let method_name = match &method.key {
                         ast::PropertyKey::StaticIdentifier(id) => id.name.to_string(),
-                        ast::PropertyKey::StringLiteral(s) => s.value.to_string(),
+                        ast::PropertyKey::StringLiteral(s) => js_str(s.value),
                         // `#method` -> stored under a "#"-prefixed key (hidden
                         // from reflection); `this.#method()` reads the same key.
                         ast::PropertyKey::PrivateIdentifier(id) => format!("#{}", id.name),
@@ -1047,7 +1060,7 @@ impl<'a> AstLowerer<'a> {
                     // Computed field names (`[k] = …`) are not supported.
                     let field_name = match &prop.key {
                         ast::PropertyKey::StaticIdentifier(id) => id.name.to_string(),
-                        ast::PropertyKey::StringLiteral(s) => s.value.to_string(),
+                        ast::PropertyKey::StringLiteral(s) => js_str(s.value),
                         // `#field` -> "#"-prefixed (hidden) key.
                         ast::PropertyKey::PrivateIdentifier(id) => format!("#{}", id.name),
                         _ => continue,
@@ -1137,7 +1150,7 @@ impl<'a> AstLowerer<'a> {
                     })?;
                 Ok(Expr::BigIntLit(value))
             }
-            ast::Expression::StringLiteral(lit) => Ok(Expr::StringLit(lit.value.to_string())),
+            ast::Expression::StringLiteral(lit) => Ok(Expr::StringLit(js_str(lit.value))),
             ast::Expression::BooleanLiteral(lit) => Ok(Expr::BoolLit(lit.value)),
             ast::Expression::NullLiteral(_) => Ok(Expr::NullLit),
             ast::Expression::TemplateLiteral(tpl) => {
@@ -1150,7 +1163,7 @@ impl<'a> AstLowerer<'a> {
                         q.value
                             .cooked
                             .as_ref()
-                            .map(|c| c.to_string())
+                            .map(|c| js_str(*c))
                             .unwrap_or_else(|| q.value.raw.to_string())
                     })
                     .collect();
@@ -1442,19 +1455,16 @@ impl<'a> AstLowerer<'a> {
             }
             ast::Expression::ArrowFunctionExpression(arrow) => {
                 let params = self.lower_formal_params(&arrow.params)?;
-                let body = if arrow.expression {
-                    match arrow.body.statements.first() {
-                        Some(ast::Statement::ExpressionStatement(expr)) => {
-                            let ret_expr = self.lower_expr(&expr.expression)?;
-                            vec![Statement::Return {
-                                value: Some(ret_expr),
-                                span: self.span(arrow.span),
-                            }]
-                        }
-                        _ => self.lower_statements(&arrow.body.statements)?,
-                    }
-                } else {
-                    self.lower_statements(&arrow.body.statements)?
+                let body = match arrow.body.as_expression() {
+                    // `x => expr`: the body is an implicit return.
+                    Some(expr) => vec![Statement::Return {
+                        value: Some(self.lower_expr(expr)?),
+                        span: self.span(arrow.span),
+                    }],
+                    None => match arrow.body.as_function_body() {
+                        Some(body) => self.lower_statements(&body.statements)?,
+                        None => Vec::new(),
+                    },
                 };
                 let func_index = self.functions.len();
                 self.functions.push(FunctionDef {
@@ -1535,7 +1545,7 @@ impl<'a> AstLowerer<'a> {
                             .value
                             .cooked
                             .as_ref()
-                            .map(|c| c.to_string())
+                            .map(|c| js_str(*c))
                             .unwrap_or_else(|| q.value.raw.to_string());
                         Some(Expr::StringLit(text))
                     })
@@ -1563,7 +1573,10 @@ impl<'a> AstLowerer<'a> {
                 })
             }
             ast::Expression::ClassExpression(class) => self.lower_class_expr(class),
-            ast::Expression::MetaProperty(s) => {
+            ast::Expression::ImportMeta(s) => {
+                Err(self.unsupported(s.span, "meta properties are not supported"))
+            }
+            ast::Expression::NewTarget(s) => {
                 Err(self.unsupported(s.span, "meta properties are not supported"))
             }
             ast::Expression::ImportExpression(s) => Err(ZapcodeError::SandboxViolation(format!(
@@ -1827,7 +1840,7 @@ fn property_key_to_string(key: &ast::PropertyKey<'_>) -> String {
 fn property_key_to_string_from_key(key: &ast::PropertyKey<'_>) -> String {
     match key {
         ast::PropertyKey::StaticIdentifier(id) => id.name.to_string(),
-        ast::PropertyKey::StringLiteral(s) => s.value.to_string(),
+        ast::PropertyKey::StringLiteral(s) => js_str(s.value),
         ast::PropertyKey::NumericLiteral(n) => n.value.to_string(),
         _ => "<computed>".to_string(),
     }
@@ -1879,4 +1892,10 @@ fn lower_assign_op(op: ast::AssignmentOperator) -> AssignOp {
         ast::AssignmentOperator::LogicalAnd => AssignOp::AndAssign,
         ast::AssignmentOperator::LogicalOr => AssignOp::OrAssign,
     }
+}
+
+/// An oxc string-literal value as text. Lone surrogates (which have no UTF-8
+/// form) render lossily, matching the previous oxc string type.
+fn js_str(s: oxc_str::JSStr<'_>) -> String {
+    s.display().to_string()
 }
